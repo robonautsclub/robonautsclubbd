@@ -30,7 +30,9 @@ const mockFeed: FeedItem[] = [
 
 const Feed: React.FC = () => {
   return (
-    <section className="w-full max-w-2xl mx-auto mt-8">
+    <section
+      className="w-full max-w-2xl mx-auto mt-8  bg-no-repeat bg-cover"
+    >
       <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 mb-6">Feed</h2>
       <ul className="flex flex-col gap-6">
         {mockFeed.map((item) => (
