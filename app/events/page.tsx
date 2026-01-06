@@ -1,144 +1,302 @@
 'use client'
-import React from 'react';
-import Image from 'next/image';
+import React from 'react'
+import Link from 'next/link'
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  ArrowRight,
+  Sparkles,
+  Users,
+} from 'lucide-react'
+import { format, parse, isPast, isFuture, differenceInDays } from 'date-fns'
+import { eventsData, type Event } from './data'
 
 // --- Helper Components ---
-
-const SectionHeader = ({ title, subtitle }: { title: string; subtitle?: string }) => (
-  <div className="text-center mb-12">
-    <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">{title}</h2>
-    {subtitle && <p className="text-lg text-gray-600 max-w-2xl mx-auto">{subtitle}</p>}
-  </div>
-);
-
-// Dummy event data
-const events = [
-  {
-    id: 1,
-    title: "RoboFest 2024 - National Qualifier",
-    date: "July 13, 2024",
-    time: "10:00 AM - 5:00 PM",
-    location: "Uttara Community Center, Dhaka",
-    description:
-      "Robonauts Club is hosting the official Bangladesh qualifier for RoboFest 2024! Teams will compete in innovative robotics challenges. Open for students in grades 3-12.",
-    image: "/robotics-event.jpg",
-    link: "#",
-  },
-  {
-    id: 2,
-    title: "STEM Discovery Workshop",
-    date: "August 3, 2024",
-    time: "2:00 PM - 5:00 PM",
-    location: "Robonauts Club Lab, Uttara",
-    description:
-      "Explore hands-on science and engineering experiments designed for curious young minds. Ideal for ages 8-16. Free registration, limited seats.",
-    image: "/workshop_kids.jpg",
-    link: "#",
-  },
-  {
-    id: 3,
-    title: "Summer Coding Bootcamp",
-    date: "August 14-20, 2024",
-    time: "4:00 PM - 7:00 PM (Daily)",
-    location: "Online/Remote",
-    description:
-      "A weeklong intensive bootcamp on block coding, Python, and real-world robotics applications. Includes project submissions and certificates.",
-    image: "/coding_bootcamp.jpg",
-    link: "#",
-  },
-];
-
-const EventCard = ({
+const SectionHeader = ({
   title,
-  date,
-  time,
-  location,
-  description,
-  image,
-  link,
-}: typeof events[0]) => (
-  <div className="rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-gray-100 bg-white overflow-hidden flex flex-col md:flex-row">
-    <div className="md:w-1/3 w-full h-48 md:h-auto relative">
-      <Image
-        src={image}
-        alt={title}
-        fill
-        className="object-cover object-center"
-        style={{ minHeight: "100%" }}
-        sizes="(max-width: 768px) 100vw, 33vw"
-        priority
-      />
-    </div>
-    <div className="flex-1 p-8 flex flex-col gap-3">
-      <h3 className="text-xl font-bold text-indigo-900">{title}</h3>
-      <div className="text-sm text-gray-500 flex flex-wrap gap-x-6 gap-y-2 mb-1">
-        <span>
-          <span className="font-semibold">Date:</span> {date}
-        </span>
-        <span>
-          <span className="font-semibold">Time:</span> {time}
-        </span>
-        <span>
-          <span className="font-semibold">Location:</span> {location}
-        </span>
+  subtitle,
+  count,
+}: {
+  title: string
+  subtitle?: string
+  count?: number
+}) => (
+  <div className="mb-8">
+    <div className="flex items-center justify-between mb-4">
+      <div>
+        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+          {title}
+        </h2>
+        {subtitle && (
+          <p className="text-lg text-gray-600">{subtitle}</p>
+        )}
       </div>
-      <p className="text-gray-700 text-base flex-1">{description}</p>
-      <div className="mt-2">
-        <a
-          href={link}
-          className="inline-block py-2 px-5 bg-indigo-600 hover:bg-indigo-800 transition-colors text-white font-semibold rounded-lg text-sm"
-        >
-          Learn More
-        </a>
-      </div>
+      {count !== undefined && (
+        <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-indigo-100 rounded-full">
+          <Sparkles className="w-5 h-5 text-indigo-600" />
+          <span className="text-lg font-bold text-indigo-900">{count}</span>
+          <span className="text-sm text-indigo-700">Events</span>
+        </div>
+      )}
     </div>
   </div>
-);
+)
+
+// --- Enhanced Event Card Component ---
+const EventCard = ({ event }: { event: Event }) => {
+  const eventDate = parse(event.date, 'yyyy-MM-dd', new Date())
+  const isUpcoming =
+    isFuture(eventDate) ||
+    eventDate.toDateString() === new Date().toDateString()
+  const status = isUpcoming ? 'Upcoming' : 'Completed'
+  const daysUntil = isUpcoming
+    ? differenceInDays(eventDate, new Date())
+    : null
+
+  return (
+    <Link href={`/events/${event.id}`}>
+      <div className="group relative bg-white rounded-2xl border-2 border-gray-200 hover:border-indigo-300 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 h-full flex flex-col">
+        {/* Status Badge */}
+        <div className="absolute top-4 right-4 z-10">
+          <span
+            className={`px-3 py-1.5 rounded-full text-xs font-bold shadow-sm ${
+              isUpcoming
+                ? 'bg-green-500 text-white'
+                : 'bg-gray-400 text-white'
+            }`}
+          >
+            {status}
+          </span>
+        </div>
+
+        {/* Image/Visual Section */}
+        <div className="relative h-48 bg-gradient-to-br from-indigo-500 via-blue-500 to-purple-500 overflow-hidden">
+          <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Calendar className="w-20 h-20 text-white/80" />
+          </div>
+          {isUpcoming && daysUntil !== null && daysUntil >= 0 && (
+            <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+              <span className="text-sm font-bold text-indigo-900">
+                {daysUntil === 0
+                  ? 'Today!'
+                  : daysUntil === 1
+                    ? 'Tomorrow'
+                    : `${daysUntil} days away`}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Content Section */}
+        <div className="p-6 flex flex-col flex-1">
+          <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-indigo-600 transition-colors line-clamp-2">
+            {event.title}
+          </h3>
+
+          {/* Event Details */}
+          <div className="space-y-2 mb-4">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Calendar className="w-4 h-4 text-indigo-600 shrink-0" />
+              <span className="font-medium">
+                {format(eventDate, 'EEEE, MMMM d, yyyy')}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Clock className="w-4 h-4 text-indigo-600 shrink-0" />
+              <span>{event.time}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <MapPin className="w-4 h-4 text-indigo-600 shrink-0" />
+              <span className="line-clamp-1">{event.location}</span>
+            </div>
+          </div>
+
+          {/* Description */}
+          <p className="text-gray-700 text-sm mb-4 flex-1 line-clamp-3">
+            {event.description}
+          </p>
+
+          {/* CTA Button */}
+          <div className="mt-auto pt-4 border-t border-gray-100">
+            <div className="flex items-center gap-2 text-indigo-600 font-semibold group-hover:text-indigo-700 transition-colors">
+              <span>View Details</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </Link>
+  )
+}
 
 // --- Main Page ---
-
 export default function EventsPage() {
+  // Sort events: upcoming first, then past events
+  const sortedEvents = [...eventsData].sort((a, b) => {
+    const dateA = parse(a.date, 'yyyy-MM-dd', new Date())
+    const dateB = parse(b.date, 'yyyy-MM-dd', new Date())
+    const now = new Date()
+
+    const aIsPast =
+      isPast(dateA) && dateA.toDateString() !== now.toDateString()
+    const bIsPast =
+      isPast(dateB) && dateB.toDateString() !== now.toDateString()
+
+    // Upcoming events first
+    if (aIsPast && !bIsPast) return 1
+    if (!aIsPast && bIsPast) return -1
+
+    // Within same group, sort by date (newest first for past, earliest first for upcoming)
+    if (aIsPast) return dateB.getTime() - dateA.getTime()
+    return dateA.getTime() - dateB.getTime()
+  })
+
+  const upcomingEvents = sortedEvents.filter((event) => {
+    const eventDate = parse(event.date, 'yyyy-MM-dd', new Date())
+    return (
+      isFuture(eventDate) ||
+      eventDate.toDateString() === new Date().toDateString()
+    )
+  })
+
+  const pastEvents = sortedEvents.filter((event) => {
+    const eventDate = parse(event.date, 'yyyy-MM-dd', new Date())
+    return (
+      isPast(eventDate) &&
+      eventDate.toDateString() !== new Date().toDateString()
+    )
+  })
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Hero Header */}
-      <section className="relative bg-linear-to-br from-indigo-900 via-blue-900 to-blue-600 text-white py-20 px-6">
-        <div className="max-w-4xl mx-auto relative z-10 text-center">
-          <h1 className="text-4xl md:text-5xl font-extrabold mb-4 tracking-tight">
-            Upcoming Events & Workshops
-          </h1>
-          <p className="text-lg md:text-xl text-blue-100 max-w-2xl mx-auto leading-relaxed">
-            Stay up to date with Robonauts Club&apos;s latest competitions, hands-on STEM workshops, and seasonal bootcamps.
-          </p>
+      <section className="relative bg-gradient-to-br from-indigo-900 via-blue-900 to-blue-600 text-white py-24 px-6 overflow-hidden">
+        {/* Background decoration */}
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-300 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-300 rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2" />
         </div>
-        {/* Decorative pattern can go here */}
+
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm mb-6">
+              <Sparkles className="w-4 h-4" />
+              <span className="text-sm font-medium">
+                {upcomingEvents.length} Upcoming Events
+              </span>
+            </div>
+            <h1 className="text-4xl md:text-6xl font-extrabold mb-6 tracking-tight">
+              Events & Workshops
+            </h1>
+            <p className="text-lg md:text-xl text-blue-100 max-w-3xl mx-auto leading-relaxed">
+              Join us for exciting robotics competitions, hands-on STEM
+              workshops, and educational bootcamps designed to inspire the next
+              generation of innovators.
+            </p>
+          </div>
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12 max-w-4xl mx-auto">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+              <div className="flex items-center gap-3 mb-2">
+                <Calendar className="w-6 h-6 text-blue-200" />
+                <span className="text-3xl font-bold">{upcomingEvents.length}</span>
+              </div>
+              <p className="text-blue-100 text-sm">Upcoming Events</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+              <div className="flex items-center gap-3 mb-2">
+                <Users className="w-6 h-6 text-blue-200" />
+                <span className="text-3xl font-bold">{eventsData.length}</span>
+              </div>
+              <p className="text-blue-100 text-sm">Total Events</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+              <div className="flex items-center gap-3 mb-2">
+                <Sparkles className="w-6 h-6 text-blue-200" />
+                <span className="text-3xl font-bold">{pastEvents.length}</span>
+              </div>
+              <p className="text-blue-100 text-sm">Past Events</p>
+            </div>
+          </div>
+        </div>
       </section>
 
-      {/* Events List */}
-      <main className="flex-1 py-20 px-6 max-w-6xl mx-auto">
-        <SectionHeader
-          title="What's Happening?"
-          subtitle="Explore our latest and upcoming STEM events. Click 'Learn More' for registration details."
-        />
+      {/* Main Content */}
+      <main className="flex-1 py-16 px-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Upcoming Events Section */}
+          {upcomingEvents.length > 0 ? (
+            <section className="mb-20">
+              <SectionHeader
+                title="Upcoming Events"
+                subtitle="Don't miss out on these exciting opportunities to learn and compete"
+                count={upcomingEvents.length}
+              />
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {upcomingEvents.map((event) => (
+                  <EventCard key={event.id} event={event} />
+                ))}
+              </div>
+            </section>
+          ) : (
+            <section className="mb-20">
+              <div className="bg-white rounded-2xl p-12 border-2 border-dashed border-gray-300 text-center">
+                <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  No Upcoming Events
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Check back soon for new events and workshops!
+                </p>
+                <a
+                  href="mailto:info@robonautsclub.com"
+                  className="inline-block py-2 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors"
+                >
+                  Contact Us
+                </a>
+              </div>
+            </section>
+          )}
 
-        <div className="space-y-10">
-          {events.map((event) => (
-            <EventCard key={event.id} {...event} />
-          ))}
-        </div>
+          {/* Past Events Section */}
+          {pastEvents.length > 0 && (
+            <section>
+              <SectionHeader
+                title="Past Events"
+                subtitle="A look back at events we've hosted"
+                count={pastEvents.length}
+              />
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {pastEvents.map((event) => (
+                  <EventCard key={event.id} event={event} />
+                ))}
+              </div>
+            </section>
+          )}
 
-        {/* Call to action */}
-        <div className="mt-16 text-center">
-          <p className="text-lg text-indigo-900 font-medium mb-4">
-            Want to organize a special STEM event for your school or community?
-          </p>
-          <a
-            href="mailto:info@robonautsclub.com"
-            className="inline-block py-3 px-7 bg-indigo-700 hover:bg-blue-900 text-white rounded-lg font-semibold text-base transition-colors"
-          >
-            Contact Us
-          </a>
+          {/* Call to action */}
+          <div className="mt-20 bg-gradient-to-br from-indigo-600 to-blue-600 rounded-3xl p-12 text-center text-white">
+            <Sparkles className="w-12 h-12 mx-auto mb-4 text-indigo-200" />
+            <h3 className="text-3xl font-bold mb-4">
+              Want to Organize an Event?
+            </h3>
+            <p className="text-lg text-indigo-100 mb-6 max-w-2xl mx-auto">
+              We&apos;re always open to collaborating with schools and
+              communities to bring robotics education to more students.
+            </p>
+            <a
+              href="mailto:info@robonautsclub.com"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-white text-indigo-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors shadow-lg"
+            >
+              Contact Us
+              <ArrowRight className="w-5 h-5" />
+            </a>
+          </div>
         </div>
       </main>
     </div>
-  );
+  )
 }
