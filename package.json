@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "date-fns": "^4.1.0",
     "flowbite-react": "^0.12.15",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.562.0",

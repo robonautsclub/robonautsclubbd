@@ -1,8 +1,17 @@
-import type { NextConfig } from "next";
-import withFlowbiteReact from "flowbite-react/plugin/nextjs";
-
-const nextConfig: NextConfig = {
-  /* config options here */
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "api.dicebear.com",
+      },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+    ],
+  },
 };
 
-export default withFlowbiteReact(nextConfig);
+export default nextConfig;

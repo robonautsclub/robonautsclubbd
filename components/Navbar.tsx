@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Inter, Poppins } from 'next/font/google'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
@@ -13,7 +13,8 @@ const poppins = Poppins({
   variable: '--font-poppins'
 })
 
-type MenuItem = { title: string; href: string }
+type SubLink = { title: string; href: string }
+type MenuItem = { title: string; href?: string; subLinks?: SubLink[] }
 
 function classNames(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(' ')
@@ -33,27 +34,50 @@ const isActive = (href?: string, current?: string) => {
 export default function Nav() {
   const pathname = usePathname()
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [dropdownOpenIdx, setDropdownOpenIdx] = useState<number | null>(null)
+  const [mobileDropdownOpenIdx, setMobileDropdownOpenIdx] = useState<
+    number | null
+  >(null)
 
   const navRef = useRef<HTMLElement | null>(null)
   const drawerRef = useRef<HTMLElement | null>(null)
 
-  const menuItems: MenuItem[] = [
-    { title: 'Home', href: '/' },
-    { title: 'Events', href: '/events' },
-    { title: 'About', href: '/about' },
-  ]
+  const menuItems: MenuItem[] = useMemo(
+    () => [
+      { title: 'Home', href: '/' },
+      { title: 'Events', href: '/events' },
+      { title: 'About us', href: '/about' },    ],
+    []
+  )
+
+  // Close dropdowns / drawer on outside click & ESC
 
   useEffect(() => {
     const onDocMouseDown = (e: MouseEvent) => {
       const t = e.target as Node
       const insideNav = navRef.current?.contains(t)
       const insideDrawer = drawerRef.current?.contains(t)
-      if (!insideNav) setIsDrawerOpen(false)
-      if (isDrawerOpen && !insideDrawer) setIsDrawerOpen(false)
+
+      // desktop dropdown: close if click is outside the nav bar
+      if (!insideNav) {
+        setDropdownOpenIdx(null)
+      }
+
+      // 🔐 drawer: close on ANY click that is not inside the drawer
+      if (isDrawerOpen && !insideDrawer) {
+        setIsDrawerOpen(false)
+        setMobileDropdownOpenIdx(null)
+      }
     }
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsDrawerOpen(false)
+      if (e.key === 'Escape') {
+        setDropdownOpenIdx(null)
+        setIsDrawerOpen(false)
+        setMobileDropdownOpenIdx(null)
+      }
     }
+
     document.addEventListener('mousedown', onDocMouseDown)
     document.addEventListener('keydown', onKey)
     return () => {
@@ -72,7 +96,7 @@ export default function Nav() {
     }
   }, [isDrawerOpen])
 
-  // Prevent horizontal overflow
+  // **Prevent horizontal overflow on all screens**
   useEffect(() => {
     document.documentElement.classList.add('overflow-x-clip')
     return () => {
@@ -80,12 +104,17 @@ export default function Nav() {
     }
   }, [])
 
+  const toggleDropdown = (idx: number) =>
+    setDropdownOpenIdx((prev) => (prev === idx ? null : idx))
+  const toggleMobileDropdown = (idx: number) =>
+    setMobileDropdownOpenIdx((prev) => (prev === idx ? null : idx))
+
   return (
     <header
       className={classNames(
         inter.variable,
         poppins.variable,
-        'sticky top-0 z-70 bg-purple-50 backdrop-blur  border-black/10 border-b'
+        'sticky top-0 z-70 bg-blue-50 backdrop-blur  border-black/10 border-b'
       )}
       style={{ borderColor: 'rgba(17,24,39,0.12)' }}
     >
@@ -95,6 +124,7 @@ export default function Nav() {
       >
         Skip to content
       </a>
+
       <nav ref={navRef} aria-label='Primary' className='mx-auto max-w-7xl'>
         <div className='flex items-center justify-between px-4 py-3'>
           {/* Brand */}
@@ -110,19 +140,99 @@ export default function Nav() {
               priority
               className='rounded-full object-contain ring-1 ring-gray-200 group-hover:ring-indigo-200 transition'
             />
-            <span className='hidden md:block text-lg font-semibold leading-tight text-gray-900 tracking-tight'>
-            ROBONAUTS CLUB
+            <span className='hidden md:block text-2xl font-semibold leading-tight text-gray-900 tracking-tight'>
+            Robonauts Club 
             </span>
           </Link>
+
           {/* Desktop menu */}
           <div className='hidden lg:block'>
-            <ul className='flex items-center gap-2 text-[15px]'>
+            <ul className='flex items-center gap-2 text-[15px] cursor-grab'>
               {menuItems.map((item, idx) => {
                 const active = isActive(item.href, pathname)
+                const sectionActive = item.subLinks?.some((s) =>
+                  isActive(s.href, pathname)
+                )
+
+                if (item.subLinks) {
+                  return (
+                    <li key={idx} className='relative'>
+                      <button
+                        type='button'
+                        aria-haspopup='menu'
+                        aria-expanded={dropdownOpenIdx === idx}
+                        onClick={() => toggleDropdown(idx)}
+                        onKeyDown={(
+                          e: React.KeyboardEvent<HTMLButtonElement>
+                        ) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            toggleDropdown(idx)
+                          }
+                        }}
+                        className={classNames(
+                          'flex items-center gap-2 py-2 px-3 rounded-lg transition-colors',
+                          sectionActive
+                            ? 'text-indigo-800 bg-indigo-50'
+                            : 'text-gray-700 hover:text-indigo-800 hover:bg-blue-600',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300'
+                        )}
+                      >
+                        <span className='font-medium'>Courses</span>
+                        <svg
+                          className={classNames(
+                            'w-4 h-4 transition-transform',
+                            dropdownOpenIdx === idx && 'rotate-180'
+                          )}
+                          viewBox='0 0 24 24'
+                          fill='none'
+                        >
+                          <path
+                            d='M19 9l-7 7-7-7'
+                            stroke='currentColor'
+                            strokeWidth='2'
+                            strokeLinecap='round'
+                            strokeLinejoin='round'
+                          />
+                        </svg>
+                      </button>
+
+                      {dropdownOpenIdx === idx && (
+                        <div
+                          role='menu'
+                          className='absolute left-0 top-full mt-2 w-56 rounded-xl bg-white shadow-lg ring-1 ring-indigo-100/70'
+                        >
+                          <ul className='py-2 text-gray-800'>
+                            {item.subLinks.map((sub, sIdx) => {
+                              const subActive = isActive(sub.href, pathname)
+                              return (
+                                <li key={sIdx}>
+                                  <Link
+                                    href={sub.href}
+                                    className={classNames(
+                                      'block px-4 py-2 rounded-md transition-colors no-underline hover:no-underline focus:no-underline',
+                                      subActive
+                                        ? 'text-indigo-800 bg-indigo-50'
+                                        : 'hover:bg-indigo-50 hover:text-indigo-800'
+                                    )}
+                                    onClick={() => setDropdownOpenIdx(null)}
+                                  >
+                                    {sub.title}
+                                  </Link>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        </div>
+                      )}
+                    </li>
+                  )
+                }
+
                 return (
                   <li key={idx}>
                     <Link
-                      href={item.href}
+                      href={item.href as string}
                       className={classNames(
                         'py-2 px-3 font-medium rounded-lg transition-colors no-underline hover:no-underline focus:no-underline',
                         active
@@ -136,8 +246,11 @@ export default function Nav() {
                   </li>
                 )
               })}
+
+             
             </ul>
           </div>
+
           {/* Mobile burger */}
           <button
             onClick={() => setIsDrawerOpen(true)}
@@ -164,7 +277,8 @@ export default function Nav() {
           </button>
         </div>
       </nav>
-      {/* Backdrop + Drawer: render ONLY when open */}
+
+      {/* Backdrop + Drawer: render ONLY when open to prevent horizontal overflow */}
       {isDrawerOpen && (
         <>
           <button
@@ -187,8 +301,9 @@ export default function Nav() {
             aria-label='Mobile Navigation'
             style={{ height: '100dvh' }}
           >
-            <div className='flex h-full flex-col'>
-              <div className='px-4 pb-3 sticky top-0 bg-white/95 backdrop-blur supports-backdrop-filter:bg-white/80 border-b border-black/10 z-10'>
+            <div className='flex h-full flex-col bg-blue-50'>
+              {/* Drawer header */}
+              <div className='px-4 pb-3 sticky top-0 backdrop-blur supports-backdrop-filter:bg-blue-100 border-blue-50  z-10'>
                 <div className='flex items-center justify-between py-2'>
                   <span className='font-semibold text-gray-900'>Menu</span>
                   <button
@@ -213,26 +328,90 @@ export default function Nav() {
                   </button>
                 </div>
               </div>
+
+              {/* Scrollable body */}
               <div className='flex-1 overflow-y-auto overscroll-contain px-4 py-4'>
                 <nav className='grid gap-2' aria-label='Mobile navigation'>
                   {menuItems.map((item, idx) => (
-                    <Link
-                      key={idx}
-                      href={item.href}
-                      onClick={() => setIsDrawerOpen(false)}
-                      className={classNames(
-                        'block p-2 text-sm font-medium rounded-lg no-underline hover:no-underline focus:no-underline',
-                        isActive(item.href, pathname)
-                          ? 'text-indigo-800 bg-indigo-50'
-                          : 'hover:bg-indigo-50 text-gray-900'
+                    <div key={idx} className='space-y-2'>
+                      {item.subLinks ? (
+                        <>
+                          <button
+                            onClick={() => toggleMobileDropdown(idx)}
+                            className='flex w-full items-center justify-between p-2 text-sm font-medium rounded-lg hover:bg-indigo-50 text-gray-900'
+                            aria-expanded={mobileDropdownOpenIdx === idx}
+                            aria-controls={`mobile-sub-${idx}`}
+                            type='button'
+                          >
+                            <span className='font-medium'>Courses</span>
+                            <svg
+                              className={classNames(
+                                'w-4 h-4 transition-transform',
+                                mobileDropdownOpenIdx === idx && 'rotate-180'
+                              )}
+                              viewBox='0 0 24 24'
+                              fill='none'
+                            >
+                              <path
+                                d='M19 9l-7 7-7-7'
+                                stroke='currentColor'
+                                strokeWidth='2'
+                                strokeLinecap='round'
+                                strokeLinejoin='round'
+                              />
+                            </svg>
+                          </button>
+                          <div
+                            id={`mobile-sub-${idx}`}
+                            className={classNames(
+                              mobileDropdownOpenIdx === idx
+                                ? 'block'
+                                : 'hidden',
+                              'ml-3'
+                            )}
+                          >
+                            {item.subLinks.map((sub, sIdx) => {
+                              const activeSub = isActive(sub.href, pathname)
+                              return (
+                                <Link
+                                  key={sIdx}
+                                  href={sub.href}
+                                  onClick={() => setIsDrawerOpen(false)}
+                                  className={classNames(
+                                    'block p-2 text-sm rounded-md no-underline hover:no-underline focus:no-underline text-indigo-800',
+                                    activeSub
+                                      ? 'text-indigo-800 bg-indigo-50'
+                                      : 'hover:bg-indigo-50 text-gray-800'
+                                  )}
+                                  aria-current={activeSub ? 'page' : undefined}
+                                >
+                                  {sub.title}
+                                </Link>
+                              )
+                            })}
+                          </div>
+                        </>
+                      ) : (
+                        <Link
+                          href={item.href as string}
+                          onClick={() => setIsDrawerOpen(false)}
+                          className={classNames(
+                            'block p-2 text-sm font-medium rounded-lg no-underline hover:no-underline focus:no-underline',
+                            isActive(item.href, pathname)
+                              ? 'text-indigo-800 bg-indigo-50'
+                              : 'hover:bg-indigo-50 text-gray-900'
+                          )}
+                          aria-current={
+                            isActive(item.href, pathname) ? 'page' : undefined
+                          }
+                        >
+                          {item.title}
+                        </Link>
                       )}
-                      aria-current={
-                        isActive(item.href, pathname) ? 'page' : undefined
-                      }
-                    >
-                      {item.title}
-                    </Link>
+                    </div>
                   ))}
+                  
+            
                 </nav>
               </div>
             </div>

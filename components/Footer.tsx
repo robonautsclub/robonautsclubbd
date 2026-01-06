@@ -22,10 +22,10 @@ const COMPANY = {
 const NAV_LINKS = ["Home", "Events", "About Us"];
 
 const SERVICES = [
-  "Interactive Workshops",
-  "Hands-on Projects",
-  "STEM Mentoring",
-  "Competitions",
+  "Robotics Workshops",
+  "Hands-on Training",
+  "Robo Fair",
+  "Competitions and Simulations",
 ];
 
 const SOCIAL_LINKS = [
@@ -40,27 +40,28 @@ const SOCIAL_LINKS = [
 
 export default function Footer() {
   return (
-    <footer className="bg-slate-50 text-slate-700">
+    <footer className="bg-brand-light text-brand-dark">
+      {/* Top accent strip */}
+      <div className="h-2 w-full bg-linear-to-r from-blue-200 via-gray-200 to-red-200" />
+
       <div className="mx-auto max-w-7xl px-6 py-12">
         {/* Top Section */}
         <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
           {/* Brand */}
           <div className="flex items-start gap-4">
+            <Image
+              src="/robologo.jpg"
+              alt="Robonauts Club Logo"
+              width={72}
+              height={72}
+              className="object-contain w-14 h-14"
+              priority
+            />
             <div>
-              <Image
-                src="/robologo.jpg"
-                alt="Robonauts Club Logo"
-                width={72}
-                height={72}
-                className="object-contain w-14 h-14"
-                priority
-              />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-slate-900">
+              <h2 className="text-xl font-semibold text-brand-blue">
                 {COMPANY.name}
               </h2>
-              <p className="mt-1 max-w-sm text-sm text-slate-600">
+              <p className="mt-1 max-w-sm text-sm text-brand-dark/70">
                 {COMPANY.tagline}
               </p>
             </div>
@@ -75,7 +76,14 @@ export default function Footer() {
                 aria-label={label}
                 target="_blank"
                 rel="noreferrer"
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-purple-600 hover:bg-purple-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="
+                  flex h-10 w-10 items-center justify-center rounded-full
+                  border border-brand-blue/20
+                  bg-white text-brand-blue
+                  shadow-sm transition
+                  hover:bg-brand-blue hover:text-white hover:border-brand-blue
+                  focus:outline-none focus:ring-2 focus:ring-brand-blue/30
+                "
               >
                 <Icon className="text-lg" />
               </a>
@@ -84,22 +92,25 @@ export default function Footer() {
         </div>
 
         {/* Divider */}
-        <div className="my-10 border-t border-slate-200" />
+        <div
+          className="mt-8 mb-6 h-px w-full"
+          style={{
+            background:
+              "linear-gradient(to right, transparent, rgba(17,24,39,0.12), transparent)",
+          }}
+        />
 
         {/* Main Content */}
         <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-3">
           {/* Navigation */}
           <div>
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-900">
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-brand-blue">
               Quick Links
             </h3>
             <ul className="space-y-3 text-sm">
               {NAV_LINKS.map((link) => (
                 <li key={link}>
-                  <a
-                    href="#"
-                    className="transition hover:text-purple-600"
-                  >
+                  <a href="#" className="transition hover:text-brand-blue">
                     {link}
                   </a>
                 </li>
@@ -109,12 +120,12 @@ export default function Footer() {
 
           {/* Services */}
           <div>
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-900">
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-brand-blue">
               Our Services
             </h3>
             <ul className="space-y-3 text-sm">
               {SERVICES.map((service) => (
-                <li key={service} className="text-slate-600">
+                <li key={service} className="text-brand-dark/70">
                   {service}
                 </li>
               ))}
@@ -123,13 +134,13 @@ export default function Footer() {
 
           {/* Contact */}
           <div>
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-900">
+            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-brand-blue">
               Contact
             </h3>
             <div className="space-y-3 text-sm">
               <a
                 href={`mailto:${COMPANY.email}`}
-                className="flex items-center gap-2 transition hover:text-purple-600"
+                className="flex items-center gap-2 transition hover:text-brand-blue"
               >
                 <Mail size={16} />
                 {COMPANY.email}
@@ -137,21 +148,42 @@ export default function Footer() {
 
               <a
                 href={`tel:${COMPANY.phone}`}
-                className="flex items-center gap-2 transition hover:text-purple-600"
+                className="flex items-center gap-2 transition hover:text-brand-blue"
               >
                 <Phone size={16} />
                 {COMPANY.phone}
               </a>
 
-              <p className="text-slate-600">{COMPANY.location}</p>
+              <p className="text-brand-dark/70">{COMPANY.location}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom Bar */}
-      <div className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500">
-        © {new Date().getFullYear()} {COMPANY.name}. All rights reserved.
+      {/* Bottom gradient bar */}
+      <div
+        className="h-1 w-full"
+        style={{
+          backgroundImage: "linear-gradient(90deg, #2C2C2C, #D61C4E)",
+        }}
+      />
+
+      {/* Bottom text row */}
+      <div className="mx-auto max-w-7xl px-6 py-4">
+        <div className="flex flex-col gap-2 text-sm text-brand-dark/80 md:flex-row md:items-center md:justify-between">
+          <span>
+            © {new Date().getFullYear()} {COMPANY.name}. All rights reserved.
+          </span>
+
+          <a
+            href="https://github.com/salahakramfuad"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition hover:text-brand-blue"
+          >
+            Developed by <span className="font-semibold">Mohammad Salah</span>
+          </a>
+        </div>
       </div>
     </footer>
   );
