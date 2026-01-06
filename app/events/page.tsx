@@ -1,5 +1,6 @@
 'use client'
 import React from 'react';
+import Image from 'next/image';
 
 // --- Helper Components ---
 
@@ -58,11 +59,14 @@ const EventCard = ({
 }: typeof events[0]) => (
   <div className="rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-gray-100 bg-white overflow-hidden flex flex-col md:flex-row">
     <div className="md:w-1/3 w-full h-48 md:h-auto relative">
-      <img
+      <Image
         src={image}
         alt={title}
-        className="w-full h-full object-cover object-center"
+        fill
+        className="object-cover object-center"
         style={{ minHeight: "100%" }}
+        sizes="(max-width: 768px) 100vw, 33vw"
+        priority
       />
     </div>
     <div className="flex-1 p-8 flex flex-col gap-3">
@@ -97,7 +101,7 @@ export default function EventsPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Hero Header */}
-      <section className="relative bg-gradient-to-br from-indigo-900 via-blue-900 to-blue-600 text-white py-20 px-6">
+      <section className="relative bg-linear-to-br from-indigo-900 via-blue-900 to-blue-600 text-white py-20 px-6">
         <div className="max-w-4xl mx-auto relative z-10 text-center">
           <h1 className="text-4xl md:text-5xl font-extrabold mb-4 tracking-tight">
             Upcoming Events & Workshops

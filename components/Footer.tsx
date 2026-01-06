@@ -40,7 +40,7 @@ const SOCIAL_LINKS = [
 
 export default function Footer() {
   return (
-    <footer className="bg-brand-light text-brand-dark">
+    <footer className="bg-brand-light text-brand-dar bg-sky-100">
       {/* Top accent strip */}
       <div className="h-2 w-full bg-linear-to-r from-blue-200 via-gray-200 to-red-200" />
 
@@ -81,7 +81,7 @@ export default function Footer() {
                   border border-brand-blue/20
                   bg-white text-brand-blue
                   shadow-sm transition
-                  hover:bg-brand-blue hover:text-white hover:border-brand-blue
+                  hover:bg-blue-400 hover:text-white hover:border-brand-blue
                   focus:outline-none focus:ring-2 focus:ring-brand-blue/30
                 "
               >
@@ -162,11 +162,12 @@ export default function Footer() {
 
       {/* Bottom gradient bar */}
       <div
-        className="h-1 w-full"
-        style={{
-          backgroundImage: "linear-gradient(90deg, #2C2C2C, #D61C4E)",
-        }}
-      />
+          className="mt-4 h-px w-full"
+          style={{
+            background:
+              "linear-gradient(to right, transparent, rgba(17,24,39,0.12), transparent)",
+          }}
+        />
 
       {/* Bottom text row */}
       <div className="mx-auto max-w-7xl px-6 py-4">

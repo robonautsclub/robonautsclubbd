@@ -114,7 +114,7 @@ export default function Nav() {
       className={classNames(
         inter.variable,
         poppins.variable,
-        'sticky top-0 z-70 bg-blue-50 backdrop-blur  border-black/10 border-b'
+        'sticky top-0 z-70 bg-sky-100 backdrop-blur  border-black/10 border-b'
       )}
       style={{ borderColor: 'rgba(17,24,39,0.12)' }}
     >
@@ -173,8 +173,8 @@ export default function Nav() {
                         className={classNames(
                           'flex items-center gap-2 py-2 px-3 rounded-lg transition-colors',
                           sectionActive
-                            ? 'text-indigo-800 bg-indigo-50'
-                            : 'text-gray-700 hover:text-indigo-800 hover:bg-blue-600',
+                            ? 'text-indigo-800 bg-indigo-500'
+                            : 'text-gray-700 hover:text-indigo-800 hover:bg-blue-200',
                           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300'
                         )}
                       >
@@ -212,8 +212,8 @@ export default function Nav() {
                                     className={classNames(
                                       'block px-4 py-2 rounded-md transition-colors no-underline hover:no-underline focus:no-underline',
                                       subActive
-                                        ? 'text-indigo-800 bg-indigo-50'
-                                        : 'hover:bg-indigo-50 hover:text-indigo-800'
+                                        ? 'text-indigo-800 bg-sky-100'
+                                        : 'hover:bg-sky-100 hover:text-indigo-800'
                                     )}
                                     onClick={() => setDropdownOpenIdx(null)}
                                   >
@@ -236,8 +236,8 @@ export default function Nav() {
                       className={classNames(
                         'py-2 px-3 font-medium rounded-lg transition-colors no-underline hover:no-underline focus:no-underline',
                         active
-                          ? 'text-indigo-800 bg-indigo-50'
-                          : 'text-gray-700 hover:text-indigo-800 hover:bg-indigo-50'
+                          ? 'text-indigo-800 bg-blue-200'
+                          : 'text-gray-700 hover:text-indigo-800 hover:bg-sky-200'
                       )}
                       aria-current={active ? 'page' : undefined}
                     >
