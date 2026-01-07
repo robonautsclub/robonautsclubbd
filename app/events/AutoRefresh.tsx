@@ -27,3 +27,4 @@ export default function AutoRefresh({ interval = 10000 }: AutoRefreshProps) {
   // This component doesn't render anything
   return null
 }
+

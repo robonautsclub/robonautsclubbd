@@ -6,6 +6,7 @@ import { Event } from '@/types/event'
 import { notFound } from 'next/navigation'
 import BookingForm from './BookingForm'
 import EventImage from './EventImage'
+import AutoRefresh from '../AutoRefresh'
 
 
 // Helper function to validate and get image URL
@@ -98,6 +99,7 @@ export default async function EventDetailPage({
 
   return (
     <div className="min-h-screen bg-linear-to-br from-sky-50 via-blue-50 to-indigo-50">
+      <AutoRefresh />
       {/* Compact Header Section */}
       <section className="relative overflow-hidden">
         {/* Background decoration */}

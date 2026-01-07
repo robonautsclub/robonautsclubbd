@@ -11,6 +11,7 @@ import {
 import { format, parse, isPast, isFuture, differenceInDays } from 'date-fns'
 import { getPublicEvents } from './actions'
 import { Event } from '@/types/event'
+import AutoRefresh from './AutoRefresh'
 
 // --- Helper Components ---
 const SectionHeader = ({
@@ -174,6 +175,7 @@ export default async function EventsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
+      <AutoRefresh />
       {/* Hero Header */}
       <section
         className="relative text-white py-16 sm:py-20 md:py-24 px-4 sm:px-6 overflow-hidden"
