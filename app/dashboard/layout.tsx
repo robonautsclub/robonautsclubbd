@@ -2,6 +2,7 @@ import { requireAuth } from '@/lib/auth'
 import { Sparkles } from 'lucide-react'
 import LogoutButton from './LogoutButton'
 import Sidebar from './Sidebar'
+import AutoRefresh from './AutoRefresh'
 
 // Force dynamic rendering since this layout uses cookies for authentication
 export const dynamic = 'force-dynamic'
@@ -16,6 +17,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100">
+      <AutoRefresh />
       {/* Top Navigation Bar */}
       <nav className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-10">
         <div className="px-4 sm:px-6 lg:px-8">

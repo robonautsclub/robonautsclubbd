@@ -23,7 +23,7 @@ export default function LogoutButton() {
       document.cookie = 'user-info=; path=/; max-age=0'
       
       // Redirect to login
-      router.push('/login')
+      router.push('/')
       router.refresh()
     } catch (error) {
       console.error('Logout error:', error)
