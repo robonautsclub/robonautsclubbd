@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, FormEvent, useEffect, Suspense } from 'react'
+import { useState, FormEvent, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
@@ -19,20 +19,14 @@ function LoginForm() {
   const [forgotPasswordError, setForgotPasswordError] = useState('')
   const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState(false)
 
-  // Generate floating shapes
-  const [shapes, setShapes] = useState<Array<{ id: number; size: number; left: number; top: number; delay: number; duration: number }>>([])
-
-  useEffect(() => {
-    const newShapes = Array.from({ length: 20 }, (_, i) => ({
-      id: i,
-      size: Math.random() * 200 + 100,
-      left: Math.random() * 100,
-      top: Math.random() * 100,
-      delay: Math.random() * 20,
-      duration: Math.random() * 10 + 15,
-    }))
-    setShapes(newShapes)
-  }, [])
+  const handleGoBack = () => {
+    // Go back to previous page, or home if no history
+    if (window.history.length > 1) {
+      router.back()
+    } else {
+      router.push('/')
+    }
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -134,29 +128,23 @@ function LoginForm() {
 
   return (
     <div className="min-h-screen relative overflow-hidden flex items-center justify-center px-4">
-      {/* Animated Gradient Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600 animate-gradient"></div>
+      {/* Simplified Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100"></div>
       
-      {/* Floating Animated Shapes */}
-      <div className="absolute inset-0 overflow-hidden">
-        {shapes.map((shape) => (
-          <div
-            key={shape.id}
-            className="absolute rounded-full opacity-20 blur-xl bg-white"
-            style={{
-              width: `${shape.size}px`,
-              height: `${shape.size}px`,
-              left: `${shape.left}%`,
-              top: `${shape.top}%`,
-              animation: `float ${shape.duration}s ease-in-out infinite`,
-              animationDelay: `${shape.delay}s`,
-            }}
-          />
-        ))}
+      {/* Simple subtle pattern */}
+      <div className="absolute inset-0 opacity-40">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-200 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-200 rounded-full blur-3xl"></div>
       </div>
 
-      {/* Animated Mesh Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-indigo-900/20 via-transparent to-sky-900/20"></div>
+      {/* Close Button */}
+      <button
+        onClick={handleGoBack}
+        className="absolute top-4 hover:cursor-pointer right-4 z-20 p-2 rounded-full bg-white/90 hover:bg-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110"
+        aria-label="Go back"
+      >
+        <X className="w-6 h-6 text-gray-600" />
+      </button>
 
       {/* Content */}
       <div className="max-w-md w-full relative z-10 animate-fade-in-up">
@@ -330,9 +318,9 @@ export default function LoginPage() {
     <Suspense
       fallback={
         <div className="min-h-screen relative overflow-hidden flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600 animate-gradient"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100"></div>
           <div className="max-w-md w-full relative z-10">
-            <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/20">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
               <div className="text-center">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 mb-4 shadow-lg animate-pulse">
                   <Sparkles className="w-8 h-8 text-white" />
