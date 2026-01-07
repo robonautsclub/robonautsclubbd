@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
+import { useState, FormEvent, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
-import { X, Mail } from 'lucide-react'
+import { X, Mail, Sparkles } from 'lucide-react'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
@@ -18,6 +18,21 @@ export default function LoginPage() {
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false)
   const [forgotPasswordError, setForgotPasswordError] = useState('')
   const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState(false)
+
+  // Generate floating shapes
+  const [shapes, setShapes] = useState<Array<{ id: number; size: number; left: number; top: number; delay: number; duration: number }>>([])
+
+  useEffect(() => {
+    const newShapes = Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      size: Math.random() * 200 + 100,
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+      delay: Math.random() * 20,
+      duration: Math.random() * 10 + 15,
+    }))
+    setShapes(newShapes)
+  }, [])
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -118,11 +133,41 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-sky-50 via-blue-50 to-indigo-50 flex items-center justify-center px-4">
-      <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl shadow-xl p-8 border-2 border-gray-200">
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center px-4">
+      {/* Animated Gradient Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600 animate-gradient"></div>
+      
+      {/* Floating Animated Shapes */}
+      <div className="absolute inset-0 overflow-hidden">
+        {shapes.map((shape) => (
+          <div
+            key={shape.id}
+            className="absolute rounded-full opacity-20 blur-xl bg-white"
+            style={{
+              width: `${shape.size}px`,
+              height: `${shape.size}px`,
+              left: `${shape.left}%`,
+              top: `${shape.top}%`,
+              animation: `float ${shape.duration}s ease-in-out infinite`,
+              animationDelay: `${shape.delay}s`,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Animated Mesh Gradient Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-indigo-900/20 via-transparent to-sky-900/20"></div>
+
+      {/* Content */}
+      <div className="max-w-md w-full relative z-10 animate-fade-in-up">
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/20">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Login</h1>
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 mb-4 shadow-lg">
+              <Sparkles className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent mb-2">
+              Admin Login
+            </h1>
             <p className="text-gray-600">Sign in to access the dashboard</p>
           </div>
 
@@ -179,7 +224,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-6 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full py-3 px-6 bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
@@ -189,8 +234,8 @@ export default function LoginPage() {
 
       {/* Forgot Password Modal */}
       {showForgotPassword && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 border-2 border-gray-200">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in-up">
+          <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl max-w-md w-full p-6 border border-white/20">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold text-gray-900">Reset Password</h2>
               <button
@@ -266,7 +311,7 @@ export default function LoginPage() {
                   <button
                     type="submit"
                     disabled={forgotPasswordLoading}
-                    className="flex-1 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-4 py-2 bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white font-medium rounded-lg transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {forgotPasswordLoading ? 'Sending...' : 'Send Reset Link'}
                   </button>
@@ -277,6 +322,33 @@ export default function LoginPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen relative overflow-hidden flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600 animate-gradient"></div>
+          <div className="max-w-md w-full relative z-10">
+            <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/20">
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 mb-4 shadow-lg animate-pulse">
+                  <Sparkles className="w-8 h-8 text-white" />
+                </div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent mb-2">
+                  Admin Login
+                </h1>
+                <p className="text-gray-600">Loading...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   )
 }
 

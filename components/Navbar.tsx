@@ -46,7 +46,9 @@ export default function Nav() {
     () => [
       { title: 'Home', href: '/' },
       { title: 'Events', href: '/events' },
-      { title: 'About us', href: '/about' },    ],
+      { title: 'About us', href: '/about' },
+      { title: 'Login', href: '/login' }
+    ],
     []
   )
 
