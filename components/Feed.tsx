@@ -67,7 +67,7 @@ const Feed = () => {
         level: 'Junior–Senior',
         blurb: 'Hands-on projects with sensors, coding, and simple robots.',
         href: '/courses/robotics',
-        img: '/images/feed/robotics.jpg'
+        img: '/feed/robotics.jpg'
       },
     
       // New: 3D Modelling
@@ -77,7 +77,7 @@ const Feed = () => {
         blurb:
           'Blender-based 3D modelling, texturing, lighting, and animation with portfolio projects.',
         href: '/courses/modelling',
-        img: '/images/feed/threed.jpeg'
+        img: '/feed/threed.jpeg'
       },
     
       // New: Game Development
@@ -87,7 +87,7 @@ const Feed = () => {
         blurb:
           'Learn Unity-style game development, C# scripting, and build playable projects.',
         href: '/courses/gamedev',
-        img: '/images/feed/gamedev.jpeg'
+        img: '/feed/gamedev.jpeg'
       },
       {
         title: 'Web Development',
@@ -95,13 +95,13 @@ const Feed = () => {
         blurb:
           'Modern HTML, CSS, JavaScript, React, and Next.js with deployed portfolio sites.',
         href: '/courses/webdev',
-        img: '/images/feed/webdev.png'
+        img: '/feed/webdev.png'
       },{
         title: 'Spoken English',
         level: 'All Levels',
         blurb: 'Fluency drills, pronunciation labs, and real-life roleplays.',
         href: '/courses/spokenenglish',
-        img: '/images/feed/learn-english.jpeg'
+        img: '/feed/learn-english.jpeg'
       },
     
       // New: IELTS (general complete program)
@@ -111,7 +111,7 @@ const Feed = () => {
         blurb:
           'All four modules with section-wise strategies and weekly mock tests.',
         href: '/courses/ielts',
-        img: '/images/feed/ielts.jpeg'
+        img: '/feed/ielts.jpeg'
       },
     
   ]

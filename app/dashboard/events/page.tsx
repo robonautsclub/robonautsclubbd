@@ -1,0 +1,170 @@
+import { requireAuth } from '@/lib/auth'
+import { getEvents } from '../actions'
+import { Calendar, Plus, MapPin, Clock, Users } from 'lucide-react'
+import { format, isFuture, isPast } from 'date-fns'
+import CreateEventForm from './CreateEventForm'
+import EventActions from './EventActions'
+
+export default async function EventsPage() {
+  await requireAuth()
+  const events = await getEvents()
+
+  // Separate upcoming and past events
+  const upcomingEvents = events.filter((event) => {
+    if (!event.date) return false
+    const eventDate = new Date(event.date)
+    return isFuture(eventDate) || eventDate.toDateString() === new Date().toDateString()
+  })
+
+  const pastEvents = events.filter((event) => {
+    if (!event.date) return false
+    const eventDate = new Date(event.date)
+    return isPast(eventDate) && eventDate.toDateString() !== new Date().toDateString()
+  })
+
+  return (
+    <div className="max-w-7xl space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-3xl font-bold text-gray-900">Events Management</h2>
+          <p className="text-gray-600 mt-1">Manage and view all your events</p>
+        </div>
+        <CreateEventForm />
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Total Events</p>
+              <p className="text-2xl font-bold text-gray-900">{events.length}</p>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+              <Calendar className="w-5 h-5 text-indigo-600" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Upcoming</p>
+              <p className="text-2xl font-bold text-green-600">{upcomingEvents.length}</p>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+              <Clock className="w-5 h-5 text-green-600" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Past Events</p>
+              <p className="text-2xl font-bold text-gray-600">{pastEvents.length}</p>
+            </div>
+            <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+              <Users className="w-5 h-5 text-gray-600" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {events.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+          <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+            <Calendar className="w-10 h-10 text-gray-400" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">No events yet</h3>
+          <p className="text-gray-600 mb-6">Create your first event to get started</p>
+          <CreateEventForm />
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <h3 className="text-lg font-semibold text-gray-900">All Events</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Event Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Date & Time
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Location
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {events.map((event) => {
+                  const eventDate = event.date ? new Date(event.date) : null
+                  const isUpcoming = eventDate && (isFuture(eventDate) || eventDate.toDateString() === new Date().toDateString())
+                  return (
+                    <tr key={event.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-semibold text-gray-900 mb-1">{event.title}</div>
+                        <div className="text-sm text-gray-500 line-clamp-1 max-w-md">{event.description}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {eventDate ? (
+                          <div className="space-y-1">
+                            <div className="text-sm font-medium text-gray-900">
+                              {format(eventDate, 'MMM d, yyyy')}
+                            </div>
+                            {event.time && (
+                              <div className="text-xs text-gray-500 flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {event.time}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400">No date</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {event.location ? (
+                          <div className="text-sm text-gray-900 flex items-center gap-1 max-w-xs">
+                            <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
+                            <span className="truncate">{event.location}</span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400">N/A</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {isUpcoming ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Upcoming
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            Past
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <EventActions event={event} />
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+

@@ -1,13 +1,34 @@
-'use client'
-
-import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
-import { Calendar, Clock, MapPin, ArrowLeft, CheckCircle, Users, Monitor, Building2 } from 'lucide-react'
+import { Calendar, Clock, MapPin, ArrowLeft, Users, Monitor, Building2 } from 'lucide-react'
 import { format, parse, isPast } from 'date-fns'
-import { eventsData, type Event } from '../data'
+import { getPublicEvent } from '../actions'
+import { Event } from '@/types/event'
+import { notFound } from 'next/navigation'
+import BookingForm from './BookingForm'
+import EventImage from './EventImage'
 
+
+// Helper function to validate and get image URL
+const getEventImageUrl = (imageUrl?: string): string => {
+  if (!imageUrl || imageUrl.trim() === '') {
+    return '/robotics-event.jpg'
+  }
+
+  const trimmed = imageUrl.trim()
+  
+  // Check if it's a valid relative path (starts with /)
+  if (trimmed.startsWith('/')) {
+    return trimmed
+  }
+  
+  // Check if it's a valid absolute URL
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed
+  }
+  
+  // Invalid URL, use default
+  return '/robotics-event.jpg'
+}
 
 // Helper function to extract tags from event
 const getEventTags = (event: Event) => {
@@ -30,186 +51,6 @@ const getEventTags = (event: Event) => {
   }
 
   return tags.slice(0, 4) // Limit to 4 tags
-}
-
-// Booking Form Component
-const BookingForm = ({ event }: { event: Event }) => {
-  const [formData, setFormData] = useState({
-    name: '',
-    school: '',
-    email: '',
-    information: '',
-  })
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [isSubmitted, setIsSubmitted] = useState(false)
-
-  const validate = () => {
-    const newErrors: Record<string, string> = {}
-    if (!formData.name.trim()) newErrors.name = 'Name is required'
-    if (!formData.school.trim()) newErrors.school = 'School is required'
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required'
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Invalid email format'
-    }
-    if (!formData.information.trim()) {
-      newErrors.information = 'Basic information is required'
-    }
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (validate()) {
-      // Include event name in submission
-      const submissionData = {
-        ...formData,
-        eventName: event.title,
-        eventId: event.id,
-      }
-      
-      // Log or send to API
-      console.log('Booking submission:', submissionData)
-      
-      // Simulate form submission
-      setIsSubmitted(true)
-      setTimeout(() => {
-        setIsSubmitted(false)
-        setFormData({ name: '', school: '', email: '', information: '' })
-        setErrors({})
-      }, 3000)
-    }
-  }
-
-  if (isSubmitted) {
-    return (
-      <div className="bg-white rounded-2xl p-8 border-2 border-green-200 shadow-lg">
-        <div className="text-center">
-          <div className="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="w-12 h-12 text-green-500" />
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-3">
-            Booking Successful!
-          </h3>
-          <p className="text-gray-600 mb-2">
-            Your booking request for <strong className="text-indigo-600">{event.title}</strong> has been
-            submitted.
-          </p>
-          <p className="text-sm text-gray-500">
-            We&apos;ll contact you soon with confirmation details.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="bg-white rounded-2xl p-7 border-2 border-gray-200 shadow-lg hover:shadow-xl transition-shadow duration-300">
-      <div className="mb-6">
-        <h3 className="text-2xl font-bold text-gray-900 mb-2">Book Your Spot</h3>
-        <p className="text-sm text-gray-500">{event.title}</p>
-      </div>
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <label
-            htmlFor="name"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            id="name"
-            value={formData.name}
-            onChange={(e) =>
-              setFormData({ ...formData, name: e.target.value })
-            }
-            className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-colors ${
-              errors.name ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:border-gray-300'
-            }`}
-          />
-          {errors.name && (
-            <p className="text-sm text-red-500 mt-1">{errors.name}</p>
-          )}
-        </div>
-        <div>
-          <label
-            htmlFor="school"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            School <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            id="school"
-            value={formData.school}
-            onChange={(e) =>
-              setFormData({ ...formData, school: e.target.value })
-            }
-            className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-colors ${
-              errors.school ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:border-gray-300'
-            }`}
-          />
-          {errors.school && (
-            <p className="text-sm text-red-500 mt-1">{errors.school}</p>
-          )}
-        </div>
-        <div>
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Email Address <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="email"
-            id="email"
-            value={formData.email}
-            onChange={(e) =>
-              setFormData({ ...formData, email: e.target.value })
-            }
-            placeholder="Enter your email"
-            className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-colors ${
-              errors.email ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:border-gray-300'
-            }`}
-          />
-          {errors.email && (
-            <p className="text-sm text-red-500 mt-1">{errors.email}</p>
-          )}
-        </div>
-        <div>
-          <label
-            htmlFor="information"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Basic Information <span className="text-red-500">*</span>
-          </label>
-          <textarea
-            id="information"
-            rows={4}
-            value={formData.information}
-            onChange={(e) =>
-              setFormData({ ...formData, information: e.target.value })
-            }
-            className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-colors resize-none ${
-              errors.information ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:border-gray-300'
-            }`}
-            placeholder="Tell us about your interest in this event..."
-          />
-          {errors.information && (
-            <p className="text-sm text-red-500 mt-1">{errors.information}</p>
-          )}
-        </div>
-        <button
-          type="submit"
-          className="w-full py-3.5 px-6 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-        >
-          Submit
-        </button>
-      </form>
-    </div>
-  )
 }
 
 // Event Passed Component
@@ -238,34 +79,16 @@ const EventPassedMessage = () => {
   )
 }
 
-export default function EventDetailPage() {
-  const params = useParams()
-  const router = useRouter()
-  const eventId = parseInt(params.id as string)
-  const event = eventsData.find((e) => e.id === eventId)
-
-  useEffect(() => {
-    if (!event) {
-      router.push('/events')
-    }
-  }, [event, router])
+export default async function EventDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const { id } = await params
+  const event = await getPublicEvent(id)
 
   if (!event) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">
-            Event Not Found
-          </h1>
-          <Link
-            href="/events"
-            className="inline-block py-2 px-6 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg transition-colors"
-          >
-            Back to Events
-          </Link>
-        </div>
-      </div>
-    )
+    notFound()
   }
 
   const eventDate = parse(event.date, 'yyyy-MM-dd', new Date())
@@ -310,15 +133,11 @@ export default function EventDetailPage() {
           <div className="lg:col-span-2 space-y-5">
             {/* Main Event Image */}
             <div className="bg-white rounded-2xl overflow-hidden border-2 border-gray-200 shadow-lg">
-              <div className="relative h-64 md:h-80 lg:h-96">
-                <Image
-                  src={event.image || '/robotics-event.jpg'}
-                  alt={event.title}
-                  fill
-                  className="object-cover"
-                  priority
-                />
-              </div>
+              <EventImage
+                src={getEventImageUrl(event.image)}
+                alt={event.title}
+                priority
+              />
             </div>
 
             {/* Overview Section */}
@@ -342,15 +161,17 @@ export default function EventDetailPage() {
                     <p className="font-semibold text-gray-900">{format(eventDate, 'MMMM d, yyyy')}</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50/50 border border-blue-100">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-                    <Clock className="w-5 h-5 text-blue-500" />
+                {event.time && (
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50/50 border border-blue-100">
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                      <Clock className="w-5 h-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 mb-1">Time</p>
+                      <p className="font-semibold text-gray-900">{event.time}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 mb-1">Time</p>
-                    <p className="font-semibold text-gray-900">{event.time}</p>
-                  </div>
-                </div>
+                )}
                 <div className="flex items-start gap-3 p-4 rounded-xl bg-purple-50/50 border border-purple-100">
                   <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center shrink-0">
                     <MapPin className="w-5 h-5 text-purple-500" />

@@ -1,4 +1,3 @@
-'use client'
 import React from 'react'
 import Link from 'next/link'
 import {
@@ -10,7 +9,8 @@ import {
   Users,
 } from 'lucide-react'
 import { format, parse, isPast, isFuture, differenceInDays } from 'date-fns'
-import { eventsData, type Event } from './data'
+import { getPublicEvents } from './actions'
+import { Event } from '@/types/event'
 
 // --- Helper Components ---
 const SectionHeader = ({
@@ -132,9 +132,12 @@ const EventCard = ({ event }: { event: Event }) => {
 }
 
 // --- Main Page ---
-export default function EventsPage() {
+export default async function EventsPage() {
+  // Fetch events from Firestore
+  const events = await getPublicEvents()
+
   // Sort events: upcoming first, then past events
-  const sortedEvents = [...eventsData].sort((a, b) => {
+  const sortedEvents = [...events].sort((a, b) => {
     const dateA = parse(a.date, 'yyyy-MM-dd', new Date())
     const dateB = parse(b.date, 'yyyy-MM-dd', new Date())
     const now = new Date()
@@ -216,7 +219,7 @@ export default function EventsPage() {
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
               <div className="flex items-center gap-3 mb-2">
                 <Users className="w-6 h-6 text-blue-200" />
-                <span className="text-3xl font-bold">{eventsData.length}</span>
+                <span className="text-3xl font-bold">{events.length}</span>
               </div>
               <p className="text-blue-100 text-sm">Total Events</p>
             </div>

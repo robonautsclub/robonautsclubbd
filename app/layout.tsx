@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import ConditionalLayout from "./ConditionalLayout";
 
 
 
@@ -18,7 +17,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Robonauts Club",
-  description: "Bangladesh’s first youth robotics club preparing students for Robofest & global STEM challenges.",
+  description: "Bangladesh's first youth robotics club preparing students for Robofest & global STEM challenges.",
 };
 
 export default function RootLayout({
@@ -31,9 +30,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Navbar />
-        {children}
-        <Footer/>
+        <ConditionalLayout>{children}</ConditionalLayout>
       </body>
     </html>
   );
