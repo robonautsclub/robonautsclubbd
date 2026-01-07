@@ -17,7 +17,9 @@ export async function getEvents(): Promise<Event[]> {
   }
 
   try {
-    const eventsSnapshot = await adminDb.collection('events').orderBy('createdAt', 'desc').get()
+    // Query without orderBy to avoid requiring a composite index
+    // We'll sort in memory instead
+    const eventsSnapshot = await adminDb.collection('events').get()
     
     const events: Event[] = []
     eventsSnapshot.forEach((doc) => {
@@ -28,6 +30,17 @@ export async function getEvents(): Promise<Event[]> {
         createdAt: data.createdAt?.toDate?.() || data.createdAt,
         updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
       } as Event)
+    })
+
+    // Sort by createdAt in descending order (newest first)
+    events.sort((a, b) => {
+      if (!a.createdAt && !b.createdAt) return 0
+      if (!a.createdAt) return 1
+      if (!b.createdAt) return -1
+      
+      const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime()
+      const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime()
+      return dateB - dateA // Descending order
     })
 
     return events
