@@ -9,7 +9,7 @@ import EventActions from './EventActions'
 export const dynamic = 'force-dynamic'
 
 export default async function EventsPage() {
-  await requireAuth()
+  const session = await requireAuth()
   const events = await getEvents()
 
   // Separate upcoming and past events
@@ -177,7 +177,7 @@ export default async function EventsPage() {
                         )}
                       </td>
                       <td className="px-3 sm:px-6 py-3 sm:py-4 text-right">
-                        <EventActions event={event} />
+                        <EventActions event={event} currentUserId={session.uid} />
                       </td>
                     </tr>
                   )

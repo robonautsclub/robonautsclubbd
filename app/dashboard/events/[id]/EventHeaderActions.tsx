@@ -10,13 +10,17 @@ import type { Event } from '@/types/event'
 
 interface EventHeaderActionsProps {
   event: Event
+  currentUserId?: string
 }
 
-export default function EventHeaderActions({ event }: EventHeaderActionsProps) {
+export default function EventHeaderActions({ event, currentUserId }: EventHeaderActionsProps) {
   const router = useRouter()
   const [showEditForm, setShowEditForm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  
+  // Only show delete button if current user is the creator
+  const canDelete = currentUserId && event.createdBy === currentUserId
 
   const handleDelete = async () => {
     setDeleting(true)
@@ -46,13 +50,15 @@ export default function EventHeaderActions({ event }: EventHeaderActionsProps) {
           <Edit className="w-4 h-4" />
           Edit Event
         </button>
-        <button
-          onClick={() => setShowDeleteConfirm(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
-        >
-          <Trash2 className="w-4 h-4" />
-          Delete Event
-        </button>
+        {canDelete && (
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete Event
+          </button>
+        )}
       </div>
 
       {showEditForm && (

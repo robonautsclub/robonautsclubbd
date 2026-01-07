@@ -17,7 +17,7 @@ export default async function EventDetailsPage({
 }: {
   params: Promise<{ id: string }>
 }) {
-  await requireAuth()
+  const session = await requireAuth()
   const { id } = await params
   const event = await getEvent(id)
   const bookings = await getBookings(id)
@@ -37,7 +37,7 @@ export default async function EventDetailsPage({
           <p className="text-sm sm:text-base text-gray-600 mt-1">View event information and bookings</p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-          <EventHeaderActions event={event} />
+          <EventHeaderActions event={event} currentUserId={session.uid} />
           <Link
             href="/dashboard/events"
             className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-center"

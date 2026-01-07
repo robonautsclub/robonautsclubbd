@@ -235,9 +235,10 @@ export async function updateEvent(
 
 /**
  * Delete an event
+ * Only the user who created the event can delete it
  */
 export async function deleteEvent(eventId: string): Promise<{ success: boolean; error?: string }> {
-  await requireAuth()
+  const session = await requireAuth()
 
   if (!adminDb) {
     console.error('Firebase Admin SDK not available. Cannot delete event.')
@@ -254,6 +255,16 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
       return {
         success: false,
         error: 'Event not found',
+      }
+    }
+
+    const eventData = eventDoc.data()!
+    
+    // Check if the current user is the creator of the event
+    if (eventData.createdBy !== session.uid) {
+      return {
+        success: false,
+        error: 'You can only delete events that you created.',
       }
     }
 

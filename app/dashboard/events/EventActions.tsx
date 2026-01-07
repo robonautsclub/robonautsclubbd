@@ -11,13 +11,17 @@ import type { Event } from '@/types/event'
 
 interface EventActionsProps {
   event: Event
+  currentUserId?: string
 }
 
-export default function EventActions({ event }: EventActionsProps) {
+export default function EventActions({ event, currentUserId }: EventActionsProps) {
   const router = useRouter()
   const [showEditForm, setShowEditForm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  
+  // Only show delete button if current user is the creator
+  const canDelete = currentUserId && event.createdBy === currentUserId
 
   const handleDelete = async () => {
     setDeleting(true)
@@ -48,14 +52,16 @@ export default function EventActions({ event }: EventActionsProps) {
           <Edit className="w-4 h-4" />
           Edit
         </button>
-        <button
-          onClick={() => setShowDeleteConfirm(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-          title="Delete event"
-        >
-          <Trash2 className="w-4 h-4" />
-          Delete
-        </button>
+        {canDelete && (
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+            title="Delete event"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete
+          </button>
+        )}
         <Link
           href={`/dashboard/events/${event.id}`}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
