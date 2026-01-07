@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-const position: [number, number] = [23.8728, 90.3984];
+const position: [number, number] = [23.8613196, 90.4021894];
 
 const defaultIcon = L.icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -31,7 +31,18 @@ export default function MapClient() {
           <Popup>
             <strong>Robonauts Club</strong>
             <br />
-            Uttara, Dhaka
+            International Hope School Bangladesh
+            <br />
+            Uttara, Dhaka, Bangladesh
+            <br />
+            <a
+              href="https://maps.app.goo.gl/BJXyvmBDBHTkagNH6"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-800 underline text-sm mt-1 inline-block"
+            >
+              View on Google Maps
+            </a>
           </Popup>
         </Marker>
       </MapContainer>

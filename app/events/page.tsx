@@ -172,7 +172,14 @@ export default function EventsPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Hero Header */}
-      <section className="relative bg-gradient-to-br from-indigo-400 via-blue-400 to-blue-500 text-white py-24 px-6 overflow-hidden">
+      <section
+        className="relative text-white py-24 px-6 overflow-hidden"
+        style={{
+          backgroundImage: "url('/robobanner.gif')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
         {/* Background decoration */}
         <div className="absolute inset-0 opacity-20">
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-300 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
