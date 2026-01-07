@@ -6,7 +6,16 @@ import { ArrowRight } from 'lucide-react'
 
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden bg-linear-to-br from-sky-50 via-blue-50 to-indigo-50 w-full min-w-full">
+    <section className="relative overflow-hidden w-full min-w-full">
+      <video
+        className="absolute inset-0 w-full h-full object-cover object-center z-0"
+        src="/re.mp4"
+        autoPlay
+        muted
+        loop
+        playsInline
+        aria-hidden="true"
+      />
       {/* Background decoration */}
       <div className="absolute inset-0 opacity-40 w-full">
         <div className="absolute top-0 right-0  h-96 bg-blue-200 w-full rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
@@ -16,7 +25,7 @@ export default function Hero() {
       <div className="relative w-full min-w-full px-4 sm:px-6 lg:px-8 py-16 sm:py-20 md:py-24 lg:py-28 xl:py-36">
         <div className="grid lg:grid-cols-2 gap-8 md:gap-12 lg:gap-16 items-center">
           {/* Left Column - Content */}
-          <div className="text-center lg:text-left space-y-6 md:space-y-8 lg:space-y-10">
+          <div className="text-center ml-12 lg:text-left space-y-6 md:space-y-8 lg:space-y-10">
             {/* Main Tagline */}
             <div className="space-y-4 md:space-y-6">
               <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 leading-tight tracking-tight">
@@ -50,7 +59,7 @@ export default function Hero() {
           </div>
 
           {/* Right Column - Visual */}
-          <div className="relative mt-8 lg:mt-0">
+          <div className="relative mt-8 lg:mt-0 hidden">
             <div className="relative aspect-square max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg mx-auto">
               {/* Main image container with linear border */}
               <div className="absolute inset-0 bg-linear-to-br from-indigo-400 to-blue-500 rounded-3xl transform rotate-6 opacity-20 blur-xl" />
