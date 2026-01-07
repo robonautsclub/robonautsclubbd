@@ -7,6 +7,10 @@ import type { Booking } from '@/types/booking'
 import Link from 'next/link'
 import EventHeaderActions from './EventHeaderActions'
 import BookingActions from './BookingActions'
+import ExportBookingsButton from './ExportBookingsButton'
+
+// Force dynamic rendering since this page uses cookies for authentication
+export const dynamic = 'force-dynamic'
 
 export default async function EventDetailsPage({
   params,
@@ -132,6 +136,7 @@ export default async function EventDetailsPage({
               Bookings
               <span className="text-sm font-normal text-gray-500">({bookings.length})</span>
             </h3>
+            <ExportBookingsButton bookings={bookings} eventTitle={event.title} />
           </div>
         </div>
 

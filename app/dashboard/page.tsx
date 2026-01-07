@@ -4,6 +4,9 @@ import { User, Mail, Key, Calendar, TrendingUp, Activity } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 
+// Force dynamic rendering since this page uses cookies for authentication
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardPage() {
   const session = await requireAuth()
   const events = await getEvents()

@@ -3,6 +3,9 @@ import { Sparkles } from 'lucide-react'
 import LogoutButton from './LogoutButton'
 import Sidebar from './Sidebar'
 
+// Force dynamic rendering since this layout uses cookies for authentication
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardLayout({
   children,
 }: {

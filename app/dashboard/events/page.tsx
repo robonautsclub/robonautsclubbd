@@ -5,6 +5,9 @@ import { format, isFuture, isPast } from 'date-fns'
 import CreateEventForm from './CreateEventForm'
 import EventActions from './EventActions'
 
+// Force dynamic rendering since this page uses cookies for authentication
+export const dynamic = 'force-dynamic'
+
 export default async function EventsPage() {
   await requireAuth()
   const events = await getEvents()
