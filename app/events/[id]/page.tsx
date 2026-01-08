@@ -31,8 +31,14 @@ const getEventImageUrl = (imageUrl?: string): string => {
   return '/robotics-event.jpg'
 }
 
-// Helper function to extract tags from event
+// Helper function to get tags from event
 const getEventTags = (event: Event) => {
+  // Use stored tags if available, otherwise fall back to extracted tags
+  if (event.tags && event.tags.length > 0) {
+    return event.tags
+  }
+
+  // Fallback: Extract tags from content if no tags are stored
   const tags: string[] = []
   const titleLower = event.title.toLowerCase()
   const descLower = (event.fullDescription || event.description).toLowerCase()

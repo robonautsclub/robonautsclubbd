@@ -12,6 +12,7 @@ export type Event = {
   eligibility?: string
   venue?: string
   agenda?: string
+  tags?: string[] // Event tags for categorization
   // Firestore metadata
   createdAt: Date | string
   updatedAt: Date | string

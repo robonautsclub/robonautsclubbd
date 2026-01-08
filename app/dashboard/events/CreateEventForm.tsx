@@ -4,7 +4,7 @@ import { useState, FormEvent, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createEvent } from '../actions'
-import { Plus, X, Calendar, Clock, MapPin, FileText, Users, Image as ImageIcon, Sparkles, Upload, Trash2 } from 'lucide-react'
+import { Plus, X, Calendar, Clock, MapPin, FileText, Users, Image as ImageIcon, Sparkles, Upload, Trash2, Tag } from 'lucide-react'
 import DatePicker from './DatePicker'
 import TimePicker from './TimePicker'
 
@@ -15,7 +15,6 @@ export default function CreateEventForm() {
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     title: '',
@@ -28,9 +27,11 @@ export default function CreateEventForm() {
     eligibility: '',
     agenda: '',
     image: '',
+    tags: [] as string[],
   })
+  const [tagInput, setTagInput] = useState('')
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -48,7 +49,6 @@ export default function CreateEventForm() {
       return
     }
 
-    setSelectedFile(file)
     setError('')
 
     // Create preview
@@ -57,17 +57,18 @@ export default function CreateEventForm() {
       setImagePreview(reader.result as string)
     }
     reader.readAsDataURL(file)
+
+    // Automatically upload the image
+    await uploadImageFile(file)
   }
 
-  const handleImageUpload = async () => {
-    if (!selectedFile) return
-
+  const uploadImageFile = async (file: File) => {
     setUploading(true)
     setError('')
 
     try {
       const uploadFormData = new FormData()
-      uploadFormData.append('image', selectedFile)
+      uploadFormData.append('image', file)
 
       const response = await fetch('/api/upload-image', {
         method: 'POST',
@@ -82,7 +83,6 @@ export default function CreateEventForm() {
 
       // Store the Cloudinary URL in form data
       setFormData({ ...formData, image: data.secure_url })
-      setSelectedFile(null)
       setImagePreview(null)
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
@@ -90,18 +90,32 @@ export default function CreateEventForm() {
     } catch (err) {
       console.error('Error uploading image:', err)
       setError(err instanceof Error ? err.message : 'Failed to upload image. Please try again.')
+      // Keep the preview so user can retry
     } finally {
       setUploading(false)
     }
   }
 
+
   const handleRemoveImage = () => {
-    setSelectedFile(null)
     setImagePreview(null)
     setFormData({ ...formData, image: '' })
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
+  }
+
+  const handleAddTag = (tag: string) => {
+    const trimmedTag = tag.trim()
+    if (trimmedTag && !formData.tags.includes(trimmedTag)) {
+      setFormData({ ...formData, tags: [...formData.tags, trimmedTag] })
+      setTagInput('')
+    }
+  }
+
+  const handleRemoveTag = (index: number) => {
+    const newTags = formData.tags.filter((_, i) => i !== index)
+    setFormData({ ...formData, tags: newTags })
   }
 
   const handleSubmit = async (e: FormEvent) => {
@@ -132,8 +146,9 @@ export default function CreateEventForm() {
           eligibility: '',
           agenda: '',
           image: '',
+          tags: [],
         })
-        setSelectedFile(null)
+        setTagInput('')
         setImagePreview(null)
         if (fileInputRef.current) {
           fileInputRef.current.value = ''
@@ -180,9 +195,9 @@ export default function CreateEventForm() {
           <button
             onClick={() => {
               setIsOpen(false)
-              setSelectedFile(null)
               setImagePreview(null)
               setError('')
+              setTagInput('')
               if (fileInputRef.current) {
                 fileInputRef.current.value = ''
               }
@@ -359,6 +374,50 @@ export default function CreateEventForm() {
               <p className="text-xs text-gray-500">Tip: Use line breaks to separate agenda items</p>
             </div>
 
+            {/* Tags */}
+            <div className="space-y-2">
+              <label htmlFor="tags" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Tag className="w-4 h-4 text-indigo-600" />
+                Tags
+              </label>
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2 p-3 min-h-12 border-2 border-gray-200 rounded-xl focus-within:ring-2 focus-within:ring-indigo-400 focus-within:border-indigo-400 transition-all bg-white">
+                  {formData.tags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTag(index)}
+                        disabled={loading || uploading}
+                        className="hover:bg-indigo-200 rounded-full p-0.5 transition-colors disabled:opacity-50"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                  <input
+                    id="tags"
+                    type="text"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if ((e.key === 'Enter' || e.key === ',') && tagInput.trim()) {
+                        e.preventDefault()
+                        handleAddTag(tagInput)
+                      }
+                    }}
+                    placeholder={formData.tags.length === 0 ? "Type a tag and press Enter..." : "Add another tag..."}
+                    className="flex-1 min-w-[150px] outline-none text-sm bg-transparent"
+                    disabled={loading || uploading}
+                  />
+                </div>
+                <p className="text-xs text-gray-500">Press Enter or comma to add a tag. Tags help categorize your event.</p>
+              </div>
+            </div>
+
             {/* Image Upload */}
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
@@ -395,35 +454,25 @@ export default function CreateEventForm() {
                       alt="Preview"
                       className="w-full h-full object-cover"
                     />
+                    {uploading && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <div className="flex flex-col items-center gap-2 text-white">
+                          <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <p className="text-sm font-medium">Uploading...</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={handleImageUpload}
-                      disabled={uploading || loading}
-                      className="flex-1 px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {uploading ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          Uploading...
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="w-4 h-4" />
-                          Upload Image
-                        </>
-                      )}
-                    </button>
+                  {!uploading && (
                     <button
                       type="button"
                       onClick={handleRemoveImage}
-                      disabled={uploading || loading}
-                      className="px-4 py-2.5 border-2 border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={loading}
+                      className="w-full px-4 py-2.5 border-2 border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Cancel
+                      Remove Image
                     </button>
-                  </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -454,9 +503,14 @@ export default function CreateEventForm() {
                   </label>
                 </div>
               )}
-              <p className="text-xs text-gray-500">
-                Upload an image from your device. It will be automatically optimized and converted to AVIF format.
-              </p>
+              <div className="space-y-1">
+                <p className="text-xs text-gray-500">
+                  Upload an image from your device. It will be automatically optimized and converted to AVIF format.
+                </p>
+                <p className="text-xs text-indigo-600 font-medium">
+                  Recommended size: 1200 × 800 pixels (3:2 aspect ratio) for best display quality
+                </p>
+              </div>
             </div>
 
             {/* Action Buttons */}
@@ -466,8 +520,8 @@ export default function CreateEventForm() {
                 onClick={() => {
                   setIsOpen(false)
                   setError('')
-                  setSelectedFile(null)
                   setImagePreview(null)
+                  setTagInput('')
                   if (fileInputRef.current) {
                     fileInputRef.current.value = ''
                   }

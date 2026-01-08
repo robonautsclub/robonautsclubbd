@@ -96,6 +96,7 @@ export async function createEvent(formData: {
   eligibility?: string
   agenda?: string
   image?: string
+  tags?: string[]
 }): Promise<{ success: boolean; error?: string; eventId?: string }> {
   const session = await requireAuth()
 
@@ -134,6 +135,7 @@ export async function createEvent(formData: {
       eligibility: formData.eligibility || '',
       agenda: formData.agenda || '',
       image: formData.image || '/robotics-event.jpg',
+      tags: formData.tags && formData.tags.length > 0 ? formData.tags : [],
       createdAt: now,
       updatedAt: now,
       createdBy: session.uid,
@@ -170,6 +172,7 @@ export async function updateEvent(
     eligibility?: string
     agenda?: string
     image?: string
+    tags?: string[]
   }
 ): Promise<{ success: boolean; error?: string }> {
   await requireAuth()
@@ -218,6 +221,7 @@ export async function updateEvent(
       eligibility: formData.eligibility || '',
       agenda: formData.agenda || '',
       image: formData.image || '/robotics-event.jpg',
+      tags: formData.tags && formData.tags.length > 0 ? formData.tags : [],
       updatedAt: new Date(),
     })
 

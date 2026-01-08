@@ -1,5 +1,6 @@
 import React from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import {
   Calendar,
   Clock,
@@ -73,12 +74,27 @@ const EventCard = ({ event }: { event: Event }) => {
 
         {/* Image/Visual Section */}
         <div className="relative h-40 sm:h-48 bg-linear-to-br from-indigo-400 via-blue-400 to-purple-400 overflow-hidden">
-          <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Calendar className="w-20 h-20 text-white/80" />
-          </div>
+          {event.image ? (
+            <>
+              <Image
+                src={event.image}
+                alt={event.title}
+                fill
+                className="object-cover group-hover:scale-105 transition-transform duration-300"
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              />
+              <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors" />
+            </>
+          ) : (
+            <>
+              <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Calendar className="w-20 h-20 text-white/80" />
+              </div>
+            </>
+          )}
           {isUpcoming && daysUntil !== null && daysUntil >= 0 && (
-            <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-lg">
+            <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-lg z-10">
               <span className="text-sm font-bold text-indigo-700">
                 {daysUntil === 0
                   ? 'Today!'
@@ -118,6 +134,25 @@ const EventCard = ({ event }: { event: Event }) => {
           <p className="text-gray-700 text-xs sm:text-sm mb-3 sm:mb-4 flex-1 line-clamp-3">
             {event.description}
           </p>
+
+          {/* Tags */}
+          {event.tags && event.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-3 sm:mb-4">
+              {event.tags.slice(0, 3).map((tag, index) => (
+                <span
+                  key={index}
+                  className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-md text-xs font-medium"
+                >
+                  {tag}
+                </span>
+              ))}
+              {event.tags.length > 3 && (
+                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md text-xs font-medium">
+                  +{event.tags.length - 3}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* CTA Button */}
           <div className="mt-auto pt-3 sm:pt-4 border-t border-gray-100">

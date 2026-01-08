@@ -3,7 +3,7 @@
 import { useState, FormEvent, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateEvent } from '../actions'
-import { X, Calendar, Clock, MapPin, FileText, Users, Image as ImageIcon, Sparkles, Edit } from 'lucide-react'
+import { X, Calendar, Clock, MapPin, FileText, Users, Image as ImageIcon, Sparkles, Edit, Tag } from 'lucide-react'
 import DatePicker from './DatePicker'
 import TimePicker from './TimePicker'
 import type { Event } from '@/types/event'
@@ -40,7 +40,9 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
     eligibility: event.eligibility || '',
     agenda: event.agenda || '',
     image: event.image || '',
+    tags: event.tags || [],
   })
+  const [tagInput, setTagInput] = useState('')
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -238,6 +240,56 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
               disabled={loading}
             />
             <p className="text-xs text-gray-500 mt-1">Enter each agenda item on a new line</p>
+          </div>
+
+          <div>
+            <label htmlFor="edit-tags" className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+              <Tag className="w-4 h-4 text-indigo-500" />
+              Tags
+            </label>
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-2 p-3 min-h-12 border-2 border-gray-200 rounded-xl focus-within:ring-2 focus-within:ring-indigo-400 focus-within:border-indigo-400 transition-all bg-white">
+                {formData.tags.map((tag, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newTags = formData.tags.filter((_, i) => i !== index)
+                        setFormData({ ...formData, tags: newTags })
+                      }}
+                      disabled={loading}
+                      className="hover:bg-indigo-200 rounded-full p-0.5 transition-colors disabled:opacity-50"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+                <input
+                  id="edit-tags"
+                  type="text"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if ((e.key === 'Enter' || e.key === ',') && tagInput.trim()) {
+                      e.preventDefault()
+                      const trimmedTag = tagInput.trim().replace(/,$/, '')
+                      if (trimmedTag && !formData.tags.includes(trimmedTag)) {
+                        setFormData({ ...formData, tags: [...formData.tags, trimmedTag] })
+                        setTagInput('')
+                      }
+                    }
+                  }}
+                  placeholder={formData.tags.length === 0 ? "Type a tag and press Enter..." : "Add another tag..."}
+                  className="flex-1 min-w-[150px] outline-none text-sm bg-transparent"
+                  disabled={loading}
+                />
+              </div>
+              <p className="text-xs text-gray-500">Press Enter or comma to add a tag. Tags help categorize your event.</p>
+            </div>
           </div>
 
           <div>
