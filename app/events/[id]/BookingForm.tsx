@@ -26,9 +26,8 @@ export default function BookingForm({ event }: { event: Event }) {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Invalid email format'
     }
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required'
-    } else if (!/^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/.test(formData.phone.trim().replace(/\s/g, ''))) {
+    // Phone number is optional, but if provided, validate format
+    if (formData.phone.trim() && !/^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/.test(formData.phone.trim().replace(/\s/g, ''))) {
       newErrors.phone = 'Invalid phone number format'
     }
     if (!formData.parentsPhone.trim()) {
@@ -198,7 +197,7 @@ export default function BookingForm({ event }: { event: Event }) {
             htmlFor="phone"
             className="block text-sm font-medium text-gray-700 mb-1"
           >
-            Phone Number <span className="text-red-500">*</span>
+            Phone Number
           </label>
           <input
             type="tel"
@@ -207,7 +206,7 @@ export default function BookingForm({ event }: { event: Event }) {
             onChange={(e) =>
               setFormData({ ...formData, phone: e.target.value })
             }
-            placeholder="Enter your phone number"
+            placeholder="Enter your phone number (optional)"
             disabled={isLoading || isSubmitted}
             className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
               errors.phone ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:border-gray-300'

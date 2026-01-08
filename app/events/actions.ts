@@ -90,13 +90,13 @@ export async function createBooking(formData: {
   name: string
   school: string
   email: string
-  phone: string
+  phone?: string
   parentsPhone: string
   information: string
 }): Promise<{ success: boolean; error?: string; bookingId?: string }> {
   try {
-    // Validate input (information is optional)
-    if (!formData.eventId || !formData.name || !formData.school || !formData.email || !formData.phone || !formData.parentsPhone) {
+    // Validate input (information and phone are optional)
+    if (!formData.eventId || !formData.name || !formData.school || !formData.email || !formData.parentsPhone) {
       return {
         success: false,
         error: 'All required fields must be filled',
@@ -113,11 +113,12 @@ export async function createBooking(formData: {
     }
 
     // Validate phone number format (allows various international formats)
+    // Phone number is optional, but if provided, validate format
     const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/
-    const normalizedPhone = formData.phone.trim().replace(/\s/g, '')
+    const normalizedPhone = formData.phone?.trim().replace(/\s/g, '') || ''
     const normalizedParentsPhone = formData.parentsPhone.trim().replace(/\s/g, '')
     
-    if (!phoneRegex.test(normalizedPhone)) {
+    if (normalizedPhone && !phoneRegex.test(normalizedPhone)) {
       return {
         success: false,
         error: 'Invalid phone number format',
@@ -181,7 +182,7 @@ export async function createBooking(formData: {
       event,
       bookingDetails: {
         school: formData.school.trim(),
-        phone: normalizedPhone,
+        phone: normalizedPhone || '',
         parentsPhone: normalizedParentsPhone,
         information: formData.information ? formData.information.trim() : '',
       },
@@ -202,7 +203,7 @@ export async function createBooking(formData: {
       name: formData.name.trim(),
       school: formData.school.trim(),
       email: formData.email.trim().toLowerCase(),
-      phone: normalizedPhone,
+      phone: normalizedPhone || '',
       parentsPhone: normalizedParentsPhone,
       information: formData.information ? formData.information.trim() : '',
       createdAt: now,
