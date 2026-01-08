@@ -1,9 +1,9 @@
 import { requireAuth } from '@/lib/auth'
 import { getEvents } from '../actions'
 import { Calendar, Plus, MapPin, Clock, Users, User } from 'lucide-react'
-import { format, isFuture, isPast } from 'date-fns'
 import CreateEventForm from './CreateEventForm'
 import EventActions from './EventActions'
+import { parseEventDates, formatEventDates, isEventUpcoming, hasEventPassed } from '@/lib/dateUtils'
 
 // Force dynamic rendering since this page uses cookies for authentication
 export const dynamic = 'force-dynamic'
@@ -14,15 +14,11 @@ export default async function EventsPage() {
 
   // Separate upcoming and past events
   const upcomingEvents = events.filter((event) => {
-    if (!event.date) return false
-    const eventDate = new Date(event.date)
-    return isFuture(eventDate) || eventDate.toDateString() === new Date().toDateString()
+    return isEventUpcoming(event.date)
   })
 
   const pastEvents = events.filter((event) => {
-    if (!event.date) return false
-    const eventDate = new Date(event.date)
-    return isPast(eventDate) && eventDate.toDateString() !== new Date().toDateString()
+    return hasEventPassed(event.date)
   })
 
   return (
@@ -113,8 +109,8 @@ export default async function EventsPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {events.map((event) => {
-                  const eventDate = event.date ? new Date(event.date) : null
-                  const isUpcoming = eventDate && (isFuture(eventDate) || eventDate.toDateString() === new Date().toDateString())
+                  const eventDates = parseEventDates(event.date)
+                  const isUpcoming = isEventUpcoming(event.date)
                   return (
                     <tr key={event.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-3 sm:px-6 py-3 sm:py-4">
@@ -122,10 +118,10 @@ export default async function EventsPage() {
                         <div className="text-xs sm:text-sm text-gray-500 line-clamp-1 max-w-md">{event.description}</div>
                       </td>
                       <td className="px-3 sm:px-6 py-3 sm:py-4">
-                        {eventDate ? (
+                        {eventDates.length > 0 ? (
                           <div className="space-y-1">
                             <div className="text-xs sm:text-sm font-medium text-gray-900">
-                              {format(eventDate, 'MMM d, yyyy')}
+                              {formatEventDates(eventDates, 'short')}
                             </div>
                             {event.time && (
                               <div className="text-xs text-gray-500 flex items-center gap-1">

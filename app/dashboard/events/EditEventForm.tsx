@@ -4,7 +4,7 @@ import { useState, FormEvent, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateEvent } from '../actions'
 import { X, Calendar, Clock, MapPin, FileText, Users, Image as ImageIcon, Sparkles, Edit, Tag } from 'lucide-react'
-import DatePicker from './DatePicker'
+import MultiDatePicker from './MultiDatePicker'
 import TimePicker from './TimePicker'
 import type { Event } from '@/types/event'
 
@@ -17,23 +17,23 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  // Helper function to format date for input
-  const formatDateForInput = (date: Date | string | undefined): string => {
-    if (!date) return ''
-    if (date instanceof Date) {
-      return date.toISOString().split('T')[0]
+  // Helper function to parse dates (handle both string and array, comma-separated)
+  const parseDates = (date: string | string[] | undefined): string[] => {
+    if (!date) return []
+    if (Array.isArray(date)) return date
+    // Handle comma-separated string
+    if (typeof date === 'string' && date.includes(',')) {
+      return date.split(',').map(d => d.trim()).filter(d => d.length > 0)
     }
-    // Handle ISO string or date string
-    const dateStr = typeof date === 'string' ? date : String(date)
-    // If it contains 'T', split it; otherwise use as is
-    return dateStr.includes('T') ? dateStr.split('T')[0] : dateStr
+    // Single date string
+    return [date]
   }
 
   const [formData, setFormData] = useState({
     title: event.title || '',
-    date: formatDateForInput(event.date),
+    dates: parseDates(event.date),
     description: event.description || '',
-    time: event.time || '',
+    time: event.time || '9:00 AM - 5:00 PM',
     location: event.location || '',
     venue: event.venue || '',
     fullDescription: event.fullDescription || '',
@@ -50,14 +50,24 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
     setLoading(true)
 
     // Basic validation
-    if (!formData.title.trim() || !formData.date || !formData.description.trim()) {
-      setError('Please fill in all required fields (Name, Date, Description)')
+    if (!formData.title.trim() || formData.dates.length === 0 || !formData.description.trim()) {
+      setError('Please fill in all required fields (Name, Date(s), Description)')
       setLoading(false)
       return
     }
 
+    // Set default time if not provided
+    const eventTime = formData.time || '9:00 AM - 5:00 PM'
+
+    // Convert dates array to string (comma-separated) or single date
+    const dateValue = formData.dates.length === 1 ? formData.dates[0] : formData.dates.join(',')
+
     try {
-      const result = await updateEvent(event.id, formData)
+      const result = await updateEvent(event.id, {
+        ...formData,
+        date: dateValue,
+        time: eventTime,
+      })
 
       if (result.success) {
         onClose()
@@ -124,13 +134,15 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
             <div>
               <label htmlFor="edit-date" className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
                 <Calendar className="w-4 h-4 text-indigo-500" />
-                Date <span className="text-red-500">*</span>
+                Date(s) <span className="text-red-500">*</span>
               </label>
-              <DatePicker
-                value={formData.date}
-                onChange={(date) => setFormData({ ...formData, date })}
+              <MultiDatePicker
+                value={formData.dates}
+                onChange={(dates) => setFormData({ ...formData, dates })}
                 disabled={loading}
+                required
               />
+              <p className="text-xs text-gray-500 mt-1">Select one or multiple dates</p>
             </div>
 
             <div>

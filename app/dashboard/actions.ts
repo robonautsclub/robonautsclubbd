@@ -87,7 +87,7 @@ export async function getEvent(id: string): Promise<Event | null> {
  */
 export async function createEvent(formData: {
   title: string
-  date: string
+  date: string | string[] // Accept both string and array
   description: string
   time?: string
   location?: string
@@ -124,11 +124,18 @@ export async function createEvent(formData: {
 
     // Create event in Firestore
     const now = new Date()
+    // Normalize date: convert array to comma-separated string, or use string as-is
+    const normalizedDate = Array.isArray(formData.date) 
+      ? formData.date.length === 1 
+        ? formData.date[0] 
+        : formData.date.join(',')
+      : formData.date
+    
     const eventRef = await adminDb.collection('events').add({
       title: formData.title,
-      date: formData.date,
+      date: normalizedDate,
       description: formData.description,
-      time: formData.time || '',
+      time: formData.time || '9:00 AM - 5:00 PM',
       location: formData.location || '',
       venue: formData.venue || formData.location || '',
       fullDescription: formData.fullDescription || formData.description,
@@ -163,7 +170,7 @@ export async function updateEvent(
   eventId: string,
   formData: {
     title: string
-    date: string
+    date: string | string[] // Accept both string and array
     description: string
     time?: string
     location?: string
@@ -210,11 +217,18 @@ export async function updateEvent(
     }
 
     // Update event in Firestore
+    // Normalize date: convert array to comma-separated string, or use string as-is
+    const normalizedDate = Array.isArray(formData.date) 
+      ? formData.date.length === 1 
+        ? formData.date[0] 
+        : formData.date.join(',')
+      : formData.date
+    
     await adminDb.collection('events').doc(eventId).update({
       title: formData.title,
-      date: formData.date,
+      date: normalizedDate,
       description: formData.description,
-      time: formData.time || '',
+      time: formData.time || '9:00 AM - 5:00 PM',
       location: formData.location || '',
       venue: formData.venue || formData.location || '',
       fullDescription: formData.fullDescription || formData.description,

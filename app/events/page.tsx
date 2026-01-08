@@ -10,10 +10,11 @@ import {
   Sparkles,
   Users,
 } from 'lucide-react'
-import { format, parse, isPast, isFuture, differenceInDays } from 'date-fns'
+import { differenceInDays } from 'date-fns'
 import { getPublicEvents } from './actions'
 import { Event } from '@/types/event'
 import AutoRefresh from './AutoRefresh'
+import { parseEventDates, formatEventDates, getFirstEventDate, isEventUpcoming, hasEventPassed } from '@/lib/dateUtils'
 
 export const metadata: Metadata = {
   title: "Events",
@@ -78,13 +79,12 @@ const SectionHeader = ({
 
 // --- Enhanced Event Card Component ---
 const EventCard = ({ event }: { event: Event }) => {
-  const eventDate = parse(event.date, 'yyyy-MM-dd', new Date())
-  const isUpcoming =
-    isFuture(eventDate) ||
-    eventDate.toDateString() === new Date().toDateString()
+  const eventDates = parseEventDates(event.date)
+  const firstDate = getFirstEventDate(event.date)
+  const isUpcoming = isEventUpcoming(event.date)
   const status = isUpcoming ? 'Upcoming' : 'Completed'
-  const daysUntil = isUpcoming
-    ? differenceInDays(eventDate, new Date())
+  const daysUntil = firstDate && isUpcoming
+    ? differenceInDays(firstDate, new Date())
     : null
 
   return (
@@ -148,7 +148,7 @@ const EventCard = ({ event }: { event: Event }) => {
             <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
               <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-indigo-500 shrink-0" />
               <span className="font-medium">
-                {format(eventDate, 'EEEE, MMMM d, yyyy')}
+                {formatEventDates(eventDates)}
               </span>
             </div>
             <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
@@ -205,14 +205,15 @@ export default async function EventsPage() {
 
   // Sort events: upcoming first, then past events
   const sortedEvents = [...events].sort((a, b) => {
-    const dateA = parse(a.date, 'yyyy-MM-dd', new Date())
-    const dateB = parse(b.date, 'yyyy-MM-dd', new Date())
-    const now = new Date()
+    const dateA = getFirstEventDate(a.date)
+    const dateB = getFirstEventDate(b.date)
+    
+    if (!dateA && !dateB) return 0
+    if (!dateA) return 1
+    if (!dateB) return -1
 
-    const aIsPast =
-      isPast(dateA) && dateA.toDateString() !== now.toDateString()
-    const bIsPast =
-      isPast(dateB) && dateB.toDateString() !== now.toDateString()
+    const aIsPast = hasEventPassed(a.date)
+    const bIsPast = hasEventPassed(b.date)
 
     // Upcoming events first
     if (aIsPast && !bIsPast) return 1
@@ -224,19 +225,11 @@ export default async function EventsPage() {
   })
 
   const upcomingEvents = sortedEvents.filter((event) => {
-    const eventDate = parse(event.date, 'yyyy-MM-dd', new Date())
-    return (
-      isFuture(eventDate) ||
-      eventDate.toDateString() === new Date().toDateString()
-    )
+    return isEventUpcoming(event.date)
   })
 
   const pastEvents = sortedEvents.filter((event) => {
-    const eventDate = parse(event.date, 'yyyy-MM-dd', new Date())
-    return (
-      isPast(eventDate) &&
-      eventDate.toDateString() !== new Date().toDateString()
-    )
+    return hasEventPassed(event.date)
   })
 
   return (

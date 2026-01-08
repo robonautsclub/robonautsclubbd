@@ -11,7 +11,9 @@ interface TimePickerProps {
 
 export default function TimePicker({ value, onChange, disabled }: TimePickerProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [startHour, setStartHour] = useState('10')
+  // Default to 9:00 AM - 5:00 PM if no value provided
+  const defaultTime = '9:00 AM - 5:00 PM'
+  const [startHour, setStartHour] = useState('9')
   const [startMinute, setStartMinute] = useState('00')
   const [startPeriod, setStartPeriod] = useState('AM')
   const [endHour, setEndHour] = useState('5')
@@ -20,17 +22,16 @@ export default function TimePicker({ value, onChange, disabled }: TimePickerProp
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // Parse existing time value if present
-    if (value) {
-      const match = value.match(/(\d{1,2}):(\d{2})\s*(AM|PM)\s*-\s*(\d{1,2}):(\d{2})\s*(AM|PM)/i)
-      if (match) {
-        setStartHour(match[1])
-        setStartMinute(match[2])
-        setStartPeriod(match[3].toUpperCase())
-        setEndHour(match[4])
-        setEndMinute(match[5])
-        setEndPeriod(match[6].toUpperCase())
-      }
+    // Parse existing time value if present, otherwise use default
+    const timeToParse = value || defaultTime
+    const match = timeToParse.match(/(\d{1,2}):(\d{2})\s*(AM|PM)\s*-\s*(\d{1,2}):(\d{2})\s*(AM|PM)/i)
+    if (match) {
+      setStartHour(match[1])
+      setStartMinute(match[2])
+      setStartPeriod(match[3].toUpperCase())
+      setEndHour(match[4])
+      setEndMinute(match[5])
+      setEndPeriod(match[6].toUpperCase())
     }
   }, [value])
 
@@ -65,11 +66,20 @@ export default function TimePicker({ value, onChange, disabled }: TimePickerProp
     }
   }, [startHour, startMinute, startPeriod, endHour, endMinute, endPeriod])
 
+  // Auto-set default time if no value is provided on initial mount
+  useEffect(() => {
+    if (!value) {
+      const defaultTimeString = formatTime()
+      onChange(defaultTimeString)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const hours = Array.from({ length: 12 }, (_, i) => (i + 1).toString())
   const minutes = ['00', '15', '30', '45']
   const periods = ['AM', 'PM']
 
-  const displayValue = value || 'Select time'
+  const displayValue = value || defaultTime
 
   return (
     <div className="relative" ref={dropdownRef}>

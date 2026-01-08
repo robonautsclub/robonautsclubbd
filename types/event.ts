@@ -3,7 +3,7 @@
 export type Event = {
   id: string // Firestore document ID
   title: string
-  date: string
+  date: string | string[] // Single date string or array of dates
   time?: string
   location: string
   description: string

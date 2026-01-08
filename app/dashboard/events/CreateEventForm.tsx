@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createEvent } from '../actions'
 import { Plus, X, Calendar, Clock, MapPin, FileText, Users, Image as ImageIcon, Sparkles, Upload, Trash2, Tag } from 'lucide-react'
-import DatePicker from './DatePicker'
+import MultiDatePicker from './MultiDatePicker'
 import TimePicker from './TimePicker'
 
 export default function CreateEventForm() {
@@ -18,9 +18,9 @@ export default function CreateEventForm() {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     title: '',
-    date: '',
+    dates: [] as string[],
     description: '',
-    time: '',
+    time: '9:00 AM - 5:00 PM', // Default time
     location: '',
     venue: '',
     fullDescription: '',
@@ -124,22 +124,32 @@ export default function CreateEventForm() {
     setLoading(true)
 
     // Basic validation
-    if (!formData.title.trim() || !formData.date || !formData.description.trim()) {
-      setError('Please fill in all required fields (Name, Date, Description)')
+    if (!formData.title.trim() || formData.dates.length === 0 || !formData.description.trim()) {
+      setError('Please fill in all required fields (Name, Date(s), Description)')
       setLoading(false)
       return
     }
 
+    // Set default time if not provided
+    const eventTime = formData.time || '9:00 AM - 5:00 PM'
+
+    // Convert dates array to string (comma-separated) or single date
+    const dateValue = formData.dates.length === 1 ? formData.dates[0] : formData.dates.join(',')
+
     try {
-      const result = await createEvent(formData)
+      const result = await createEvent({
+        ...formData,
+        date: dateValue,
+        time: eventTime,
+      })
 
       if (result.success) {
         // Reset form and close modal
         setFormData({
           title: '',
-          date: '',
+          dates: [],
           description: '',
-          time: '',
+          time: '9:00 AM - 5:00 PM', // Reset to default time
           location: '',
           venue: '',
           fullDescription: '',
@@ -246,14 +256,15 @@ export default function CreateEventForm() {
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                   <Calendar className="w-4 h-4 text-indigo-600" />
-                  Date <span className="text-red-500">*</span>
+                  Date(s) <span className="text-red-500">*</span>
                 </label>
-                <DatePicker
-                  value={formData.date}
-                  onChange={(value) => setFormData({ ...formData, date: value })}
-                  disabled={loading}
+                <MultiDatePicker
+                  value={formData.dates}
+                  onChange={(dates) => setFormData({ ...formData, dates })}
+                  disabled={loading || uploading}
                   required
                 />
+                <p className="text-xs text-gray-500">Select one or multiple dates for the event</p>
               </div>
 
               <div className="space-y-2">

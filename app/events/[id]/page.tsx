@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { Metadata } from 'next'
 import Script from 'next/script'
 import { Calendar, Clock, MapPin, ArrowLeft, Users, Monitor, Building2 } from 'lucide-react'
-import { format, parse, isPast } from 'date-fns'
 import { getPublicEvent } from '../actions'
 import { Event } from '@/types/event'
 import { notFound } from 'next/navigation'
@@ -10,6 +9,7 @@ import BookingForm from './BookingForm'
 import EventImage from './EventImage'
 import AutoRefresh from '../AutoRefresh'
 import { SITE_CONFIG, getEventSchema, getBreadcrumbSchema } from '@/lib/seo'
+import { parseEventDates, formatEventDates, hasEventPassed } from '@/lib/dateUtils'
 
 
 // Helper function to validate and get image URL
@@ -148,19 +148,26 @@ export default async function EventDetailPage({
     notFound()
   }
 
-  const eventDate = parse(event.date, 'yyyy-MM-dd', new Date())
-  const hasPassed = isPast(eventDate) && eventDate.toDateString() !== new Date().toDateString()
+  const eventDates = parseEventDates(event.date)
+  const hasPassed = hasEventPassed(event.date)
   const tags = getEventTags(event)
   const isOnline = event.location.toLowerCase().includes('online') || event.venue?.toLowerCase().includes('online')
 
   // Generate structured data
   const eventUrl = `${SITE_CONFIG.url}/events/${id}`
+  // For structured data, use first date or comma-separated string
+  const schemaDate = Array.isArray(event.date) 
+    ? event.date.length > 0 ? event.date[0] : ''
+    : typeof event.date === 'string' && event.date.includes(',')
+    ? event.date.split(',')[0].trim()
+    : event.date || ''
+
   const eventSchema = getEventSchema({
     id: event.id,
     title: event.title,
     description: event.fullDescription || event.description,
-    date: event.date,
-    time: event.time,
+    date: schemaDate,
+    time: event.time || '9:00 AM - 5:00 PM',
     location: event.location,
     venue: event.venue,
     image: getEventImageUrl(event.image),
@@ -245,8 +252,8 @@ export default async function EventDetailPage({
                     <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs sm:text-sm font-medium text-gray-500 mb-1">Date</p>
-                    <p className="text-sm sm:text-base font-semibold text-gray-900">{format(eventDate, 'MMMM d, yyyy')}</p>
+                    <p className="text-xs sm:text-sm font-medium text-gray-500 mb-1">Date{eventDates.length > 1 ? 's' : ''}</p>
+                    <p className="text-sm sm:text-base font-semibold text-gray-900">{formatEventDates(eventDates, 'long')}</p>
                   </div>
                 </div>
                 {event.time && (
