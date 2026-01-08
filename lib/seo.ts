@@ -65,17 +65,23 @@ export function getEventSchema(event: {
   id: string;
   title: string;
   description: string;
-  date: string;
+  date: string | string[];
   time?: string;
   location: string;
   venue?: string;
   image?: string;
   url: string;
 }) {
-  const eventDate = new Date(event.date);
+  // Handle both single date string and multiple dates (use first date for schema)
+  const dateValue = Array.isArray(event.date) 
+    ? event.date.length > 0 ? event.date[0] : ''
+    : typeof event.date === 'string' && event.date.includes(',')
+    ? event.date.split(',')[0].trim()
+    : event.date || ''
+  
   const startDate = event.time
-    ? `${event.date}T${event.time}:00`
-    : `${event.date}T00:00:00`;
+    ? `${dateValue}T${event.time}:00`
+    : `${dateValue}T00:00:00`;
 
   return {
     "@context": "https://schema.org",

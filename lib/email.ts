@@ -1,6 +1,6 @@
 import { Resend } from 'resend'
 import type { Event } from '@/types/event'
-import { format } from 'date-fns'
+import { formatEventDates, getFirstEventDate, parseEventDates } from './dateUtils'
 
 // Initialize Resend client
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -34,9 +34,9 @@ export async function sendBookingConfirmationEmail({
       }
     }
 
-    // Format event date
-    const eventDate = event.date ? new Date(event.date) : null
-    const formattedDate = eventDate ? format(eventDate, 'MMMM d, yyyy') : 'TBA'
+    // Format event date(s)
+    const firstDate = getFirstEventDate(event.date)
+    const formattedDate = firstDate ? formatEventDates(parseEventDates(event.date), 'long') : 'TBA'
 
     // Create email HTML content
     const emailHtml = `

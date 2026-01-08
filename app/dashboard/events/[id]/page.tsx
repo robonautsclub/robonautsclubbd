@@ -1,13 +1,14 @@
 import { requireAuth } from '@/lib/auth'
 import { getEvent, getBookings } from '../../actions'
 import { notFound } from 'next/navigation'
-import { format, isFuture } from 'date-fns'
+import { format } from 'date-fns'
 import { Calendar, Clock, MapPin, Users, Mail, Building2, ArrowLeft, User } from 'lucide-react'
 import type { Booking } from '@/types/booking'
 import Link from 'next/link'
 import EventHeaderActions from './EventHeaderActions'
 import BookingActions from './BookingActions'
 import ExportBookingsButton from './ExportBookingsButton'
+import { getFirstEventDate, formatEventDates, parseEventDates, isEventUpcoming, hasEventPassed } from '@/lib/dateUtils'
 
 // Force dynamic rendering since this page uses cookies for authentication
 export const dynamic = 'force-dynamic'
@@ -26,7 +27,8 @@ export default async function EventDetailsPage({
     notFound()
   }
 
-  const eventDate = event.date ? new Date(event.date) : null
+  const eventDates = parseEventDates(event.date)
+  const eventDate = getFirstEventDate(event.date)
 
   return (
     <div className="max-w-7xl space-y-4 sm:space-y-6">
@@ -51,13 +53,13 @@ export default async function EventDetailsPage({
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
           <h3 className="text-xl sm:text-2xl font-bold text-gray-900">{event.title}</h3>
-          {eventDate && (
+          {eventDates.length > 0 && (
             <span className={`inline-flex items-center px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium self-start sm:self-auto ${
-              isFuture(eventDate) || eventDate.toDateString() === new Date().toDateString()
+              isEventUpcoming(event.date)
                 ? 'bg-green-100 text-green-800'
                 : 'bg-gray-100 text-gray-800'
             }`}>
-              {isFuture(eventDate) || eventDate.toDateString() === new Date().toDateString() ? 'Upcoming' : 'Past'}
+              {isEventUpcoming(event.date) ? 'Upcoming' : 'Past'}
             </span>
           )}
         </div>
@@ -68,9 +70,9 @@ export default async function EventDetailsPage({
               <Calendar className="w-5 h-5 text-indigo-600" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500 mb-1">Date</p>
+              <p className="text-sm font-medium text-gray-500 mb-1">Date{eventDates.length > 1 ? 's' : ''}</p>
               <p className="font-semibold text-gray-900">
-                {eventDate ? format(eventDate, 'MMMM d, yyyy') : 'No date set'}
+                {formatEventDates(eventDates, 'long')}
               </p>
             </div>
           </div>

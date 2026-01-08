@@ -3,6 +3,7 @@ import { getEvents } from './actions'
 import { User, Mail, Key, Calendar, TrendingUp, Activity } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
+import { isEventUpcoming, getFirstEventDate, formatEventDates, parseEventDates } from '@/lib/dateUtils'
 
 // Force dynamic rendering since this page uses cookies for authentication
 export const dynamic = 'force-dynamic'
@@ -14,9 +15,7 @@ export default async function DashboardPage() {
   // Calculate stats
   const totalEvents = events.length
   const upcomingEvents = events.filter((event) => {
-    if (!event.date) return false
-    const eventDate = new Date(event.date)
-    return eventDate >= new Date()
+    return isEventUpcoming(event.date)
   }).length
   const pastEvents = totalEvents - upcomingEvents
 
@@ -149,7 +148,8 @@ export default async function DashboardPage() {
             ) : (
               <div className="space-y-3">
                 {recentEvents.map((event) => {
-                  const eventDate = event.date ? new Date(event.date) : null
+                  const eventDates = parseEventDates(event.date)
+                  const firstDate = getFirstEventDate(event.date)
                   const createdDate = event.createdAt ? new Date(event.createdAt) : null
                   return (
                     <Link
@@ -166,10 +166,13 @@ export default async function DashboardPage() {
                             {event.description}
                           </p>
                           <div className="flex items-center gap-4 text-xs text-gray-500">
-                            {eventDate && (
+                            {firstDate && (
                               <span className="flex items-center gap-1">
                                 <Calendar className="w-3 h-3" />
-                                {format(eventDate, 'MMM d, yyyy')}
+                                {eventDates.length === 1 
+                                  ? format(firstDate, 'MMM d, yyyy')
+                                  : formatEventDates(eventDates, 'short')
+                                }
                               </span>
                             )}
                             {createdDate && (
