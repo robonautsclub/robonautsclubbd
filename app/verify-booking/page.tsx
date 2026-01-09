@@ -8,6 +8,7 @@ import { format } from 'date-fns'
 import Link from 'next/link'
 import Image from 'next/image'
 import CopyButton from './CopyButton'
+import RetryButton from './RetryButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -192,12 +193,7 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
             >
               View Events
             </Link>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-xl border-2 border-gray-300 transition-colors"
-            >
-              Try Again
-            </button>
+            <RetryButton className="px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-xl border-2 border-gray-300 transition-colors" />
           </div>
         </div>
       </div>

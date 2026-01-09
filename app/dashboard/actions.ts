@@ -432,7 +432,7 @@ export async function cancelBooking(bookingId: string): Promise<{ success: boole
   }
 
   try {
-    // Check if booking exists
+    // Check if booking exists and fetch booking details
     const bookingDoc = await adminDb.collection('bookings').doc(bookingId).get()
     if (!bookingDoc.exists) {
       return {
@@ -441,7 +441,51 @@ export async function cancelBooking(bookingId: string): Promise<{ success: boole
       }
     }
 
-    // Delete the booking
+    const bookingData = bookingDoc.data()!
+    const booking = {
+      id: bookingDoc.id,
+      ...bookingData,
+    } as Booking
+
+    // Fetch event details
+    const eventDoc = await adminDb.collection('events').doc(booking.eventId).get()
+    if (!eventDoc.exists) {
+      // Event not found, still proceed with deletion but skip email
+      await adminDb.collection('bookings').doc(bookingId).delete()
+      return {
+        success: true,
+      }
+    }
+
+    const eventData = eventDoc.data()!
+    const event = {
+      id: eventDoc.id,
+      ...eventData,
+    } as Event
+
+    // Send cancellation email before deleting the booking
+    if (booking.email && booking.registrationId) {
+      try {
+        const { sendBookingCancellationEmail } = await import('@/lib/email')
+        const emailResult = await sendBookingCancellationEmail({
+          to: booking.email,
+          name: booking.name,
+          event,
+          registrationId: booking.registrationId,
+        })
+
+        // Log if email failed, but continue with deletion
+        if (!emailResult.success) {
+          console.error('Failed to send cancellation email:', emailResult.error)
+          // Continue with deletion even if email fails
+        }
+      } catch (emailError) {
+        console.error('Error sending cancellation email:', emailError)
+        // Continue with deletion even if email fails
+      }
+    }
+
+    // Delete the booking after sending email
     await adminDb.collection('bookings').doc(bookingId).delete()
 
     return {
