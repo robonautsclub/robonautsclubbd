@@ -1,9 +1,6 @@
-import { Resend } from 'resend'
+import * as brevo from '@getbrevo/brevo'
 import type { Event } from '@/types/event'
 import { formatEventDates, getFirstEventDate, parseEventDates } from './dateUtils'
-
-// Initialize Resend client
-const resend = new Resend(process.env.RESEND_API_KEY)
 
 interface BookingConfirmationEmailProps {
   to: string
@@ -27,12 +24,12 @@ export async function sendBookingConfirmationEmail({
   bookingDetails,
 }: BookingConfirmationEmailProps): Promise<{ success: boolean; error?: string }> {
   try {
-    // Check if Resend API key is configured
-    if (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY.trim() === '') {
-      console.error('RESEND_API_KEY is not configured')
+    // Check if Brevo API key is configured
+    if (!process.env.BREVO_API_KEY || process.env.BREVO_API_KEY.trim() === '') {
+      console.error('BREVO_API_KEY is not configured')
       return {
         success: false,
-        error: 'Email service is not configured. Please set RESEND_API_KEY in your environment variables. Get your API key from https://resend.com/api-keys',
+        error: 'Email service is not configured. Please set BREVO_API_KEY in your environment variables. Get your API key from https://app.brevo.com/settings/keys/api',
       }
     }
 
@@ -315,73 +312,121 @@ export async function sendBookingConfirmationEmail({
 
     // Determine the "from" email address
     // Priority:
-    // 1. Use RESEND_FROM_EMAIL if set (must be from a verified domain)
-    // 2. Fallback to Resend's default onboarding domain (works immediately for testing)
-    // 3. For production, verify your domain in Resend and use your custom domain
-    let fromEmail = process.env.RESEND_FROM_EMAIL
+    // 1. Use BREVO_FROM_EMAIL if set (must be from a verified domain)
+    // 2. Fallback to default sender address
+    // 3. For production, verify your domain in Brevo and use your custom domain
+    let fromEmail = process.env.BREVO_FROM_EMAIL
     
-    // If no custom from email is set, use Resend's default onboarding domain
-    // This works immediately without domain verification for testing
-    // For production, verify your domain at https://resend.com/domains and set RESEND_FROM_EMAIL
+    // If no custom from email is set, use the default sender
+    // For production, verify your domain at https://app.brevo.com/settings/senders/domains and set BREVO_FROM_EMAIL
     if (!fromEmail || fromEmail.trim() === '') {
-      // Use Resend's default onboarding domain which works without verification
-      // Format: "Your Name <onboarding@resend.dev>"
       fromEmail = 'Robonauts Club <noreply@robonautsclub.com>'
     }
 
-    // Send email using Resend
-    const { data, error } = await resend.emails.send({
-      from: fromEmail,
-      to: [to],
-      subject: `Booking Confirmation: ${event.title}`,
-      html: emailHtml,
-    })
-
-    if (error) {
-      console.error('Resend email error:', error)
-      console.error('Error details:', JSON.stringify(error, null, 2))
-      
-      // Provide more specific error messages based on error type
-      if (error.message?.includes('domain is not verified') || error.message?.includes('not verified')) {
-        return {
-          success: false,
-          error: `Email domain not verified. Please verify your domain at https://resend.com/domains. Current from address: ${fromEmail}`,
-        }
-      }
-      
-      // Handle other Resend API errors
-      if (error.statusCode === 403 || error.statusCode === 401) {
-        const errorDetails = error.message || 'Access denied'
-        return {
-          success: false,
-          error: `Email service access denied (${error.statusCode}). Possible causes:\n1. Invalid or expired RESEND_API_KEY - Get a new key from https://resend.com/api-keys\n2. Domain not verified - Verify your domain at https://resend.com/domains\n3. API key doesn't have send permissions\n\nError: ${errorDetails}\n\nCurrent from address: ${fromEmail}`,
-        }
-      }
-      
-      if (error.statusCode === 422) {
-        return {
-          success: false,
-          error: `Invalid email configuration. Please check your RESEND_FROM_EMAIL setting. Current from address: ${fromEmail}\n\nThe from address must be from a verified domain in Resend. Verify your domain at https://resend.com/domains or use the default Resend domain.`,
-        }
-      }
-      
-      return {
-        success: false,
-        error: error.message || `Failed to send confirmation email (Status: ${error.statusCode || 'Unknown'}). Please check your Resend configuration.`,
-      }
+    // Parse sender email and name
+    let senderEmail = fromEmail
+    let senderName = 'Robonauts Club'
+    
+    // Check if fromEmail contains name in format "Name <email@domain.com>"
+    const nameMatch = fromEmail.match(/^(.+?)\s*<(.+?)>$/)
+    if (nameMatch) {
+      senderName = nameMatch[1].trim()
+      senderEmail = nameMatch[2].trim()
     }
 
-    if (!data || !data.id) {
-      console.error('Resend returned no data or email ID')
+    // Initialize Brevo client with API key
+    const apiInstance = new brevo.TransactionalEmailsApi()
+    apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY!)
+
+    // Send email using Brevo
+    const sendSmtpEmail = new brevo.SendSmtpEmail()
+    sendSmtpEmail.sender = { email: senderEmail, name: senderName }
+    sendSmtpEmail.to = [{ email: to, name: name }]
+    sendSmtpEmail.subject = `Booking Confirmation: ${event.title}`
+    sendSmtpEmail.htmlContent = emailHtml
+
+    try {
+      const data = await apiInstance.sendTransacEmail(sendSmtpEmail)
+      
+      // Brevo API can return different response formats:
+      // - A string (messageId directly)
+      // - An object with messageId property
+      // - An object with different property names
+      let messageId: string | undefined
+      
+      if (typeof data === 'string') {
+        messageId = data
+      } else if (data && typeof data === 'object') {
+        // Check for various possible property names
+        const dataObj = data as Record<string, unknown>
+        messageId = 
+          (typeof dataObj.messageId === 'string' ? dataObj.messageId : undefined) ||
+          (typeof dataObj['message-id'] === 'string' ? dataObj['message-id'] : undefined) ||
+          (typeof dataObj.message_id === 'string' ? dataObj.message_id : undefined) ||
+          (typeof dataObj.id === 'string' ? dataObj.id : undefined)
+      }
+      
+      // If we have any response from Brevo (even without messageId), consider it successful
+      // The email was sent if we got a response without an error
+      if (data !== null && data !== undefined) {
+        console.log('Booking confirmation email sent successfully. Message ID:', messageId || 'N/A')
+        return {
+          success: true,
+        }
+      }
+      
+      // Only fail if we got null/undefined response
+      console.error('Brevo returned null or undefined response')
       return {
         success: false,
         error: 'Email service returned an unexpected response',
       }
-    }
-
-    console.log('Booking confirmation email sent successfully:', data.id)
-    return {
-      success: true,
+    } catch (error: unknown) {
+      console.error('Brevo email error:', error)
+      console.error('Error details:', JSON.stringify(error, null, 2))
+      
+      // Handle Brevo API errors
+      const errorObj = error as { response?: { status?: number; body?: unknown; data?: unknown }; statusCode?: number; message?: string }
+      
+      if (errorObj.response) {
+        const statusCode = errorObj.response.status || errorObj.statusCode
+        const errorBody = (errorObj.response.body || errorObj.response.data || {}) as { message?: string }
+        const errorMessage = errorBody.message || errorObj.message || 'Unknown error'
+        
+        // Provide more specific error messages based on error type
+        if (errorMessage.includes('not verified') || errorMessage.includes('domain is not verified')) {
+          return {
+            success: false,
+            error: `Email domain not verified. Please verify your domain at https://app.brevo.com/settings/senders/domains. Current from address: ${fromEmail}`,
+          }
+        }
+        
+        if (statusCode === 403 || statusCode === 401) {
+          return {
+            success: false,
+            error: `Email service access denied (${statusCode}). Possible causes:\n1. Invalid or expired BREVO_API_KEY - Get a new key from https://app.brevo.com/settings/keys/api\n2. Domain not verified - Verify your domain at https://app.brevo.com/settings/senders/domains\n3. API key doesn't have send permissions\n\nError: ${errorMessage}\n\nCurrent from address: ${fromEmail}`,
+          }
+        }
+        
+        if (statusCode === 422) {
+          return {
+            success: false,
+            error: `Invalid email configuration. Please check your BREVO_FROM_EMAIL setting. Current from address: ${fromEmail}\n\nThe from address must be from a verified domain in Brevo. Verify your domain at https://app.brevo.com/settings/senders/domains.`,
+          }
+        }
+        
+        return {
+          success: false,
+          error: errorMessage || `Failed to send confirmation email (Status: ${statusCode || 'Unknown'}). Please check your Brevo configuration.`,
+        }
+      }
+      
+      // Handle non-API errors
+      const errorMessage = errorObj.message || 'An unexpected error occurred while sending the email'
+      return {
+        success: false,
+        error: errorMessage,
+      }
     }
   } catch (error) {
     console.error('Error sending booking confirmation email:', error)
@@ -391,4 +436,5 @@ export async function sendBookingConfirmationEmail({
     }
   }
 }
+
 
