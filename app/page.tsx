@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import Feed from "@/components/Feed";
 import { SITE_CONFIG } from "@/lib/seo";
+import { getPublicCourses } from "@/app/events/actions";
 
 export const metadata: Metadata = {
   title: "Home",
@@ -33,10 +34,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Home() {
+export default async function Home() {
+  // Fetch courses from Firestore (non-archived only)
+  const courses = await getPublicCourses()
+
   return (
     <main className="flex flex-col w-full min-w-full">
-      <Feed />
+      <Feed initialCourses={courses} />
     </main>
   );
 }

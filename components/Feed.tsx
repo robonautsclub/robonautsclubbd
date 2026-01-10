@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
+import type { Course } from '@/types/course'
 
 const SectionHeader = ({
   title,
@@ -33,7 +34,11 @@ const SectionHeader = ({
   </div>
 )
 
-const Feed = () => {
+interface FeedProps {
+  initialCourses?: Course[]
+}
+
+const Feed = ({ initialCourses = [] }: FeedProps) => {
   const features = [
     {
       icon: Wrench,
@@ -61,60 +66,18 @@ const Feed = () => {
     },
   ]
 
-  const courses = [
-    {
-        title: 'Robotics & STEM Lab',
-        level: 'Junior–Senior',
-        blurb: 'Hands-on projects with sensors, coding, and simple robots.',
-        href: '/courses/robotics',
-        img: '/feed/robotics.jpg'
-      },
-    
-      // New: 3D Modelling
-      {
-        title: '3D Modelling & Animation',
-        level: 'Beginner–Advanced',
-        blurb:
-          'Blender-based 3D modelling, texturing, lighting, and animation with portfolio projects.',
-        href: '/courses/modelling',
-        img: '/feed/threed.jpeg'
-      },
-    
-      // New: Game Development
-      {
-        title: 'Game Development',
-        level: 'Beginner–Intermediate',
-        blurb:
-          'Learn Unity-style game development, C# scripting, and build playable projects.',
-        href: '/courses/gamedev',
-        img: '/feed/gamedev.jpeg'
-      },
-      {
-        title: 'Web Development',
-        level: 'Beginner–Intermediate',
-        blurb:
-          'Modern HTML, CSS, JavaScript, React, and Next.js with deployed portfolio sites.',
-        href: '/courses/webdev',
-        img: '/feed/webdev.png'
-      },{
-        title: 'Spoken English',
-        level: 'All Levels',
-        blurb: 'Fluency drills, pronunciation labs, and real-life roleplays.',
-        href: '/courses/spokenenglish',
-        img: '/feed/learn-english.jpeg'
-      },
-    
-      // New: IELTS (general complete program)
-      {
-        title: 'IELTS Complete',
-        level: 'For All',
-        blurb:
-          'All four modules with section-wise strategies and weekly mock tests.',
-        href: '/courses/ielts',
-        img: '/feed/ielts.jpeg'
-      },
-    
-  ]
+  // Convert Course type to CourseCard props format
+  // Filter out archived courses and map to CourseCard format
+  const courses = initialCourses
+    .filter((course) => !course.isArchived) // Filter out archived courses (only show active)
+    .map((course) => ({
+      id: course.id, // Keep ID for React key
+      title: course.title,
+      level: course.level,
+      blurb: course.blurb,
+      href: course.href,
+      img: course.image,
+    }))
 
   const faqItems = [
     {
@@ -181,17 +144,24 @@ const Feed = () => {
             title="Choose Your Learning Path with HOPE TTC"
             subtitle="Explore our comprehensive robotics courses designed for all skill levels"
           />
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            {courses.map((course, index) => (
-              <div
-                key={index}
-                style={{ animationDelay: `${index * 50}ms` }}
-                className="opacity-0 animate-fade-in-up"
-              >
-                <CourseCard {...course} />
-              </div>
-            ))}
-          </div>
+          {courses.length === 0 ? (
+            <div className="text-center py-12">
+              <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600">No courses available at the moment. Check back soon!</p>
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+              {courses.map((course, index) => (
+                <div
+                  key={course.id || index}
+                  style={{ animationDelay: `${index * 50}ms` }}
+                  className="opacity-0 animate-fade-in-up"
+                >
+                  <CourseCard title={course.title} level={course.level} blurb={course.blurb} href={course.href} img={course.img} />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

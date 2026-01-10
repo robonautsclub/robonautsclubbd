@@ -102,8 +102,10 @@ export async function sendBookingConfirmationEmail({
       })
       
       // Upload PDF to Cloudinary with event-based folder structure
+      // PDFs are stored in: events/<event-id>/booking-<bookingId>.pdf
+      // Cloudinary automatically creates the folder if it doesn't exist
       if (pdfBuffer) {
-        pdfUrl = await uploadPDFToStorage(pdfBuffer, event.title, bookingId)
+        pdfUrl = await uploadPDFToStorage(pdfBuffer, event.id, bookingId)
         if (!pdfUrl) {
           console.warn('Failed to upload PDF to Cloudinary, but continuing with email send')
         }

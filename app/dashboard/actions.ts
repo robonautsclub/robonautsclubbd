@@ -5,6 +5,7 @@ import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase-admin'
 import { Event } from '@/types/event'
 import { Booking } from '@/types/booking'
+import { Course } from '@/types/course'
 import { sanitizeEventForDatabase } from '@/lib/textSanitizer'
 
 /**
@@ -496,6 +497,340 @@ export async function cancelBooking(bookingId: string): Promise<{ success: boole
     return {
       success: false,
       error: 'Failed to cancel booking. Please try again.',
+    }
+  }
+}
+
+// ==================== COURSE MANAGEMENT ====================
+
+/**
+ * Get all courses from Firestore (admin only)
+ */
+export async function getCourses(): Promise<Course[]> {
+  await requireAuth() // Ensure user is authenticated
+
+  if (!adminDb) {
+    console.error('Firebase Admin SDK not available. Cannot fetch courses.')
+    throw new Error('Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.')
+  }
+
+  try {
+    const coursesSnapshot = await adminDb.collection('courses').get()
+    
+    const courses: Course[] = []
+    coursesSnapshot.forEach((doc) => {
+      const data = doc.data()
+      courses.push({
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate?.() || data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+      } as Course)
+    })
+
+    // Sort by createdAt in descending order (newest first)
+    courses.sort((a, b) => {
+      if (!a.createdAt && !b.createdAt) return 0
+      if (!a.createdAt) return 1
+      if (!b.createdAt) return -1
+      
+      const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime()
+      const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime()
+      return dateB - dateA // Descending order
+    })
+
+    return courses
+  } catch (error) {
+    console.error('Error fetching courses:', error)
+    throw new Error('Failed to fetch courses')
+  }
+}
+
+/**
+ * Get a single course by ID
+ */
+export async function getCourse(id: string): Promise<Course | null> {
+  await requireAuth()
+
+  if (!adminDb) {
+    console.error('Firebase Admin SDK not available. Cannot fetch course.')
+    throw new Error('Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.')
+  }
+
+  try {
+    const courseDoc = await adminDb.collection('courses').doc(id).get()
+    
+    if (!courseDoc.exists) {
+      return null
+    }
+
+    const data = courseDoc.data()!
+    return {
+      id: courseDoc.id,
+      ...data,
+      createdAt: data.createdAt?.toDate?.() || data.createdAt,
+      updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+    } as Course
+  } catch (error) {
+    console.error('Error fetching course:', error)
+    throw new Error('Failed to fetch course')
+  }
+}
+
+/**
+ * Create a new course
+ */
+export async function createCourse(formData: {
+  title: string
+  level: string
+  blurb: string
+  href: string
+  image: string
+}): Promise<{ success: boolean; error?: string; courseId?: string }> {
+  const session = await requireAuth()
+
+  if (!adminDb) {
+    console.error('Firebase Admin SDK not available. Cannot create course.')
+    return {
+      success: false,
+      error: 'Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.',
+    }
+  }
+
+  try {
+    // Validate required fields
+    if (!formData.title.trim() || !formData.level.trim() || !formData.blurb.trim() || !formData.image.trim()) {
+      return {
+        success: false,
+        error: 'Title, level, blurb, and image are required fields.',
+      }
+    }
+
+    // Check if course with same title already exists
+    const existingCourses = await adminDb
+      .collection('courses')
+      .where('title', '==', formData.title.trim())
+      .get()
+
+    if (!existingCourses.empty) {
+      return {
+        success: false,
+        error: 'A course with this name already exists',
+      }
+    }
+
+    // Create course in Firestore
+    const now = new Date()
+    const courseRef = await adminDb.collection('courses').add({
+      title: formData.title.trim(),
+      level: formData.level.trim(),
+      blurb: formData.blurb.trim(),
+      href: formData.href.trim() || `/courses/${formData.title.toLowerCase().replace(/\s+/g, '-')}`,
+      image: formData.image.trim(),
+      isArchived: false,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: session.uid,
+      createdByName: session.name,
+      createdByEmail: session.email,
+    })
+
+    // Revalidate pages to show new course immediately
+    revalidatePath('/')
+    revalidatePath('/dashboard/courses')
+
+    return {
+      success: true,
+      courseId: courseRef.id,
+    }
+  } catch (error) {
+    console.error('Error creating course:', error)
+    return {
+      success: false,
+      error: 'Failed to create course. Please try again.',
+    }
+  }
+}
+
+/**
+ * Update an existing course
+ */
+export async function updateCourse(
+  courseId: string,
+  formData: {
+    title: string
+    level: string
+    blurb: string
+    href: string
+    image: string
+  }
+): Promise<{ success: boolean; error?: string }> {
+  await requireAuth()
+
+  if (!adminDb) {
+    console.error('Firebase Admin SDK not available. Cannot update course.')
+    return {
+      success: false,
+      error: 'Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.',
+    }
+  }
+
+  try {
+    // Check if course exists
+    const courseDoc = await adminDb.collection('courses').doc(courseId).get()
+    if (!courseDoc.exists) {
+      return {
+        success: false,
+        error: 'Course not found',
+      }
+    }
+
+    // Validate required fields
+    if (!formData.title.trim() || !formData.level.trim() || !formData.blurb.trim() || !formData.image.trim()) {
+      return {
+        success: false,
+        error: 'Title, level, blurb, and image are required fields.',
+      }
+    }
+
+    // Check if another course with the same title exists (excluding current course)
+    const existingCourses = await adminDb
+      .collection('courses')
+      .where('title', '==', formData.title.trim())
+      .get()
+
+    const hasDuplicate = existingCourses.docs.some((doc) => doc.id !== courseId)
+    if (hasDuplicate) {
+      return {
+        success: false,
+        error: 'A course with this name already exists',
+      }
+    }
+
+    // Update course in Firestore
+    await adminDb.collection('courses').doc(courseId).update({
+      title: formData.title.trim(),
+      level: formData.level.trim(),
+      blurb: formData.blurb.trim(),
+      href: formData.href.trim() || `/courses/${formData.title.toLowerCase().replace(/\s+/g, '-')}`,
+      image: formData.image.trim(),
+      updatedAt: new Date(),
+    })
+
+    // Revalidate pages to show updated course immediately
+    revalidatePath('/')
+    revalidatePath('/dashboard/courses')
+
+    return {
+      success: true,
+    }
+  } catch (error) {
+    console.error('Error updating course:', error)
+    return {
+      success: false,
+      error: 'Failed to update course. Please try again.',
+    }
+  }
+}
+
+/**
+ * Archive or unarchive a course
+ */
+export async function archiveCourse(courseId: string): Promise<{ success: boolean; error?: string }> {
+  await requireAuth()
+
+  if (!adminDb) {
+    console.error('Firebase Admin SDK not available. Cannot archive course.')
+    return {
+      success: false,
+      error: 'Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.',
+    }
+  }
+
+  try {
+    // Check if course exists
+    const courseDoc = await adminDb.collection('courses').doc(courseId).get()
+    if (!courseDoc.exists) {
+      return {
+        success: false,
+        error: 'Course not found',
+      }
+    }
+
+    const courseData = courseDoc.data()!
+    const currentArchiveStatus = courseData.isArchived || false
+
+    // Toggle archive status
+    await adminDb.collection('courses').doc(courseId).update({
+      isArchived: !currentArchiveStatus,
+      updatedAt: new Date(),
+    })
+
+    // Revalidate pages
+    revalidatePath('/')
+    revalidatePath('/dashboard/courses')
+
+    return {
+      success: true,
+    }
+  } catch (error) {
+    console.error('Error archiving course:', error)
+    return {
+      success: false,
+      error: 'Failed to archive course. Please try again.',
+    }
+  }
+}
+
+/**
+ * Delete a course permanently
+ */
+export async function deleteCourse(courseId: string): Promise<{ success: boolean; error?: string }> {
+  const session = await requireAuth()
+
+  if (!adminDb) {
+    console.error('Firebase Admin SDK not available. Cannot delete course.')
+    return {
+      success: false,
+      error: 'Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.',
+    }
+  }
+
+  try {
+    // Check if course exists
+    const courseDoc = await adminDb.collection('courses').doc(courseId).get()
+    if (!courseDoc.exists) {
+      return {
+        success: false,
+        error: 'Course not found',
+      }
+    }
+
+    const courseData = courseDoc.data()!
+    
+    // Check if the current user is the creator of the course
+    if (courseData.createdBy !== session.uid) {
+      return {
+        success: false,
+        error: 'You can only delete courses that you created.',
+      }
+    }
+
+    // Delete the course
+    await adminDb.collection('courses').doc(courseId).delete()
+
+    // Revalidate pages to remove deleted course immediately
+    revalidatePath('/')
+    revalidatePath('/dashboard/courses')
+
+    return {
+      success: true,
+    }
+  } catch (error) {
+    console.error('Error deleting course:', error)
+    return {
+      success: false,
+      error: 'Failed to delete course. Please try again.',
     }
   }
 }

@@ -2,6 +2,7 @@
 
 import { adminDb } from '@/lib/firebase-admin'
 import { Event } from '@/types/event'
+import { Course } from '@/types/course'
 import { sendBookingConfirmationEmail } from '@/lib/email'
 import { generateRegistrationId } from '@/lib/registrationId'
 
@@ -255,5 +256,52 @@ export async function createBooking(formData: {
       success: false,
       error: 'Failed to create booking. Please try again.',
     }
+  }
+}
+
+/**
+ * Get all courses from Firestore (public - no auth required)
+ * Only returns non-archived courses
+ * Used by Feed component for public display
+ */
+export async function getPublicCourses(): Promise<Course[]> {
+  if (!adminDb) {
+    console.error('Firebase Admin SDK not available. Cannot fetch courses.')
+    return []
+  }
+
+  try {
+    // Query for non-archived courses only
+    const coursesSnapshot = await adminDb
+      .collection('courses')
+      .where('isArchived', '==', false)
+      .get()
+    
+    const courses: Course[] = []
+    coursesSnapshot.forEach((doc) => {
+      const data = doc.data()
+      courses.push({
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate?.() || data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+      } as Course)
+    })
+
+    // Sort by createdAt in descending order (newest first)
+    courses.sort((a, b) => {
+      if (!a.createdAt && !b.createdAt) return 0
+      if (!a.createdAt) return 1
+      if (!b.createdAt) return -1
+      
+      const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime()
+      const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime()
+      return dateB - dateA // Descending order
+    })
+
+    return courses
+  } catch (error) {
+    console.error('Error fetching public courses:', error)
+    return []
   }
 }

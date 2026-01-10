@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Calendar } from 'lucide-react'
+import { LayoutDashboard, Calendar, BookOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export default function Sidebar() {
@@ -18,6 +18,11 @@ export default function Sidebar() {
       href: '/dashboard/events',
       icon: Calendar,
       label: 'Events',
+    },
+    {
+      href: '/dashboard/courses',
+      icon: BookOpen,
+      label: 'Courses',
     },
   ]
 

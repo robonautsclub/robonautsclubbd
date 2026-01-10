@@ -1,6 +1,7 @@
 /**
  * PDF Storage utility for Cloudinary
- * Stores PDFs in event-organized folder structure: booking-confirmations/events/<event-slug>/booking-<bookingId>.pdf
+ * Stores PDFs in event-organized folder structure: events/<event-id>/booking-<bookingId>.pdf
+ * Folders are automatically created by Cloudinary when uploading to a path
  */
 
 import cloudinary from './cloudinary'
@@ -18,12 +19,13 @@ function bufferToStream(buffer: Buffer): Readable {
 
 /**
  * Upload PDF to Cloudinary with event-based folder structure
- * Stores PDFs in: booking-confirmations/events/<event-slug>/booking-<bookingId>.pdf
+ * Stores PDFs in: events/<event-id>/booking-<bookingId>.pdf
+ * Cloudinary automatically creates folders if they don't exist
  * Tries 'raw' resource_type first, falls back to 'image' if needed
  */
 export async function uploadPDFToStorage(
   pdfBuffer: Buffer,
-  eventTitle: string,
+  eventId: string,
   bookingId: string
 ): Promise<string | null> {
   try {
@@ -32,14 +34,14 @@ export async function uploadPDFToStorage(
       return null
     }
 
-    // Generate event slug for folder structure
-    const { generateEventSlug } = require('./pathUtils')
-    const eventSlug = generateEventSlug(eventTitle)
+    // Sanitize event ID and booking ID for folder structure
+    const sanitizedEventId = eventId.replace(/[^a-zA-Z0-9-_]/g, '')
     const sanitizedBookingId = bookingId.replace(/[^a-zA-Z0-9]/g, '')
     
-    // Create folder path: booking-confirmations/events/<event-slug>
+    // Create folder path: events/<event-id>
     // File name: booking-<bookingId>.pdf
-    const publicId = `booking-confirmations/events/${eventSlug}/booking-${sanitizedBookingId}`
+    // Cloudinary will automatically create the folder if it doesn't exist
+    const publicId = `events/${sanitizedEventId}/booking-${sanitizedBookingId}`
 
     // Try uploading as 'raw' resource_type first (Option 1)
     const rawResult = await uploadPDFWithResourceType(pdfBuffer, publicId, 'raw')
@@ -62,6 +64,8 @@ export async function uploadPDFToStorage(
 
 /**
  * Upload PDF with specified resource type
+ * Cloudinary automatically creates folders when uploading to a path that includes folder structure
+ * The folder structure is already included in the publicId (e.g., events/<event-id>/booking-<bookingId>)
  */
 async function uploadPDFWithResourceType(
   pdfBuffer: Buffer,
@@ -74,15 +78,18 @@ async function uploadPDFWithResourceType(
       const stream = bufferToStream(pdfBuffer)
 
       // Upload options with proper access settings
-      // publicId already contains the full path: booking-confirmations/events/<event-slug>/booking-<bookingId>
+      // publicId already contains the full path: events/<event-id>/booking-<bookingId>
+      // Cloudinary will automatically create the folder structure (events/<event-id>/) if it doesn't exist
+      // The folder is part of the public_id path, so no need for separate folder option
       const uploadOptions: any = {
         resource_type: resourceType,
-        public_id: publicId, // Full path including folder structure
+        public_id: publicId, // Full path including folder structure: events/<event-id>/booking-<bookingId>
         format: 'pdf',
         access_mode: 'public', // Ensure file is publicly accessible
         invalidate: true, // Clear CDN cache
         type: 'upload', // Explicit upload type
         allowed_formats: ['pdf'], // Security: only allow PDF format
+        // Note: Folder is automatically created from the public_id path structure
       }
 
       const uploadStream = cloudinary.uploader.upload_stream(
@@ -134,10 +141,10 @@ async function uploadPDFWithResourceType(
 /**
  * Delete PDF from Cloudinary
  * Tries both 'raw' and 'image' resource types since we support both
- * Constructs publicId from eventTitle and bookingId using the same folder structure as upload
+ * Constructs publicId from eventId and bookingId using the same folder structure as upload
  */
 export async function deletePDFFromStorage(
-  eventTitle: string,
+  eventId: string,
   bookingId: string
 ): Promise<boolean> {
   try {
@@ -146,13 +153,12 @@ export async function deletePDFFromStorage(
       return false
     }
 
-    // Generate event slug for folder structure
-    const { generateEventSlug } = require('./pathUtils')
-    const eventSlug = generateEventSlug(eventTitle)
+    // Sanitize event ID and booking ID to match upload structure
+    const sanitizedEventId = eventId.replace(/[^a-zA-Z0-9-_]/g, '')
     const sanitizedBookingId = bookingId.replace(/[^a-zA-Z0-9]/g, '')
     
-    // Construct publicId matching the upload structure
-    const publicId = `booking-confirmations/events/${eventSlug}/booking-${sanitizedBookingId}`
+    // Construct publicId matching the upload structure: events/<event-id>/booking-<bookingId>
+    const publicId = `events/${sanitizedEventId}/booking-${sanitizedBookingId}`
     let deleted = false
 
     // Try deleting as 'raw' first
