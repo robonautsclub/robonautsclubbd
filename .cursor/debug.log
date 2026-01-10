@@ -2944,3 +2944,27 @@
 {"location":"lib/auth.ts:20","message":"Verifying token with adminAuth","data":{"hasAdminAuth":true},"timestamp":1768030404654,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
 {"location":"lib/auth.ts:25","message":"Token verified successfully","data":{"uid":"yjyB6AZoSUafm4Gx442Aa0lADMA2","email":"fuadturkish@gmail.com"},"timestamp":1768030404971,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
 {"location":"lib/auth.ts:83","message":"requireAuth session check","data":{"hasSession":true,"uid":"yjyB6AZoSUafm4Gx442Aa0lADMA2"},"timestamp":1768030404971,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:80","message":"requireAuth entry","data":{},"timestamp":1768030493773,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:9","message":"getServerSession entry","data":{},"timestamp":1768030493773,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:80","message":"requireAuth entry","data":{},"timestamp":1768030493775,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:9","message":"getServerSession entry","data":{},"timestamp":1768030493776,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:15","message":"Token check","data":{"hasToken":true,"hasUserInfo":true},"timestamp":1768030493784,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:20","message":"Verifying token with adminAuth","data":{"hasAdminAuth":true},"timestamp":1768030493785,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:15","message":"Token check","data":{"hasToken":true,"hasUserInfo":true},"timestamp":1768030493785,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:20","message":"Verifying token with adminAuth","data":{"hasAdminAuth":true},"timestamp":1768030493785,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:25","message":"Token verified successfully","data":{"uid":"yjyB6AZoSUafm4Gx442Aa0lADMA2","email":"fuadturkish@gmail.com"},"timestamp":1768030494194,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:83","message":"requireAuth session check","data":{"hasSession":true,"uid":"yjyB6AZoSUafm4Gx442Aa0lADMA2"},"timestamp":1768030494194,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:80","message":"requireAuth entry","data":{},"timestamp":1768030494195,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:9","message":"getServerSession entry","data":{},"timestamp":1768030494195,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:15","message":"Token check","data":{"hasToken":true,"hasUserInfo":true},"timestamp":1768030494195,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:20","message":"Verifying token with adminAuth","data":{"hasAdminAuth":true},"timestamp":1768030494195,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:25","message":"Token verified successfully","data":{"uid":"yjyB6AZoSUafm4Gx442Aa0lADMA2","email":"fuadturkish@gmail.com"},"timestamp":1768030494213,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:83","message":"requireAuth session check","data":{"hasSession":true,"uid":"yjyB6AZoSUafm4Gx442Aa0lADMA2"},"timestamp":1768030494213,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:25","message":"Token verified successfully","data":{"uid":"yjyB6AZoSUafm4Gx442Aa0lADMA2","email":"fuadturkish@gmail.com"},"timestamp":1768030494535,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:83","message":"requireAuth session check","data":{"hasSession":true,"uid":"yjyB6AZoSUafm4Gx442Aa0lADMA2"},"timestamp":1768030494536,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:80","message":"requireAuth entry","data":{},"timestamp":1768030494615,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:9","message":"getServerSession entry","data":{},"timestamp":1768030494615,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:15","message":"Token check","data":{"hasToken":true,"hasUserInfo":true},"timestamp":1768030494615,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:20","message":"Verifying token with adminAuth","data":{"hasAdminAuth":true},"timestamp":1768030494615,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:25","message":"Token verified successfully","data":{"uid":"yjyB6AZoSUafm4Gx442Aa0lADMA2","email":"fuadturkish@gmail.com"},"timestamp":1768030494945,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
+{"location":"lib/auth.ts:83","message":"requireAuth session check","data":{"hasSession":true,"uid":"yjyB6AZoSUafm4Gx442Aa0lADMA2"},"timestamp":1768030494946,"sessionId":"debug-session","runId":"run1","hypothesisId":"A"}
