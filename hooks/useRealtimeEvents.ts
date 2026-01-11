@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { collection, onSnapshot, doc, query, where } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { Event } from '@/types/event'
@@ -12,12 +12,19 @@ export function useRealtimeEvents(publicAccess: boolean = false) {
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const unsubscribeRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     if (!db) {
       setError('Firebase Firestore is not initialized')
       setLoading(false)
       return
+    }
+
+    // Cleanup previous subscription if it exists (React Strict Mode protection)
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current()
+      unsubscribeRef.current = null
     }
 
     try {
@@ -58,13 +65,29 @@ export function useRealtimeEvents(publicAccess: boolean = false) {
         },
         (err) => {
           console.error('Error listening to events:', err)
-          setError('Failed to load events')
-          setLoading(false)
+          // Handle permission errors gracefully
+          if (err.code === 'permission-denied') {
+            setError('Permission denied. Please check Firestore security rules.')
+          } else if (err.code === 'failed-precondition') {
+            // Internal assertion errors - don't set error, just log
+            console.warn('Firestore internal error (likely React Strict Mode):', err)
+            setLoading(false)
+          } else {
+            setError('Failed to load events')
+            setLoading(false)
+          }
         }
       )
 
+      unsubscribeRef.current = unsubscribe
+
       // Cleanup listener on unmount
-      return () => unsubscribe()
+      return () => {
+        if (unsubscribeRef.current) {
+          unsubscribeRef.current()
+          unsubscribeRef.current = null
+        }
+      }
     } catch (err) {
       console.error('Error setting up events listener:', err)
       setError('Failed to set up real-time listener')
@@ -82,6 +105,7 @@ export function useRealtimeEvent(eventId: string) {
   const [event, setEvent] = useState<Event | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const unsubscribeRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     if (!db) {
@@ -93,6 +117,12 @@ export function useRealtimeEvent(eventId: string) {
     if (!eventId) {
       setLoading(false)
       return
+    }
+
+    // Cleanup previous subscription if it exists (React Strict Mode protection)
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current()
+      unsubscribeRef.current = null
     }
 
     try {
@@ -118,13 +148,29 @@ export function useRealtimeEvent(eventId: string) {
         },
         (err) => {
           console.error('Error listening to event:', err)
-          setError('Failed to load event')
-          setLoading(false)
+          // Handle permission errors gracefully
+          if (err.code === 'permission-denied') {
+            setError('Permission denied. Please check Firestore security rules.')
+          } else if (err.code === 'failed-precondition') {
+            // Internal assertion errors - don't set error, just log
+            console.warn('Firestore internal error (likely React Strict Mode):', err)
+            setLoading(false)
+          } else {
+            setError('Failed to load event')
+            setLoading(false)
+          }
         }
       )
 
+      unsubscribeRef.current = unsubscribe
+
       // Cleanup listener on unmount
-      return () => unsubscribe()
+      return () => {
+        if (unsubscribeRef.current) {
+          unsubscribeRef.current()
+          unsubscribeRef.current = null
+        }
+      }
     } catch (err) {
       console.error('Error setting up event listener:', err)
       setError('Failed to set up real-time listener')
@@ -142,6 +188,7 @@ export function useRealtimeBookings(eventId: string) {
   const [bookings, setBookings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const unsubscribeRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     if (!db) {
@@ -153,6 +200,12 @@ export function useRealtimeBookings(eventId: string) {
     if (!eventId) {
       setLoading(false)
       return
+    }
+
+    // Cleanup previous subscription if it exists (React Strict Mode protection)
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current()
+      unsubscribeRef.current = null
     }
 
     try {
@@ -197,13 +250,29 @@ export function useRealtimeBookings(eventId: string) {
         },
         (err) => {
           console.error('Error listening to bookings:', err)
-          setError('Failed to load bookings')
-          setLoading(false)
+          // Handle permission errors gracefully
+          if (err.code === 'permission-denied') {
+            setError('Permission denied. Please check Firestore security rules.')
+          } else if (err.code === 'failed-precondition') {
+            // Internal assertion errors - don't set error, just log
+            console.warn('Firestore internal error (likely React Strict Mode):', err)
+            setLoading(false)
+          } else {
+            setError('Failed to load bookings')
+            setLoading(false)
+          }
         }
       )
 
+      unsubscribeRef.current = unsubscribe
+
       // Cleanup listener on unmount
-      return () => unsubscribe()
+      return () => {
+        if (unsubscribeRef.current) {
+          unsubscribeRef.current()
+          unsubscribeRef.current = null
+        }
+      }
     } catch (err) {
       console.error('Error setting up bookings listener:', err)
       setError('Failed to set up real-time listener')

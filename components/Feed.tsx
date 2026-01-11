@@ -12,6 +12,12 @@ import {
   Eye,
   Award,
   Sparkles,
+  Globe,
+  Zap,
+  Rocket,
+  Star,
+  Medal,
+  Flag,
 } from 'lucide-react'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
@@ -210,18 +216,21 @@ const Feed = ({ initialCourses = [] }: FeedProps) => {
       </section>
 
       {/* Collaboration with Olympiads Section */}
-      <section className="py-12 sm:py-16 md:py-20 lg:py-24 bg-white relative">
+      <section className="py-12 sm:py-16 md:py-20 lg:py-24 bg-linear-to-br from-indigo-50/50 via-blue-50/50 to-purple-50/30 relative">
         <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-gray-200 to-transparent" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 relative z-10">
           <SectionHeader
             title="Our Olympiad Participation"
             subtitle="Our teams have previously competed in well-known national and international robotics olympiads, gaining valuable hands-on competition experience that helps us train and mentor current members."
           />
-          <div className="bg-linear-to-br from-indigo-50 via-blue-50 to-purple-50 rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-12 border-2 border-indigo-100 shadow-xl hover:shadow-2xl transition-all duration-300">
+          
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-10 lg:p-12 border-2 border-gray-200 shadow-sm hover:shadow-xl transition-all duration-300">
             <div className="mb-6 sm:mb-8">
               <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-                <Award className="w-8 h-8 sm:w-10 sm:h-10 text-indigo-500" />
-                <h3 className="text-xl sm:text-2xl font-bold text-gray-900">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-linear-to-br from-indigo-100 to-blue-100 flex items-center justify-center">
+                  <Award className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-500" />
+                </div>
+                <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
                   Olympiads We&apos;ve Competed In
                 </h3>
               </div>
@@ -229,73 +238,54 @@ const Feed = ({ initialCourses = [] }: FeedProps) => {
                 Robonauts Club has previously participated in prestigious robotics competitions at both national and international levels. These experiences have provided our students with real competition exposure and continue to inform our training programs.
               </p>
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              <div className="group bg-white p-4 sm:p-6 rounded-lg sm:rounded-xl border border-gray-200 hover:border-indigo-200 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5">
-                <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
-                  World Robot Olympiad (WRO)
-                </h4>
-                <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                  Global robotics competition where teams design and build robots to solve themed challenges.
-                </p>
-              </div>
-              <div className="group bg-white p-6 rounded-xl border border-gray-200 hover:border-indigo-200 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5">
-                <h4 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
-                  FIRST LEGO League Challenge (FLL)
-                </h4>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  International competition for elementary and middle school students focused on robotics and real-world problem solving.
-                </p>
-              </div>
-              <div className="group bg-white p-6 rounded-xl border border-gray-200 hover:border-indigo-200 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5">
-                <h4 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
-                  FIRST Tech Challenge (FTC)
-                </h4>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  Competition for middle and high school students involving more advanced robot design and gameplay.
-                </p>
-              </div>
-              <div className="group bg-white p-6 rounded-xl border border-gray-200 hover:border-indigo-200 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5">
-                <h4 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
-                  FIRST Robotics Competition (FRC)
-                </h4>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  High school–level global competition emphasizing large-scale robot engineering and teamwork.
-                </p>
-              </div>
-              <div className="group bg-white p-6 rounded-xl border border-gray-200 hover:border-indigo-200 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5">
-                <h4 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
-                  VEX IQ Robotics Competition
-                </h4>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  Beginner-friendly robotics competition with game-based challenges, including divisions for younger students.
-                </p>
-              </div>
-              <div className="group bg-white p-6 rounded-xl border border-gray-200 hover:border-indigo-200 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5">
-                <h4 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
-                  Technoxian – World Robotics Championship Series
-                </h4>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  International robotics championship featuring multiple competitive categories such as Robo Race and Robo Soccer.
-                </p>
-              </div>
+
+            {/* Olympiad Cards with Icons */}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-10">
+              {[
+                { name: 'World Robot Olympiad (WRO)', icon: Globe, color: 'from-indigo-500 to-blue-500', description: 'Global robotics competition where teams design and build robots to solve themed challenges.' },
+                { name: 'FIRST LEGO League Challenge (FLL)', icon: Rocket, color: 'from-blue-500 to-cyan-500', description: 'International competition for elementary and middle school students focused on robotics and real-world problem solving.' },
+                { name: 'FIRST Tech Challenge (FTC)', icon: Zap, color: 'from-purple-500 to-pink-500', description: 'Competition for middle and high school students involving more advanced robot design and gameplay.' },
+                { name: 'FIRST Robotics Competition (FRC)', icon: Trophy, color: 'from-yellow-500 to-orange-500', description: 'High school–level global competition emphasizing large-scale robot engineering and teamwork.' },
+                { name: 'VEX IQ Robotics Competition', icon: Star, color: 'from-green-500 to-emerald-500', description: 'Beginner-friendly robotics competition with game-based challenges, including divisions for younger students.' },
+                { name: 'Technoxian – World Robotics Championship', icon: Medal, color: 'from-red-500 to-rose-500', description: 'International robotics championship featuring multiple competitive categories such as Robo Race and Robo Soccer.' },
+              ].map((olympiad, index) => {
+                const Icon = olympiad.icon
+                return (
+                  <div
+                    key={index}
+                    className="group bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-gray-200 hover:border-indigo-200 hover:bg-linear-to-br hover:from-indigo-50/50 hover:to-blue-50/50 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+                  >
+                    <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-linear-to-br ${olympiad.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                      <Icon className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                    </div>
+                    <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
+                      {olympiad.name}
+                    </h4>
+                    <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
+                      {olympiad.description}
+                    </p>
+                  </div>
+                )
+              })}
             </div>
-            <div className="grid grid-cols-2 gap-4 sm:gap-6 mt-6 sm:mt-10">
-              <div className="group bg-white p-4 sm:p-6 rounded-lg sm:rounded-xl border-2 border-gray-200 hover:border-indigo-200 text-center hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
-                <div className="text-3xl sm:text-4xl font-bold bg-linear-to-r from-indigo-500 to-indigo-600 bg-clip-text text-transparent mb-2 group-hover:scale-110 transition-transform duration-300">
+            {/* Stats Section */}
+            <div className="grid grid-cols-2 gap-4 sm:gap-6 mb-8 sm:mb-10">
+              <div className="group bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 border-gray-200 hover:border-indigo-200 text-center hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
+                <div className="text-3xl sm:text-4xl md:text-5xl font-bold bg-linear-to-r from-indigo-500 to-indigo-600 bg-clip-text text-transparent mb-2 group-hover:scale-110 transition-transform duration-300">
                   50+
                 </div>
                 <div className="text-xs sm:text-sm text-gray-600 font-medium">
                   Competition Participants
                 </div>
               </div>
-              <div className="group bg-white p-4 sm:p-6 rounded-lg sm:rounded-xl border-2 border-gray-200 hover:border-blue-200 text-center hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
-                <div className="text-3xl sm:text-4xl font-bold bg-linear-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent mb-2 group-hover:scale-110 transition-transform duration-300">
+              <div className="group bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 border-gray-200 hover:border-blue-200 text-center hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
+                <div className="text-3xl sm:text-4xl md:text-5xl font-bold bg-linear-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent mb-2 group-hover:scale-110 transition-transform duration-300">
                   15+
                 </div>
                 <div className="text-xs sm:text-sm text-gray-600 font-medium">Awards Won</div>
               </div>
-              <div className="group bg-white p-4 sm:p-6 rounded-lg sm:rounded-xl border-2 border-gray-200 hover:border-purple-200 text-center col-span-2 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
-                <div className="text-3xl sm:text-4xl font-bold bg-linear-to-r from-purple-500 to-purple-600 bg-clip-text text-transparent mb-2 group-hover:scale-110 transition-transform duration-300">
+              <div className="group bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 border-gray-200 hover:border-purple-200 text-center col-span-2 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
+                <div className="text-3xl sm:text-4xl md:text-5xl font-bold bg-linear-to-r from-purple-500 to-purple-600 bg-clip-text text-transparent mb-2 group-hover:scale-110 transition-transform duration-300">
                   100%
                 </div>
                 <div className="text-xs sm:text-sm text-gray-600 font-medium">
@@ -306,14 +296,19 @@ const Feed = ({ initialCourses = [] }: FeedProps) => {
             
             {/* Scrolling Countries Section */}
             <div className="mt-8 sm:mt-10 pt-6 sm:pt-8 border-t border-gray-200">
-              <div className="overflow-hidden relative">
-                <div className="flex animate-scroll-left gap-8 sm:gap-12">
+              <div className="overflow-hidden relative rounded-xl bg-gray-50 p-4 border border-gray-200">
+                {/* Gradient overlays for fade effect */}
+                <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-24 bg-linear-to-r from-gray-50 to-transparent z-10 pointer-events-none" />
+                <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-24 bg-linear-to-r from-transparent to-gray-50 z-10 pointer-events-none" />
+                
+                <div className="flex animate-scroll-left gap-6 sm:gap-8 md:gap-12">
                   {/* First set of countries */}
                   {['Bangladesh', 'India', 'Thailand', 'Malaysia', 'Singapore', 'Indonesia', 'Philippines', 'Vietnam', 'China', 'Japan', 'South Korea', 'UAE', 'Qatar', 'Saudi Arabia', 'Turkey'].map((country, index) => (
                     <div
                       key={`country-1-${index}`}
-                      className="shrink-0 px-4 sm:px-6 py-2 sm:py-3 bg-white rounded-lg sm:rounded-xl border border-indigo-200 shadow-sm hover:shadow-md transition-shadow"
+                      className="shrink-0 flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-white rounded-lg sm:rounded-xl border border-indigo-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all duration-300"
                     >
+                      <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500 shrink-0" />
                       <span className="text-sm sm:text-base font-semibold text-indigo-600 whitespace-nowrap">
                         {country}
                       </span>
@@ -323,8 +318,9 @@ const Feed = ({ initialCourses = [] }: FeedProps) => {
                   {['Bangladesh', 'India', 'Thailand', 'Malaysia', 'Singapore', 'Indonesia', 'Philippines', 'Vietnam', 'China', 'Japan', 'South Korea', 'UAE', 'Qatar', 'Saudi Arabia', 'Turkey'].map((country, index) => (
                     <div
                       key={`country-2-${index}`}
-                      className="shrink-0 px-4 sm:px-6 py-2 sm:py-3 bg-white rounded-lg sm:rounded-xl border border-indigo-200 shadow-sm hover:shadow-md transition-shadow"
+                      className="shrink-0 flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-white rounded-lg sm:rounded-xl border border-indigo-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all duration-300"
                     >
+                      <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500 shrink-0" />
                       <span className="text-sm sm:text-base font-semibold text-indigo-600 whitespace-nowrap">
                         {country}
                       </span>

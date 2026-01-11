@@ -50,21 +50,30 @@ let auth: Auth | null = null
 let db: Firestore | null = null
 
 try {
-  if (getApps().length === 0) {
+  // Check if Firebase app already exists
+  const existingApps = getApps()
+  if (existingApps.length > 0) {
+    app = existingApps[0]
+  } else {
     // Only initialize if we have the minimum required config
     if (firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId) {
       app = initializeApp(firebaseConfig)
     } else {
       console.error('Firebase initialization skipped: Missing required configuration values')
     }
-  } else {
-    app = getApps()[0]
   }
 
   // Only create auth and firestore instances if app is initialized
   if (app) {
-    auth = getAuth(app)
-    db = getFirestore(app)
+    try {
+      auth = getAuth(app)
+      db = getFirestore(app)
+    } catch (error) {
+      // If auth/firestore already initialized, get existing instances
+      console.warn('Firebase services may already be initialized:', error)
+      if (!auth) auth = getAuth(app)
+      if (!db) db = getFirestore(app)
+    }
   }
 } catch (error) {
   console.error('Firebase initialization error:', error)
