@@ -2,7 +2,7 @@
 
 import { useState, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, Mail, Save, Loader2, CheckCircle2 } from 'lucide-react'
+import { User, Mail, Save, Loader2, CheckCircle2, Lock } from 'lucide-react'
 import type { Session } from '@/lib/auth'
 
 interface ProfileFormProps {
@@ -16,7 +16,7 @@ export default function ProfileForm({ session }: ProfileFormProps) {
   const [success, setSuccess] = useState(false)
   const [formData, setFormData] = useState({
     displayName: session.name || '',
-    email: session.email || '',
+    password: '',
   })
 
   const handleSubmit = async (e: FormEvent) => {
@@ -32,10 +32,9 @@ export default function ProfileForm({ session }: ProfileFormProps) {
       return
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(formData.email)) {
-      setError('Invalid email format')
+    // Validate password if provided
+    if (formData.password && formData.password.length > 0 && formData.password.length < 6) {
+      setError('Password must be at least 6 characters long')
       setLoading(false)
       return
     }
@@ -49,7 +48,7 @@ export default function ProfileForm({ session }: ProfileFormProps) {
         credentials: 'include',
         body: JSON.stringify({
           displayName: formData.displayName.trim(),
-          email: formData.email.trim(),
+          password: formData.password || undefined, // Only send password if provided
         }),
       })
 
@@ -60,11 +59,12 @@ export default function ProfileForm({ session }: ProfileFormProps) {
       }
 
       setSuccess(true)
+      // Clear password field on success
+      setFormData({ ...formData, password: '' })
       setTimeout(() => {
         router.refresh()
       }, 1500)
     } catch (err) {
-      console.error('Error updating profile:', err)
       setError(err instanceof Error ? err.message : 'Failed to update profile. Please try again.')
     } finally {
       setLoading(false)
@@ -73,7 +73,7 @@ export default function ProfileForm({ session }: ProfileFormProps) {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-blue-50">
+      <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-200 bg-linear-to-r from-indigo-50 to-blue-50">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-indigo-500 flex items-center justify-center">
             <User className="w-5 h-5 text-white" />
@@ -124,22 +124,39 @@ export default function ProfileForm({ session }: ProfileFormProps) {
           />
         </div>
 
-        {/* Email */}
+        {/* Email (Read-only) */}
         <div className="space-y-2">
           <label htmlFor="email" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
             <Mail className="w-4 h-4 text-indigo-600" />
-            Email Address <span className="text-red-500">*</span>
+            Email Address
           </label>
           <input
             id="email"
             type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            required
+            value={session.email}
+            disabled
             placeholder="your.email@example.com"
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-600 cursor-not-allowed"
+          />
+          <p className="text-xs text-gray-500">Email address cannot be changed. Contact a Super Admin if you need to update your email.</p>
+        </div>
+
+        {/* Password */}
+        <div className="space-y-2">
+          <label htmlFor="password" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <Lock className="w-4 h-4 text-indigo-600" />
+            New Password (leave blank to keep current)
+          </label>
+          <input
+            id="password"
+            type="password"
+            value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            placeholder="Enter new password (minimum 6 characters)"
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
             disabled={loading}
           />
+          <p className="text-xs text-gray-500">Only enter a new password if you want to change it. Leave blank to keep your current password.</p>
         </div>
 
         {/* Role Info (read-only) */}

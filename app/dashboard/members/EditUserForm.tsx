@@ -23,7 +23,6 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [formData, setFormData] = useState({
-    email: user.email,
     displayName: user.displayName,
     password: '',
     disabled: user.disabled,
@@ -34,16 +33,6 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
     setError('')
     setLoading(true)
 
-    // Validate email format if changed
-    if (formData.email !== user.email) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(formData.email)) {
-        setError('Invalid email format')
-        setLoading(false)
-        return
-      }
-    }
-
     // Validate password if provided
     if (formData.password && formData.password.length < 6) {
       setError('Password must be at least 6 characters long')
@@ -53,15 +42,11 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
 
     try {
       const updateData: {
-        email?: string
         displayName?: string
         password?: string
         disabled?: boolean
       } = {}
 
-      if (formData.email !== user.email) {
-        updateData.email = formData.email.trim()
-      }
       if (formData.displayName !== user.displayName) {
         updateData.displayName = formData.displayName.trim()
       }
@@ -96,7 +81,6 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
       onClose()
       router.refresh()
     } catch (err) {
-      console.error('Error updating user:', err)
       setError(err instanceof Error ? err.message : 'Failed to update user. Please try again.')
     } finally {
       setLoading(false)
@@ -140,7 +124,7 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
               </div>
             )}
 
-            {/* Email */}
+            {/* Email (Read-only) */}
             <div className="space-y-2">
               <label htmlFor="email" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                 <Mail className="w-4 h-4 text-indigo-600" />
@@ -149,13 +133,12 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
               <input
                 id="email"
                 type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
+                value={user.email}
+                disabled
                 placeholder="user@example.com"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
-                disabled={loading}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-600 cursor-not-allowed"
               />
+              <p className="text-xs text-gray-500">Email address cannot be changed for security reasons.</p>
             </div>
 
             {/* Display Name */}

@@ -102,7 +102,7 @@ export async function PUT(
 
     const { uid } = await params
     const body = await request.json()
-    const { email, displayName, password, disabled } = body
+    const { displayName, password, disabled } = body
 
     if (!uid) {
       return NextResponse.json(
@@ -111,25 +111,21 @@ export async function PUT(
       )
     }
 
+    // Email updates are not allowed - even for Super Admin
+    // This ensures email addresses remain stable and secure
+    if (body.email !== undefined) {
+      return NextResponse.json(
+        { error: 'Email address cannot be changed. Email addresses are permanent for security reasons.' },
+        { status: 400 }
+      )
+    }
+
     // Build update object
     const updateData: {
-      email?: string
       displayName?: string
       password?: string
       disabled?: boolean
     } = {}
-
-    if (email !== undefined) {
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(email)) {
-        return NextResponse.json(
-          { error: 'Invalid email format' },
-          { status: 400 }
-        )
-      }
-      updateData.email = email
-    }
 
     if (displayName !== undefined) {
       updateData.displayName = displayName
@@ -153,7 +149,6 @@ export async function PUT(
     // Get current user data for notification
     const currentUser = await adminAuth.getUser(uid)
     const changes: string[] = []
-    if (updateData.email && updateData.email !== currentUser.email) changes.push('email')
     if (updateData.displayName && updateData.displayName !== currentUser.displayName) changes.push('display name')
     if (updateData.password) changes.push('password')
     if (updateData.disabled !== undefined && updateData.disabled !== currentUser.disabled) {

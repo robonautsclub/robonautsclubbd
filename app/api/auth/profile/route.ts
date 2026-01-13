@@ -18,47 +18,49 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { displayName, email } = body
+    const { displayName, password } = body
 
     // Validate input
-    if (!displayName || !email) {
+    if (!displayName) {
       return NextResponse.json(
-        { error: 'Display name and email are required' },
+        { error: 'Display name is required' },
         { status: 400 }
       )
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: 'Invalid email format' },
-        { status: 400 }
-      )
+    // Validate password if provided
+    if (password !== undefined && password !== null && password !== '') {
+      if (password.length < 6) {
+        return NextResponse.json(
+          { error: 'Password must be at least 6 characters long' },
+          { status: 400 }
+        )
+      }
     }
 
     // Get current user data to check what changed
     const currentUser = await adminAuth.getUser(session.uid)
     const changes: string[] = []
 
-    if (currentUser.displayName !== displayName) {
+    if (currentUser.displayName !== displayName.trim()) {
       changes.push('display name')
     }
-    if (currentUser.email !== email) {
-      changes.push('email')
+    if (password && password.length > 0) {
+      changes.push('password')
     }
 
-    // Update user
+    // Update user - only displayName and password can be updated
+    // Email cannot be changed by users
     const updateData: {
       displayName?: string
-      email?: string
+      password?: string
     } = {}
 
-    if (displayName !== currentUser.displayName) {
+    if (displayName.trim() !== currentUser.displayName) {
       updateData.displayName = displayName.trim()
     }
-    if (email !== currentUser.email) {
-      updateData.email = email.trim()
+    if (password && password.length > 0) {
+      updateData.password = password
     }
 
     // Only update if there are changes
@@ -82,7 +84,6 @@ export async function PUT(request: NextRequest) {
             })
           }
         } catch (notifError) {
-          console.error('Error creating notification:', notifError)
           // Don't fail the profile update if notification fails
         }
       }
@@ -101,17 +102,9 @@ export async function PUT(request: NextRequest) {
       message: 'Profile updated successfully',
     })
   } catch (error: unknown) {
-    console.error('Error updating profile:', error)
-
     // Handle Firebase Auth errors
     const firebaseError = error as { code?: string; message?: string }
-    if (firebaseError.code === 'auth/email-already-exists') {
-      return NextResponse.json(
-        { error: 'A user with this email already exists' },
-        { status: 400 }
-      )
-    }
-
+    
     return NextResponse.json(
       { error: 'Failed to update profile' },
       { status: 500 }
