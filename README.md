@@ -49,7 +49,7 @@ Robonauts Club website is a comprehensive event management and booking platform 
 - **Firebase Storage** - Alternative image storage (if needed)
 
 ### Email Service
-- **Resend** - Transactional email service
+- **Brevo** - Transactional email service
 
 ### Additional Libraries
 - **Leaflet & React Leaflet** - Interactive maps
@@ -67,12 +67,48 @@ Robonauts Club website is a comprehensive event management and booking platform 
 - 📱 **Responsive Design**: Mobile-first, fully responsive
 
 ### Admin Features
-- 🔐 **Secure Dashboard**: Protected admin routes
-- ➕ **Event Management**: Create, edit, delete events
+- 🔐 **Secure Dashboard**: Protected admin routes with role-based access
+- 🔑 **Role-Based Access Control (RBAC)**: Super Admin and Admin roles
+- ➕ **Event Management**: Create, edit, delete events (with permission checks)
+- 📚 **Course Management**: Create, edit, delete, and archive courses
 - 📊 **Booking Management**: View and export event bookings
 - 🖼️ **Image Upload**: Direct image upload with AVIF conversion
 - 🏷️ **Tags System**: Categorize events with tags
 - 📧 **Email Notifications**: Send booking confirmations
+- 👤 **Profile Management**: Update display name and password
+- 🔔 **Notifications System**: Real-time notifications for database changes
+- 👥 **User Management** (Super Admin only): Create, edit, and delete admin users
+
+### Role-Based Access Control
+
+The system implements a comprehensive RBAC system with two roles:
+
+#### Super Admin
+- **Definition**: Defined via `SUPER_ADMIN_EMAILS` environment variable
+- **Permissions**:
+  - Full access to all events (create, update, delete any event)
+  - Full access to all courses (create, update, delete, archive any course)
+  - User management (create, update, delete admin users)
+  - Access to Members management page
+  - Can view all notifications
+
+#### Admin
+- **Definition**: Any authenticated user not in the Super Admin email list
+- **Permissions**:
+  - Can create events
+  - Can only update/delete events they created
+  - Can create courses
+  - Can only update/delete/archive courses they created
+  - Cannot manage users
+  - Cannot access Members page
+  - Can view all notifications
+
+#### Security Features
+- 🔒 **Firebase Custom Claims**: Roles stored in Firebase Custom Claims (server-side only)
+- 🔒 **Automatic Role Assignment**: Roles assigned automatically on login and token refresh
+- 🔒 **Firestore Security Rules**: Database-level permission enforcement
+- 🔒 **Backend Permission Checks**: Server-side validation for all operations
+- 🔒 **Email Protection**: Email addresses cannot be changed by any user (including Super Admin)
 
 ### SEO Features
 - 📄 **Dynamic Metadata**: Page-specific SEO optimization
@@ -173,6 +209,11 @@ RESEND_FROM_EMAIL=noreply@robonautsclub.com
 ```env
 # Your production website URL (for SEO and absolute URLs)
 NEXT_PUBLIC_SITE_URL=https://robonautsclub.com
+
+# Super Admin Emails (comma-separated)
+# Users with these emails will be assigned 'superAdmin' role
+# All other authenticated users will be assigned 'admin' role
+SUPER_ADMIN_EMAILS=admin1@company.com,admin2@company.com,admin3@company.com
 ```
 
 ### Complete .env.local Example
@@ -200,16 +241,22 @@ CLOUDINARY_URL=cloudinary://123456789012345:abcdefghijklmnopqrstuvwxyz@dvxxa4sho
 # Resend Email Service
 RESEND_API_KEY=re_1234567890abcdefghijklmnop
 RESEND_FROM_EMAIL=noreply@robonautsclub.com
+
+# Super Admin Emails (comma-separated, no spaces)
+SUPER_ADMIN_EMAILS=admin1@company.com,admin2@company.com,admin3@company.com
 ```
 
 ## 🗄️ Storage Solutions
 
 ### Firebase Firestore
-- **Purpose**: Primary database for events, bookings, and user data
+- **Purpose**: Primary database for events, bookings, user data, and notifications
 - **Collections**:
-  - `events` - Event information (title, date, description, image, tags, etc.)
+  - `events` - Event information (title, date, description, image, tags, createdBy, etc.)
   - `bookings` - Event registrations with user details
+  - `courses` - Course information (title, level, blurb, image, createdBy, isArchived, etc.)
+  - `notifications` - System notifications for database changes
 - **Access**: Server-side via Firebase Admin SDK, Client-side via Firebase Client SDK
+- **Security**: Role-based access control enforced via Firestore Security Rules
 
 ### Cloudinary
 - **Purpose**: Image storage and optimization
@@ -236,6 +283,12 @@ robonautsclub/
 │   │   ├── MapClient.tsx       # Interactive map component
 │   │   └── page.tsx            # About page content
 │   ├── api/                     # API routes
+│   │   ├── admin/              # Admin-only API routes
+│   │   │   └── users/          # User management (Super Admin only)
+│   │   ├── auth/               # Authentication API routes
+│   │   │   ├── assign-role/   # Role assignment endpoint
+│   │   │   └── profile/       # Profile update endpoint
+│   │   ├── notifications/      # Notifications API
 │   │   └── upload-image/       # Cloudinary image upload endpoint
 │   ├── dashboard/               # Admin dashboard (protected)
 │   │   ├── events/             # Event management
@@ -243,7 +296,18 @@ robonautsclub/
 │   │   │   ├── CreateEventForm.tsx
 │   │   │   ├── EditEventForm.tsx
 │   │   │   └── page.tsx
+│   │   ├── courses/            # Course management
+│   │   │   ├── CreateCourseForm.tsx
+│   │   │   ├── EditCourseForm.tsx
+│   │   │   └── page.tsx
+│   │   ├── members/            # User management (Super Admin only)
+│   │   │   ├── CreateUserForm.tsx
+│   │   │   ├── EditUserForm.tsx
+│   │   │   └── page.tsx
+│   │   ├── profile/            # Profile management
+│   │   │   └── page.tsx
 │   │   ├── actions.ts          # Server actions for dashboard
+│   │   ├── Notifications.tsx    # Notifications component
 │   │   └── layout.tsx          # Dashboard layout
 │   ├── events/                  # Public events pages
 │   │   ├── [id]/              # Event detail page
@@ -267,16 +331,20 @@ robonautsclub/
 │   ├── OrganizationSchema.tsx  # SEO structured data
 │   └── StructuredData.tsx      # Reusable structured data
 ├── lib/                          # Utility libraries
-│   ├── auth.ts                 # Authentication utilities
+│   ├── auth.ts                 # Authentication utilities (RBAC helpers)
+│   ├── auth-client.ts          # Client-side auth utilities
 │   ├── cloudinary.ts           # Cloudinary configuration
 │   ├── email.ts                # Email service (Resend)
 │   ├── firebase-admin.ts       # Firebase Admin SDK setup
 │   ├── firebase.ts             # Firebase Client SDK setup
+│   ├── notifications.ts        # Notification creation helper
 │   ├── seo.ts                  # SEO utilities and schemas
 │   └── utils.ts                # General utilities
 ├── types/                        # TypeScript type definitions
 │   ├── booking.ts              # Booking type
+│   ├── course.ts               # Course type
 │   └── event.ts                # Event type
+├── firestore.rules              # Firestore security rules (RBAC)
 ├── public/                       # Static assets
 │   ├── images/                 # Image assets
 │   └── ...
@@ -374,6 +442,13 @@ pnpm lint         # Run ESLint
 - ✅ Verify service account has proper permissions
 - ✅ Ensure private key includes `\n` escape sequences
 
+**Problem**: Role not assigned correctly
+- ✅ Verify `SUPER_ADMIN_EMAILS` environment variable is set
+- ✅ Restart the Next.js server after adding/updating `SUPER_ADMIN_EMAILS`
+- ✅ Check server console logs for role assignment messages
+- ✅ Log out and log back in to trigger role assignment
+- ✅ Verify email matches exactly (case-insensitive) in `SUPER_ADMIN_EMAILS`
+
 ### Cloudinary Issues
 
 **Problem**: Image upload failing
@@ -396,6 +471,10 @@ pnpm lint         # Run ESLint
 - ✅ Check TypeScript errors: `pnpm build`
 - ✅ Verify all environment variables are set
 
+**Problem**: Route handler errors with `params`
+- ✅ In Next.js 15+, `params` is a Promise and must be awaited
+- ✅ Use `const { id } = await params` instead of `const { id } = params`
+
 ### SEO Issues
 
 **Problem**: Metadata not showing
@@ -405,11 +484,53 @@ pnpm lint         # Run ESLint
 
 ## 📝 Additional Notes
 
+### Role-Based Access Control (RBAC)
+
+The system uses Firebase Custom Claims for role management:
+
+1. **Role Assignment**: Happens automatically on login via `/api/auth/assign-role`
+2. **Super Admin**: Emails defined in `SUPER_ADMIN_EMAILS` environment variable
+3. **Admin**: All other authenticated users
+4. **Token Refresh**: Roles are re-assigned on token refresh
+5. **Security**: Custom claims are set server-side only, cannot be modified from client
+
+### Profile Management
+
+- **Display Name**: Can be updated by any admin
+- **Password**: Can be changed by any admin
+- **Email**: Cannot be changed (permanent for security)
+- **Role**: Managed by system, cannot be changed by users
+
+### Notifications System
+
+- **Automatic Notifications**: Created for all database changes:
+  - Event creation/update/deletion
+  - Course creation/update/deletion/archiving
+  - User creation/update/deletion (Super Admin only)
+  - Profile updates
+- **Auto-Mark as Read**: All notifications marked as read when dropdown is opened
+- **Real-time Updates**: Notifications refresh every 30 seconds
+- **Visible to**: All admins and super admins
+
+### User Management (Super Admin Only)
+
+- **Create Users**: Super Admin can create new admin users
+- **Update Users**: Can update display name, password, and disable/enable accounts
+- **Delete Users**: Can permanently delete user accounts
+- **Email Restriction**: Even Super Admin cannot change user email addresses
+
 ### Security
 - 🔒 Never commit `.env.local` or `firebase-service-account.json`
 - 🔒 Keep API keys secure and rotate regularly
 - 🔒 Use environment variables in production
 - 🔒 Admin routes are protected by middleware
+- 🔒 Role-based access control (RBAC) enforced at multiple levels:
+  - Firebase Custom Claims (server-side only)
+  - Firestore Security Rules (database level)
+  - Backend permission checks (application level)
+- 🔒 Email addresses are permanent and cannot be changed
+- 🔒 Role assignment happens automatically on login (no client-side mutation)
+- 🔒 `SUPER_ADMIN_EMAILS` must be server-side only (not `NEXT_PUBLIC_`)
 
 ### Performance
 - ⚡ Images are optimized with Cloudinary (AVIF format)
@@ -423,10 +544,28 @@ pnpm lint         # Run ESLint
 - ✅ Safari (latest)
 - ✅ Edge (latest)
 
+## 🔔 Notifications System
+
+The platform includes a comprehensive notification system that tracks all database changes:
+
+### Notification Types
+- **Event Changes**: Created, updated, or deleted events
+- **Course Changes**: Created, updated, deleted, or archived courses
+- **User Changes**: Created, updated, or deleted users (Super Admin actions)
+- **Profile Updates**: When users update their profile information
+
+### Features
+- **Real-time Updates**: Notifications refresh every 30 seconds
+- **Auto-Mark as Read**: All notifications automatically marked as read when dropdown opens
+- **Unread Badge**: Shows count of unread notifications
+- **Color-Coded**: Different colors for different notification types
+- **Change Tracking**: Shows what specific fields were changed
+
 ## 📚 Additional Resources
 
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Firebase Documentation](https://firebase.google.com/docs)
+- [Firebase Custom Claims](https://firebase.google.com/docs/auth/admin/custom-claims)
 - [Cloudinary Documentation](https://cloudinary.com/documentation)
 - [Resend Documentation](https://resend.com/docs)
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs)
