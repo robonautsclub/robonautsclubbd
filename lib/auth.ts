@@ -2,6 +2,10 @@ import { cookies } from 'next/headers'
 import { adminAuth } from './firebase-admin'
 import { redirect } from 'next/navigation'
 
+/** Session duration: 30 minutes (used for cookie max-age and client timers) */
+export const SESSION_DURATION_SECONDS = 30 * 60
+export const SESSION_DURATION_MS = SESSION_DURATION_SECONDS * 1000
+
 /**
  * Get the current user session from the auth token cookie (server-side)
  * Returns the decoded token with user info, or null if not authenticated
@@ -116,7 +120,7 @@ export async function requireAuth() {
  * This should be called after successful login
  */
 export function setAuthToken(token: string) {
-  document.cookie = `auth-token=${token}; path=/; max-age=3600; SameSite=Lax` // 1 hour
+  document.cookie = `auth-token=${token}; path=/; max-age=${SESSION_DURATION_SECONDS}; SameSite=Lax`
 }
 
 /**

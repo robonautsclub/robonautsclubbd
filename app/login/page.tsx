@@ -4,6 +4,7 @@ import { useState, FormEvent, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
+import { SESSION_DURATION_SECONDS } from '@/lib/auth'
 import { X, Mail, Sparkles } from 'lucide-react'
 
 function LoginForm() {
@@ -88,8 +89,8 @@ function LoginForm() {
         // The role will be assigned on next token refresh
       }
 
-      // Set the final token in cookie (1 hour session)
-      document.cookie = `auth-token=${finalToken}; path=/; max-age=3600; SameSite=Lax`
+      // Set the final token in cookie (30-minute session)
+      document.cookie = `auth-token=${finalToken}; path=/; max-age=${SESSION_DURATION_SECONDS}; SameSite=Lax`
 
       // Store user info in cookie (for fallback when Admin SDK is not available)
       // Include role for client-side access
@@ -100,10 +101,10 @@ function LoginForm() {
         emailVerified: user.emailVerified,
         role: assignedRole,
       }
-      document.cookie = `user-info=${JSON.stringify(userInfo)}; path=/; max-age=3600; SameSite=Lax`
+      document.cookie = `user-info=${JSON.stringify(userInfo)}; path=/; max-age=${SESSION_DURATION_SECONDS}; SameSite=Lax`
 
-      // Session start for 1-hour auto logout timer
-      document.cookie = `session-start=${Date.now()}; path=/; max-age=3600; SameSite=Lax`
+      // Session start for 30-minute auto logout timer
+      document.cookie = `session-start=${Date.now()}; path=/; max-age=${SESSION_DURATION_SECONDS}; SameSite=Lax`
 
       // Redirect to dashboard or the redirect URL
       const redirectTo = searchParams.get('redirect') || '/dashboard'

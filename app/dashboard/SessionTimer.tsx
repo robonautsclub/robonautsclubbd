@@ -4,8 +4,7 @@ import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { signOut } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
-
-const ONE_HOUR_MS = 3600000
+import { SESSION_DURATION_MS } from '@/lib/auth'
 
 function getSessionStart(): number | null {
   if (typeof window === 'undefined') return null
@@ -25,7 +24,7 @@ function clearSessionCookies() {
 }
 
 /**
- * Proactive 1-hour session timer. Clears cookies, signs out, and redirects to login when the session expires.
+ * Proactive 30-minute session timer. Clears cookies, signs out, and redirects to login when the session expires.
  */
 export default function SessionTimer() {
   const router = useRouter()
@@ -35,7 +34,7 @@ export default function SessionTimer() {
     const sessionStart = getSessionStart()
     const now = Date.now()
     const elapsed = sessionStart != null ? now - sessionStart : 0
-    const remainingMs = Math.max(0, ONE_HOUR_MS - elapsed)
+    const remainingMs = Math.max(0, SESSION_DURATION_MS - elapsed)
 
     const handleExpiry = () => {
       clearSessionCookies()

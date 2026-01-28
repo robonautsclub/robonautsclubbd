@@ -4,6 +4,31 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
+import { SESSION_DURATION_MS } from '@/lib/auth'
+
+function getSessionStart(): number | null {
+  if (typeof window === 'undefined') return null
+  const match = document.cookie
+    .split('; ')
+    .find((row) => row.startsWith('session-start='))
+  const value = match?.split('=')[1]
+  if (!value) return null
+  const parsed = parseInt(value, 10)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function clearSessionCookies() {
+  document.cookie = 'auth-token=; path=/; max-age=0'
+  document.cookie = 'user-info=; path=/; max-age=0'
+  document.cookie = 'session-start=; path=/; max-age=0'
+}
+
+function getRemainingSessionSeconds(): number {
+  const sessionStart = getSessionStart()
+  if (sessionStart == null) return 0
+  const remainingMs = sessionStart + SESSION_DURATION_MS - Date.now()
+  return Math.max(0, Math.floor(remainingMs / 1000))
+}
 
 /**
  * Client-side component that checks for token expiration
@@ -23,9 +48,7 @@ export default function TokenExpirationChecker() {
       auth,
       async (user) => {
         if (!user) {
-          // User is not authenticated, clear cookies and redirect
-          document.cookie = 'auth-token=; path=/; max-age=0'
-          document.cookie = 'user-info=; path=/; max-age=0'
+          clearSessionCookies()
           router.push('/login')
           return
         }
@@ -35,9 +58,14 @@ export default function TokenExpirationChecker() {
           const token = await user.getIdToken(true) // Force refresh if needed
           
           if (!token) {
-            // No valid token, redirect to login
-            document.cookie = 'auth-token=; path=/; max-age=0'
-            document.cookie = 'user-info=; path=/; max-age=0'
+            clearSessionCookies()
+            router.push('/login')
+            return
+          }
+
+          const remainingSeconds = getRemainingSessionSeconds()
+          if (remainingSeconds <= 0) {
+            clearSessionCookies()
             router.push('/login')
             return
           }
@@ -54,34 +82,24 @@ export default function TokenExpirationChecker() {
             })
 
             if (roleResponse.ok) {
-              // Get fresh token with updated claims after role assignment
               const freshToken = await user.getIdToken(true)
-              // Use the fresh token with updated claims (1 hour session)
-              document.cookie = `auth-token=${freshToken}; path=/; max-age=3600; SameSite=Lax`
+              document.cookie = `auth-token=${freshToken}; path=/; max-age=${remainingSeconds}; SameSite=Lax`
             } else {
-              // Role assignment failed, but continue with current token
-              document.cookie = `auth-token=${token}; path=/; max-age=3600; SameSite=Lax`
+              document.cookie = `auth-token=${token}; path=/; max-age=${remainingSeconds}; SameSite=Lax`
             }
           } catch (roleError) {
             console.error('Error assigning role during token refresh:', roleError)
-            // Continue with current token even if role assignment fails
-            // The role will be assigned on next token refresh or login
-            document.cookie = `auth-token=${token}; path=/; max-age=3600; SameSite=Lax`
+            document.cookie = `auth-token=${token}; path=/; max-age=${remainingSeconds}; SameSite=Lax`
           }
         } catch (error: unknown) {
           console.error('Token refresh error:', error)
-          
-          // Token refresh failed (likely expired), redirect to login
-          document.cookie = 'auth-token=; path=/; max-age=0'
-          document.cookie = 'user-info=; path=/; max-age=0'
+          clearSessionCookies()
           router.push('/login')
         }
       },
       (error) => {
         console.error('Auth state change error:', error)
-        // Auth error occurred, clear cookies and redirect
-        document.cookie = 'auth-token=; path=/; max-age=0'
-        document.cookie = 'user-info=; path=/; max-age=0'
+        clearSessionCookies()
         router.push('/login')
       }
     )

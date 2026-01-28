@@ -2,10 +2,13 @@ import { isTokenExpired } from '@/lib/jwt'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+const SESSION_DURATION_MS = 30 * 60 * 1000 // 30 minutes
+
 function clearAuthAndRedirect(loginUrl: URL) {
   const response = NextResponse.redirect(loginUrl)
   response.cookies.delete('auth-token')
   response.cookies.delete('user-info')
+  response.cookies.delete('session-start')
   return response
 }
 
@@ -32,6 +35,16 @@ export function middleware(request: NextRequest) {
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('redirect', pathname)
       return clearAuthAndRedirect(loginUrl)
+    }
+
+    const sessionStartCookie = request.cookies.get('session-start')?.value
+    if (sessionStartCookie) {
+      const sessionStart = parseInt(sessionStartCookie, 10)
+      if (Number.isFinite(sessionStart) && Date.now() - sessionStart > SESSION_DURATION_MS) {
+        const loginUrl = new URL('/login', request.url)
+        loginUrl.searchParams.set('redirect', pathname)
+        return clearAuthAndRedirect(loginUrl)
+      }
     }
   }
 
