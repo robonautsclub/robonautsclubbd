@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
-import { SESSION_DURATION_MS } from '@/lib/auth'
+import { SESSION_DURATION_MS } from '@/lib/session'
 
 function getSessionStart(): number | null {
   if (typeof window === 'undefined') return null

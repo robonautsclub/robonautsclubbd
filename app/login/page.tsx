@@ -4,7 +4,7 @@ import { useState, FormEvent, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
-import { SESSION_DURATION_SECONDS } from '@/lib/auth'
+import { SESSION_DURATION_SECONDS } from '@/lib/session'
 import { X, Mail, Sparkles } from 'lucide-react'
 
 function LoginForm() {

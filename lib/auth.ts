@@ -1,10 +1,7 @@
 import { cookies } from 'next/headers'
 import { adminAuth } from './firebase-admin'
 import { redirect } from 'next/navigation'
-
-/** Session duration: 30 minutes (used for cookie max-age and client timers) */
-export const SESSION_DURATION_SECONDS = 30 * 60
-export const SESSION_DURATION_MS = SESSION_DURATION_SECONDS * 1000
+import { SESSION_DURATION_SECONDS } from './session'
 
 /**
  * Get the current user session from the auth token cookie (server-side)
