@@ -8,7 +8,7 @@ export const SITE_CONFIG = {
   description: "Bangladesh's first youth robotics club preparing students for Robofest & global STEM challenges.",
   email: "info@robonautsclub.com",
   phone: "+8801824863366",
-  location: "Dhaka, Bangladesh",
+  location: "5B, House #4, Road #7, Sector #3, Uttara",
   social: {
     facebook: "https://www.facebook.com/robonautsclub",
     instagram: "https://www.instagram.com/robonauts_club",
@@ -30,9 +30,10 @@ export function getOrganizationSchema() {
     description: SITE_CONFIG.description,
     address: {
       "@type": "PostalAddress",
-      addressLocality: "Dhaka",
-      addressCountry: "BD",
+      streetAddress: "5B, House #4, Road #7, Sector #3",
+      addressLocality: "Uttara",
       addressRegion: "Dhaka",
+      addressCountry: "BD",
     },
     contactPoint: {
       "@type": "ContactPoint",

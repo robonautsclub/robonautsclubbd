@@ -15,7 +15,7 @@ const COMPANY = {
   tagline: "Innovation meets curiosity in STEM education",
   email: "info@robonautsclub.com",
   phone: "+8801824863366",
-  location: "Dhaka, Bangladesh",
+  location: "5B, House #4, Road #7, Sector #3, Uttara",
   facebook: "https://www.facebook.com/robonautsclub",
 };
 

@@ -23,6 +23,8 @@ const MapClient = dynamic(() => import("./MapClient"), {
   ssr: false,
 });
 
+const GOOGLE_MAPS_LINK = "https://maps.app.goo.gl/3kWfm4iG8a3ZdfLF6";
+
 // Constants
 const STATS = [
   { icon: Users, value: "500+", label: "Active Members" },
@@ -395,7 +397,15 @@ export default function AboutPage() {
                       <MapPin className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
                       <div>
                         <p className="text-sm font-medium text-gray-500 mb-1">Address</p>
-                        <p className="text-gray-700">Uttara, Dhaka, Bangladesh, 1230</p>
+                        <p className="text-gray-700">5B, House #4, Road #7, Sector #3, Uttara</p>
+                        <a
+                          href={GOOGLE_MAPS_LINK}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-indigo-600 hover:text-indigo-800 hover:underline mt-1 inline-block"
+                        >
+                          View on Google Maps
+                        </a>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
