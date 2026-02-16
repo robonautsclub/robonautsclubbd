@@ -20,6 +20,7 @@ import {
   Medal,
 } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ArrowRight } from 'lucide-react'
 import type { Course } from '@/types/course'
 
@@ -40,6 +41,57 @@ const SectionHeader = ({
   </div>
 )
 
+const OLYMPIADS = [
+  {
+    name: 'GENIUS Olympiad',
+    icon: Medal,
+    logo: '/olympiads/genius.jpeg',
+    color: 'from-green-500 to-teal-500',
+    description: 'International high school project competition in science, robotics, business, art, and environmental innovation, hosted in the USA.',
+    url: 'https://www.geniusolympiad.org/',
+  },
+  {
+    name: 'NASA Human Exploration Rover Challenge (HERC)',
+    icon: Rocket,
+    logo: '/olympiads/nasahover.webp',
+    color: 'from-slate-700 to-blue-600',
+    description: 'NASA-organized global engineering challenge where student teams design, build, and race human-powered rovers over simulated extraterrestrial terrain. (USA)',
+    url: 'https://www.nasa.gov/learning-resources/nasa-human-exploration-rover-challenge/',
+  },
+  {
+    name: 'NextGen Olympiad',
+    icon: Globe,
+    logo: '/olympiads/nextgen.jpg',
+    color: 'from-purple-500 to-indigo-500',
+    description: 'International STEM competition hosted in Australia, focusing on robotics, AI, innovation, and future technologies for school students.',
+    url: 'https://www.nextgenolympiad.com/',
+  },
+  {
+    name: 'World Scholars Cup',
+    icon: Trophy,
+    logo: '/olympiads/worldscholar.png',
+    color: 'from-yellow-500 to-amber-500',
+    description: 'Global academic tournament combining debate, collaborative writing, quizzes, and interdisciplinary challenges for students worldwide. (Origin: USA)',
+    url: 'https://www.scholarscup.org/',
+  },
+  {
+    name: 'Owlypia International',
+    icon: Star,
+    logo: '/olympiads/owlypia.jpeg',
+    color: 'from-pink-500 to-rose-500',
+    description: 'Global online knowledge competition for students aged 7–18, covering science, literature, history, and general knowledge. (Origin: United Kingdom)',
+    url: 'https://www.owlypia.org/',
+  },
+  {
+    name: 'Robofest',
+    icon: Zap,
+    logo: '/olympiads/robofest.png',
+    color: 'from-blue-500 to-cyan-500',
+    description: 'International robotics competition hosted by Lawrence Technological University, USA, featuring BottleSumo, RoboParade, and autonomous robotics challenges.',
+    url: 'https://www.robofest.net/',
+  },
+] as const
+
 interface FeedProps {
   initialCourses?: Course[]
 }
@@ -48,9 +100,9 @@ const Feed = ({ initialCourses = [] }: FeedProps) => {
   const features = [
     {
       icon: Wrench,
-      title: 'Hands-on Robotics',
+      title: 'Hands-on Science & Technology',
       description:
-        'Build and program real robots through practical projects that bring STEM concepts to life.',
+        'Build and program real robots and projects that bring STEM concepts to life.',
     },
     {
       icon: Users,
@@ -66,7 +118,7 @@ const Feed = ({ initialCourses = [] }: FeedProps) => {
     },
     {
       icon: BookOpen,
-      title: 'Community Learning',
+      title: 'One stop ECA Solution',
       description:
         'Join a vibrant community of young innovators sharing knowledge and collaborating on projects.',
     },
@@ -226,7 +278,7 @@ const Feed = ({ initialCourses = [] }: FeedProps) => {
             title="Our Olympiad Participation"
             subtitle="Our teams have previously competed in well-known national and international robotics olympiads, gaining valuable hands-on competition experience that helps us train and mentor current members."
           />
-          
+
           <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-10 lg:p-12 border-2 border-gray-200 shadow-sm hover:shadow-xl transition-all duration-300">
             <div className="mb-6 sm:mb-8">
               <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
@@ -242,34 +294,39 @@ const Feed = ({ initialCourses = [] }: FeedProps) => {
               </p>
             </div>
 
-            {/* Olympiad Cards with Icons */}
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-10">
-              {[
-                { name: 'World Robot Olympiad (WRO)', icon: Globe, color: 'from-indigo-500 to-blue-500', description: 'Global robotics competition where teams design and build robots to solve themed challenges.' },
-                { name: 'FIRST LEGO League Challenge (FLL)', icon: Rocket, color: 'from-blue-500 to-cyan-500', description: 'International competition for elementary and middle school students focused on robotics and real-world problem solving.' },
-                { name: 'FIRST Tech Challenge (FTC)', icon: Zap, color: 'from-purple-500 to-pink-500', description: 'Competition for middle and high school students involving more advanced robot design and gameplay.' },
-                { name: 'FIRST Robotics Competition (FRC)', icon: Trophy, color: 'from-yellow-500 to-orange-500', description: 'High school–level global competition emphasizing large-scale robot engineering and teamwork.' },
-                { name: 'VEX IQ Robotics Competition', icon: Star, color: 'from-green-500 to-emerald-500', description: 'Beginner-friendly robotics competition with game-based challenges, including divisions for younger students.' },
-                { name: 'Technoxian – World Robotics Championship', icon: Medal, color: 'from-red-500 to-rose-500', description: 'International robotics championship featuring multiple competitive categories such as Robo Race and Robo Soccer.' },
-              ].map((olympiad, index) => {
-                const Icon = olympiad.icon
-                return (
-                  <div
-                    key={index}
-                    className="group bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-gray-200 hover:border-indigo-200 hover:bg-linear-to-br hover:from-indigo-50/50 hover:to-blue-50/50 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
-                  >
-                    <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-linear-to-br ${olympiad.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                      <Icon className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+            {/* Olympiad Cards */}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 mb-8 sm:mb-10">
+              {OLYMPIADS.map((olympiad, index) => (
+                <a
+                  key={index}
+                  href={olympiad.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex flex-col bg-white rounded-2xl border border-gray-200/80 shadow-sm hover:shadow-xl hover:border-indigo-200/80 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
+                >
+                  <div className={`flex items-center justify-center min-h-36 sm:min-h-44 bg-linear-to-br ${olympiad.color} p-5`}>
+                    <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-xl bg-white/95 shadow-md flex items-center justify-center p-2 group-hover:scale-105 transition-transform duration-300">
+                      <Image
+                        src={olympiad.logo}
+                        alt={`${olympiad.name} logo`}
+                        width={128}
+                        height={128}
+                        className="object-contain w-full h-full"
+                        quality={90}
+                        sizes="(max-width: 640px) 96px, 128px"
+                      />
                     </div>
-                    <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">
+                  </div>
+                  <div className="p-5 sm:p-6 flex flex-col flex-1">
+                    <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors underline decoration-dashed underline-offset-2 decoration-indigo-200 group-hover:decoration-indigo-400">
                       {olympiad.name}
                     </h4>
-                    <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
+                    <p className="text-xs sm:text-sm text-gray-600 leading-relaxed flex-1">
                       {olympiad.description}
                     </p>
                   </div>
-                )
-              })}
+                </a>
+              ))}
             </div>
             {/* Stats Section */}
             <div className="grid grid-cols-2 gap-4 sm:gap-6 mb-8 sm:mb-10">
@@ -296,17 +353,31 @@ const Feed = ({ initialCourses = [] }: FeedProps) => {
                 </div>
               </div>
             </div>
-            
+
             {/* Scrolling Countries Section */}
             <div className="mt-8 sm:mt-10 pt-6 sm:pt-8 border-t border-gray-200">
               <div className="overflow-hidden relative rounded-xl bg-gray-50 p-4 border border-gray-200">
                 {/* Gradient overlays for fade effect */}
                 <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-24 bg-linear-to-r from-gray-50 to-transparent z-10 pointer-events-none" />
                 <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-24 bg-linear-to-r from-transparent to-gray-50 z-10 pointer-events-none" />
-                
+
                 <div className="flex animate-scroll-left gap-6 sm:gap-8 md:gap-12">
                   {/* First set of countries */}
-                  {['Bangladesh', 'India', 'Thailand', 'Malaysia', 'Singapore', 'Indonesia', 'Philippines', 'Vietnam', 'China', 'Japan', 'South Korea', 'UAE', 'Qatar', 'Saudi Arabia', 'Turkey'].map((country, index) => (
+                  {[
+                    'Bangladesh',
+                    'Thailand',
+                    'Malaysia',
+                    'Singapore',
+                    'China',
+                    'Japan',
+                    'South Korea',
+                    'Qatar',
+                    'Turkey',
+                    'USA',
+                    'Canada',
+                    'Australia',
+                    'England',
+                  ].map((country, index) => (
                     <div
                       key={`country-1-${index}`}
                       className="shrink-0 flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-white rounded-lg sm:rounded-xl border border-indigo-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all duration-300"
