@@ -1,41 +1,46 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Volume2, VolumeX } from 'lucide-react'
 
 export default function Hero() {
+  const [muted, setMuted] = useState(false)
+
   return (
-    <section className="relative overflow-hidden w-full min-w-full">
+    <section className="relative overflow-hidden w-full min-w-full min-h-screen">
       <video
         className="absolute inset-0 w-full h-full object-cover object-center z-0"
-        src="/re.mp4"
+        src="https://res.cloudinary.com/digkc0xsk/video/upload/v1771270419/ROBOFESTnew_lj6ak1.mp4"
         autoPlay
-        muted
+        muted={muted}
         loop
         playsInline
         aria-hidden="true"
       />
+      {/* Dark overlay for text readability */}
+      <div className="absolute inset-0 z-1 bg-black/55" aria-hidden="true" />
       {/* Background decoration */}
-      <div className="absolute inset-0 opacity-40 w-full">
+      <div className="absolute inset-0 opacity-30 w-full z-1 pointer-events-none">
         <div className="absolute top-0 right-0  h-96 bg-blue-200 w-full rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
         <div className="absolute bottom-0 left-0  h-96 bg-indigo-200 w-full rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2" />
       </div>
 
-      <div className="relative w-full min-w-full px-4 sm:px-6 lg:px-8 py-16 sm:py-20 md:py-24 lg:py-28 xl:py-36">
+      <div className="relative mt-50 z-10 w-full min-w-full px-4 sm:px-6 lg:px-8 py-16 sm:py-20 md:py-24 lg:py-28 xl:py-36">
         <div className="grid lg:grid-cols-2 gap-8 md:gap-12 lg:gap-16 items-center">
           {/* Left Column - Content */}
           <div className="text-center lg:ml-12 lg:text-left space-y-6 md:space-y-8 lg:space-y-10">
             {/* Main Tagline */}
             <div className="space-y-4 md:space-y-6">
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 leading-tight tracking-tight">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
                 <span className="block">Build Skills.</span>
                 <span className="block">Break Barriers.</span>
-                <span className="block text-transparent bg-clip-text bg-linear-to-r from-indigo-500 to-blue-500">
+                <span className="block text-transparent bg-clip-text bg-linear-to-r from-indigo-300 to-blue-300 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
                   Go Global.
                 </span>
               </h1>
-              <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-xl mx-auto lg:mx-0 leading-relaxed px-4 sm:px-0">
+              <p className="text-base sm:text-lg md:text-xl text-gray-100 max-w-xl mx-auto lg:mx-0 leading-relaxed px-4 sm:px-0 drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
                 Empowering the next generation of robotics innovators through hands-on learning and global competition.
               </p>
             </div>
@@ -81,8 +86,18 @@ export default function Hero() {
         </div>
       </div>
 
+      {/* Sound toggle - video starts muted (required for autoplay); click to hear sound */}
+      <button
+        type="button"
+        onClick={() => setMuted((m) => !m)}
+        className="absolute bottom-6 right-6 z-20 p-2.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors border border-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
+        aria-label={muted ? 'Unmute video' : 'Mute video'}
+      >
+        {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+      </button>
+
       {/* Bottom wave decoration */}
-      <div className="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-white to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-white to-transparent z-1" />
     </section>
   )
 }

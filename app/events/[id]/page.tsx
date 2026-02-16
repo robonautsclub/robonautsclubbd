@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Metadata } from 'next'
 import Script from 'next/script'
-import { Calendar, Clock, MapPin, ArrowLeft, Users, Monitor, Building2 } from 'lucide-react'
+import { Calendar, Clock, MapPin, ArrowLeft, Users, Monitor, Building2, Banknote } from 'lucide-react'
 import { getPublicEvent } from '../actions'
 import { Event } from '@/types/event'
 import { notFound } from 'next/navigation'
@@ -309,6 +309,17 @@ export default async function EventDetailPage({
                     <div className="flex-1 min-w-0">
                       <p className="text-xs sm:text-sm font-medium text-gray-500 mb-1">Audience</p>
                       <p className="text-sm sm:text-base font-semibold text-gray-900 wrap-break-word">{event.eligibility}</p>
+                    </div>
+                  </div>
+                )}
+                {event.isPaid && event.amount != null && (
+                  <div className="flex items-start gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg sm:rounded-xl bg-amber-50/50 border border-amber-100">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                      <Banknote className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm font-medium text-gray-500 mb-1">Fee</p>
+                      <p className="text-sm sm:text-base font-semibold text-gray-900">BDT {event.amount}</p>
                     </div>
                   </div>
                 )}

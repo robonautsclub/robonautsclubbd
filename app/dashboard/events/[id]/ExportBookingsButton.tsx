@@ -50,7 +50,7 @@ export default function ExportBookingsButton({ bookings, eventTitle }: ExportBoo
             'School': booking.school,
             'Email': booking.email,
             'Phone': booking.phone || 'N/A',
-            'Parent\'s Phone': booking.parentsPhone || 'N/A',
+            'bKash Number': booking.bkashNumber || '',
             'Additional Information': booking.information,
             'Booked At': formattedDate,
           }
@@ -70,8 +70,8 @@ export default function ExportBookingsButton({ bookings, eventTitle }: ExportBoo
           { wch: 30 }, // School
           { wch: 35 }, // Email
           { wch: 18 }, // Phone
-          { wch: 20 }, // Parent's Phone
-          { wch: 50 }, // Additional Information
+            { wch: 18 }, // bKash Number
+            { wch: 50 }, // Additional Information
           { wch: 20 }, // Booked At
         ]
         ws['!cols'] = columnWidths

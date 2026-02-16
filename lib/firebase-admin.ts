@@ -27,10 +27,17 @@ const hasEnvCredentials =
   process.env.FIREBASE_ADMIN_PROJECT_ID
 
 if (hasEnvCredentials) {
+  // Normalize private key: env may have literal \n or real newlines; PEM must use \n
+  const rawKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY!.trim()
+  const privateKey = rawKey
+    .replace(/\\n/g, '\n')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .trim()
   serviceAccount = {
     projectId: process.env.FIREBASE_ADMIN_PROJECT_ID!,
     clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL!,
-    privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+    privateKey,
   }
   console.log('Firebase Admin SDK: Loaded from environment variables')
 } else {

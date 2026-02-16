@@ -120,14 +120,14 @@ export function sanitizeBookingDetailsForPDF(bookingDetails: {
   school?: string
   email?: string
   phone?: string
-  parentsPhone?: string
+  bkashNumber?: string
   information?: string
 }): {
   name: string
   school: string
   email: string
   phone: string
-  parentsPhone: string
+  bkashNumber: string
   information: string
 } {
   return {
@@ -135,7 +135,7 @@ export function sanitizeBookingDetailsForPDF(bookingDetails: {
     school: sanitizeTextForPDF(bookingDetails.school) || '',
     email: sanitizeTextForPDF(bookingDetails.email) || '',
     phone: sanitizeTextForPDF(bookingDetails.phone) || '',
-    parentsPhone: sanitizeTextForPDF(bookingDetails.parentsPhone) || '',
+    bkashNumber: sanitizeTextForPDF(bookingDetails.bkashNumber) || '',
     information: sanitizeTextForPDF(bookingDetails.information) || '',
   }
 }

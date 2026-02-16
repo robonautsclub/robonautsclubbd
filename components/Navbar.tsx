@@ -38,9 +38,11 @@ export default function Nav() {
   const [mobileDropdownOpenIdx, setMobileDropdownOpenIdx] = useState<
     number | null
   >(null)
+  const [isVisible, setIsVisible] = useState(true)
 
   const navRef = useRef<HTMLElement | null>(null)
   const drawerRef = useRef<HTMLElement | null>(null)
+  const lastScrollY = useRef(0)
 
   const menuItems: MenuItem[] = useMemo(
     () => [
@@ -105,6 +107,24 @@ export default function Nav() {
     }
   }, [])
 
+  // Hide navbar on scroll down, show on scroll up or near top
+  useEffect(() => {
+    const onScroll = () => {
+      if (isDrawerOpen) return
+      const scrollY = window.scrollY
+      if (scrollY <= 50) {
+        setIsVisible(true)
+      } else if (scrollY > lastScrollY.current + 10) {
+        setIsVisible(false)
+      } else if (scrollY < lastScrollY.current - 10) {
+        setIsVisible(true)
+      }
+      lastScrollY.current = scrollY
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [isDrawerOpen])
+
   const toggleDropdown = (idx: number) =>
     setDropdownOpenIdx((prev) => (prev === idx ? null : idx))
   const toggleMobileDropdown = (idx: number) =>
@@ -115,7 +135,9 @@ export default function Nav() {
       className={classNames(
         inter.variable,
         poppins.variable,
-        'sticky top-0 z-70 bg-blue-100 backdrop-blur  border-black/10 border-b'
+        'sticky top-0 z-70 bg-blue-100 backdrop-blur border-black/10 border-b',
+        'transition-transform duration-300 ease-in-out',
+        isVisible ? 'translate-y-0' : '-translate-y-full'
       )}
       style={{ borderColor: 'rgba(17,24,39,0.12)' }}
     >

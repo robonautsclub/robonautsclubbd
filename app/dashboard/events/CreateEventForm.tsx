@@ -4,7 +4,7 @@ import { useState, FormEvent, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createEvent } from '../actions'
-import { Plus, X, Calendar, Clock, MapPin, FileText, Users, Image as ImageIcon, Sparkles, Upload, Trash2, Tag } from 'lucide-react'
+import { Plus, X, Calendar, Clock, MapPin, FileText, Users, Image as ImageIcon, Sparkles, Upload, Trash2, Tag, Banknote } from 'lucide-react'
 import MultiDatePicker from './MultiDatePicker'
 import TimePicker from './TimePicker'
 
@@ -28,6 +28,8 @@ export default function CreateEventForm() {
     agenda: '',
     image: '',
     tags: [] as string[],
+    isPaid: false,
+    amount: '' as '' | number,
   })
   const [tagInput, setTagInput] = useState('')
 
@@ -129,6 +131,14 @@ export default function CreateEventForm() {
       setLoading(false)
       return
     }
+    if (formData.isPaid) {
+      const amt = typeof formData.amount === 'number' ? formData.amount : Number(formData.amount)
+      if (amt === undefined || amt === null || isNaN(amt) || amt <= 0) {
+        setError('Please enter a valid amount for paid events')
+        setLoading(false)
+        return
+      }
+    }
 
     // Set default time if not provided
     const eventTime = formData.time || '9:00 AM - 5:00 PM'
@@ -141,6 +151,8 @@ export default function CreateEventForm() {
         ...formData,
         date: dateValue,
         time: eventTime,
+        isPaid: formData.isPaid,
+        amount: formData.isPaid && formData.amount !== '' ? Number(formData.amount) : undefined,
       })
 
       if (result.success) {
@@ -157,6 +169,8 @@ export default function CreateEventForm() {
           agenda: '',
           image: '',
           tags: [],
+          isPaid: false,
+          amount: '',
         })
         setTagInput('')
         setImagePreview(null)
@@ -365,6 +379,52 @@ export default function CreateEventForm() {
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
                 disabled={loading}
               />
+            </div>
+
+            {/* Paid event */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Banknote className="w-4 h-4 text-indigo-600" />
+                Paid event
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.isPaid}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      isPaid: e.target.checked,
+                      amount: e.target.checked ? formData.amount : '',
+                    })
+                  }
+                  disabled={loading}
+                  className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="text-sm text-gray-700">This is a paid event</span>
+              </label>
+              {formData.isPaid && (
+                <div className="mt-2">
+                  <label htmlFor="amount" className="block text-sm font-medium text-gray-600 mb-1">
+                    Amount (BDT) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="amount"
+                    type="number"
+                    min={1}
+                    value={formData.amount === '' ? '' : formData.amount}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        amount: e.target.value === '' ? '' : Number(e.target.value),
+                      })
+                    }
+                    placeholder="e.g. 500"
+                    disabled={loading}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Agenda */}

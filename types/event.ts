@@ -13,6 +13,8 @@ export type Event = {
   venue?: string
   agenda?: string
   tags?: string[] // Event tags for categorization
+  isPaid?: boolean
+  amount?: number // Fee amount (e.g. BDT)
   // Firestore metadata
   createdAt: Date | string
   updatedAt: Date | string

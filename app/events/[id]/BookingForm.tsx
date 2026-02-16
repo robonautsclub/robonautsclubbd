@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, FormEvent } from 'react'
-import { CheckCircle } from 'lucide-react'
+import { CheckCircle, Banknote } from 'lucide-react'
 import { Event } from '@/types/event'
 
 export default function BookingForm({ event }: { event: Event }) {
@@ -10,7 +10,7 @@ export default function BookingForm({ event }: { event: Event }) {
     school: '',
     email: '',
     phone: '',
-    parentsPhone: '',
+    bkashNumber: '',
     information: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -26,24 +26,22 @@ export default function BookingForm({ event }: { event: Event }) {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Invalid email format'
     }
-    // Phone number is optional, but if provided, validate format (11 digits starting with 01)
+    // Phone number is required, 11 digits starting with 01
     const phoneDigits = formData.phone.trim().replace(/\s/g, '')
-    if (phoneDigits) {
-      if (phoneDigits.length !== 11 || !phoneDigits.startsWith('01')) {
-        newErrors.phone = 'Phone number must be 11 digits and start with 01'
+    if (!phoneDigits) {
+      newErrors.phone = 'Phone number is required'
+    } else if (phoneDigits.length !== 11 || !phoneDigits.startsWith('01')) {
+      newErrors.phone = 'Phone number must be 11 digits and start with 01'
+    }
+    // bKash number required for paid events
+    if (event.isPaid) {
+      const bkashDigits = formData.bkashNumber.trim().replace(/\s/g, '')
+      if (!bkashDigits) {
+        newErrors.bkashNumber = 'bKash number is required for paid events'
+      } else if (bkashDigits.length !== 11 || !bkashDigits.startsWith('01')) {
+        newErrors.bkashNumber = 'bKash number must be 11 digits and start with 01'
       }
     }
-    
-    // Parent's phone number is required and must be 11 digits starting with 01
-    if (!formData.parentsPhone.trim()) {
-      newErrors.parentsPhone = "Parent's phone number is required"
-    } else {
-      const parentsPhoneDigits = formData.parentsPhone.trim().replace(/\s/g, '')
-      if (parentsPhoneDigits.length !== 11 || !parentsPhoneDigits.startsWith('01')) {
-        newErrors.parentsPhone = "Parent's phone number must be 11 digits and start with 01"
-      }
-    }
-    // Information field is optional, no validation needed
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -58,24 +56,24 @@ export default function BookingForm({ event }: { event: Event }) {
     try {
       // Import the server action dynamically
       const { createBooking } = await import('../actions')
-      
+
       // Event ID is now always a string from Firestore
       const eventId = event.id
-      
+
       const result = await createBooking({
         eventId,
         name: formData.name.trim(),
         school: formData.school.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim(),
-        parentsPhone: formData.parentsPhone.trim(),
+        bkashNumber: formData.bkashNumber.trim(),
         information: formData.information.trim(),
       })
 
       if (result.success) {
         // Only show success message if booking was created AND email was sent
         setIsSubmitted(true)
-        setFormData({ name: '', school: '', email: '', phone: '', parentsPhone: '', information: '' })
+        setFormData({ name: '', school: '', email: '', phone: '', bkashNumber: '', information: '' })
         setTimeout(() => {
           setIsSubmitted(false)
         }, 5000)
@@ -83,7 +81,7 @@ export default function BookingForm({ event }: { event: Event }) {
         // Show specific error message - this includes email sending failures
         const errorMessage = result.error || 'Failed to submit booking. Please try again.'
         setErrors({ submit: errorMessage })
-        
+
         // If it's a duplicate booking error, highlight it
         if (errorMessage.includes('already registered')) {
           // Optionally clear the form or keep it for user to see
@@ -122,9 +120,20 @@ export default function BookingForm({ event }: { event: Event }) {
   return (
     <div className="bg-white rounded-xl sm:rounded-2xl p-5 sm:p-7 border-2 border-gray-200 shadow-lg hover:shadow-xl transition-shadow duration-300">
       <div className="mb-4 sm:mb-6">
-        <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Book Your Spot</h3>
+        <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Registration Form</h3>
         <p className="text-xs sm:text-sm text-gray-500">{event.title}</p>
       </div>
+      {event.isPaid && event.amount != null && event.amount > 0 && (
+        <div className="mb-5 p-4 rounded-xl bg-amber-50 border-2 border-amber-300 shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <Banknote className="w-5 h-5 text-amber-600 shrink-0" />
+            <span className="text-sm font-semibold text-amber-800 uppercase tracking-wide">Registration Fee</span>
+          </div>
+          <p className="text-2xl sm:text-3xl font-bold text-amber-700">
+            BDT {event.amount}
+          </p>
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="space-y-5">
         {errors.submit && (
           <div className="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
@@ -203,34 +212,10 @@ export default function BookingForm({ event }: { event: Event }) {
         </div>
         <div>
           <label
-            htmlFor="parentsPhone"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Parent&apos;s Phone Number <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="tel"
-            id="parentsPhone"
-            value={formData.parentsPhone}
-            onChange={(e) =>
-              setFormData({ ...formData, parentsPhone: e.target.value })
-            }
-            placeholder="01XXXXXXXXX (11 digits starting with 01)"
-            disabled={isLoading || isSubmitted}
-            className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-              errors.parentsPhone ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:border-gray-300'
-            }`}
-          />
-          {errors.parentsPhone && (
-            <p className="text-sm text-red-500 mt-1">{errors.parentsPhone}</p>
-          )}
-        </div>
-        <div>
-          <label
             htmlFor="phone"
             className="block text-sm font-medium text-gray-700 mb-1"
           >
-            Phone Number
+            Phone Number <span className="text-red-500">*</span>
           </label>
           <input
             type="tel"
@@ -239,7 +224,7 @@ export default function BookingForm({ event }: { event: Event }) {
             onChange={(e) =>
               setFormData({ ...formData, phone: e.target.value })
             }
-            placeholder="01XXXXXXXXX (11 digits, optional)"
+            placeholder="01XXXXXXXXX (11 digits starting with 01)"
             disabled={isLoading || isSubmitted}
             className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
               errors.phone ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:border-gray-300'
@@ -249,7 +234,36 @@ export default function BookingForm({ event }: { event: Event }) {
             <p className="text-sm text-red-500 mt-1">{errors.phone}</p>
           )}
         </div>
-       
+        {event.isPaid && (
+          <div>
+            <label
+              htmlFor="bkashNumber"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              bKash Number <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="tel"
+              id="bkashNumber"
+              value={formData.bkashNumber}
+              onChange={(e) =>
+                setFormData({ ...formData, bkashNumber: e.target.value })
+              }
+              placeholder="01XXXXXXXXX (11 digits for bKash payment)"
+              disabled={isLoading || isSubmitted}
+              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                errors.bkashNumber ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+              }`}
+            />
+            {errors.bkashNumber && (
+              <p className="text-sm text-red-500 mt-1">{errors.bkashNumber}</p>
+            )}
+            <p className="text-xs text-gray-600 mt-2">
+              Payment confirmation will be notified by one of the admin.
+            </p>
+          </div>
+        )}
+
         <div>
           <label
             htmlFor="information"
@@ -285,4 +299,3 @@ export default function BookingForm({ event }: { event: Event }) {
     </div>
   )
 }
-

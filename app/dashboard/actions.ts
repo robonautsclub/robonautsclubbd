@@ -101,6 +101,8 @@ export async function createEvent(formData: {
   agenda?: string
   image?: string
   tags?: string[]
+  isPaid?: boolean
+  amount?: number
 }): Promise<{ success: boolean; error?: string; eventId?: string }> {
   const session = await requireAuth()
 
@@ -152,6 +154,7 @@ export async function createEvent(formData: {
       : formData.date
     
     // Use sanitized values for all text fields
+    const isPaid = formData.isPaid ?? false
     const eventRef = await adminDb.collection('events').add({
       title: sanitized.title,
       date: normalizedDate,
@@ -164,6 +167,8 @@ export async function createEvent(formData: {
       agenda: sanitized.agenda,
       image: formData.image || '/robotics-event.jpg',
       tags: sanitized.tags,
+      isPaid,
+      ...(isPaid && { amount: formData.amount ?? 0 }),
       createdAt: now,
       updatedAt: now,
       createdBy: session.uid,
@@ -212,6 +217,8 @@ export async function updateEvent(
     agenda?: string
     image?: string
     tags?: string[]
+    isPaid?: boolean
+    amount?: number
   }
 ): Promise<{ success: boolean; error?: string }> {
   const session = await requireAuth()
@@ -286,6 +293,7 @@ export async function updateEvent(
       : formData.date
     
     // Use sanitized values for all text fields
+    const isPaid = formData.isPaid ?? false
     await adminDb.collection('events').doc(eventId).update({
       title: sanitized.title,
       date: normalizedDate,
@@ -298,6 +306,8 @@ export async function updateEvent(
       agenda: sanitized.agenda,
       image: formData.image || '/robotics-event.jpg',
       tags: sanitized.tags,
+      isPaid,
+      amount: isPaid ? (formData.amount ?? 0) : 0,
       updatedAt: new Date(),
     })
 

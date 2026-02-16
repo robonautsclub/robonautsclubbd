@@ -268,22 +268,22 @@ export default async function VerificationPage({ params }: VerificationPageProps
                     </p>
                     <p className="text-base text-gray-900 break-all">{booking!.email}</p>
                   </div>
-                  {booking!.phone && (
-                    <div>
-                      <p className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-1">
-                        <Phone className="w-4 h-4" />
-                        Phone
-                      </p>
-                      <p className="text-base text-gray-900">{booking!.phone}</p>
-                    </div>
-                  )}
                   <div>
                     <p className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-1">
                       <Phone className="w-4 h-4" />
-                      Parent&apos;s Phone
+                      Phone
                     </p>
-                    <p className="text-base text-gray-900">{booking!.parentsPhone}</p>
+                    <p className="text-base text-gray-900">{booking!.phone || 'N/A'}</p>
                   </div>
+                  {booking!.bkashNumber && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 mb-1 flex items-center gap-1">
+                        <Phone className="w-4 h-4" />
+                        bKash Number
+                      </p>
+                      <p className="text-base text-gray-900">{booking!.bkashNumber}</p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-sm font-medium text-gray-600 mb-1">Registered On</p>
                     <p className="text-base text-gray-900">

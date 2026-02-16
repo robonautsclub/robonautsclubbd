@@ -13,7 +13,7 @@ interface BookingDetails {
   school: string
   email: string
   phone: string
-  parentsPhone: string
+  bkashNumber?: string
   information: string
 }
 
@@ -529,13 +529,13 @@ async function generatePDFContent(
     // Email (required)
     yPos = addField('Email', sanitizedBooking.email, true, yPos)
 
-    // Phone (optional)
-    if (sanitizedBooking.phone) {
-      yPos = addField('Phone', sanitizedBooking.phone, false, yPos)
-    }
+    // Phone (required)
+    yPos = addField('Phone', sanitizedBooking.phone, true, yPos)
 
-    // Parent's Phone (required)
-    yPos = addField("Parent's Phone", sanitizedBooking.parentsPhone, true, yPos)
+    // bKash Number (when present, for paid events)
+    if (sanitizedBooking.bkashNumber) {
+      yPos = addField('bKash Number', sanitizedBooking.bkashNumber, false, yPos)
+    }
 
     // Additional Information (optional, truncate if too long for single page)
     if (sanitizedBooking.information) {
