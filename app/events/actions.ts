@@ -14,7 +14,7 @@ import { generateRegistrationId } from '@/lib/registrationId'
  */
 export const getPublicEvents = cache(async (): Promise<Event[]> => {
   if (!adminDb) {
-    console.error('Firebase Admin SDK not available. Cannot fetch events.')
+    console.warn('Firebase Admin SDK not available. Cannot fetch events.')
     // Return empty array instead of throwing for public pages
     return []
   }
@@ -328,7 +328,7 @@ export async function createBooking(formData: {
  */
 export const getPublicCourses = cache(async (): Promise<Course[]> => {
   if (!adminDb) {
-    console.error('Firebase Admin SDK not available. Cannot fetch courses.')
+    console.warn('Firebase Admin SDK not available. Cannot fetch courses.')
     return []
   }
 

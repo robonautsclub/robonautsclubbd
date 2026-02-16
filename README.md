@@ -156,7 +156,7 @@ pnpm dev
 
 ## 🔐 Environment Variables & Credentials
 
-Create a `.env.local` file in the root directory with the following variables:
+Create a `.env.local` file in the root directory with the following variables. For Firebase Admin SDK (server-side courses/events, Firestore), you must set all three: `FIREBASE_ADMIN_PROJECT_ID`, `FIREBASE_ADMIN_CLIENT_EMAIL`, and `FIREBASE_ADMIN_PRIVATE_KEY` (or use `lib/firebase-service-account.json`).
 
 ### Required Variables
 
@@ -179,8 +179,10 @@ NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 # Get these from Firebase Console > Project Settings > Service Accounts
 FIREBASE_ADMIN_PROJECT_ID=your_project_id
 FIREBASE_ADMIN_CLIENT_EMAIL=your_service_account_email@your_project.iam.gserviceaccount.com
-FIREBASE_ADMIN_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour private key here\n-----END PRIVATE KEY-----\n"
+# Important: private key must be on ONE line; use literal \n for line breaks (not real newlines)
+FIREBASE_ADMIN_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYourPrivateKeyLinesJoinedWithBackslashN\n-----END PRIVATE KEY-----\n"
 ```
+**Note:** Do not split `FIREBASE_ADMIN_PRIVATE_KEY` across multiple lines in `.env`—most loaders only read the first line and you will get "Invalid PEM formatted message". Use one line with `\n` (backslash + n) between the key lines.
 
 **Option 2: JSON File (Alternative for Development)**
 - Download service account JSON from Firebase Console

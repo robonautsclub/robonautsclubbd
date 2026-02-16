@@ -4,13 +4,13 @@ import { adminAuth } from '@/lib/firebase-admin'
 /**
  * Role Assignment API Route
  * Server-side only endpoint that assigns roles via Firebase Custom Claims
- * 
+ *
  * This endpoint:
  * - Verifies the user's ID token
  * - Checks if email is in SUPER_ADMIN_EMAILS environment variable
  * - Sets custom claim: role = 'superAdmin' or 'admin'
  * - Returns success/error
- * 
+ *
  * Must be called after login and on token refresh
  */
 export async function POST(request: NextRequest) {
