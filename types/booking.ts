@@ -8,7 +8,7 @@ export type Booking = {
   school: string
   email: string
   phone: string
-  parentsPhone: string
+  bkashNumber?: string
   information: string
   createdAt: Date | string
 }

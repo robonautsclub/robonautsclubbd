@@ -13,7 +13,7 @@ interface BookingConfirmationEmailProps {
   bookingDetails: {
     school: string
     phone: string
-    parentsPhone: string
+    bkashNumber?: string
     information: string
   }
 }
@@ -337,16 +337,18 @@ export async function sendBookingConfirmationEmail({
                           </table>
                         </td>
                       </tr>
+                      ${bookingDetails.bkashNumber ? `
                       <tr>
                         <td style="padding: 10px 0;">
                           <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                             <tr>
-                              <td width="120" style="padding: 0; color: #3b82f6; font-size: 14px; font-weight: 500; vertical-align: top;">Parent's Phone:</td>
-                              <td style="padding: 0; color: #1e40af; font-size: 15px; font-weight: 600; vertical-align: top;">${bookingDetails.parentsPhone}</td>
+                              <td width="120" style="padding: 0; color: #3b82f6; font-size: 14px; font-weight: 500; vertical-align: top;">bKash Number:</td>
+                              <td style="padding: 0; color: #1e40af; font-size: 15px; font-weight: 600; vertical-align: top;">${bookingDetails.bkashNumber}</td>
                             </tr>
                           </table>
                         </td>
                       </tr>
+                      ` : ''}
                     </table>
                   </td>
                 </tr>

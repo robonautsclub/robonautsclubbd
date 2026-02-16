@@ -414,28 +414,28 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
                     </div>
                     <p className="text-base font-semibold text-gray-900 break-all">{booking!.email}</p>
                   </div>
-                  {booking!.phone && (
-                    <div className="bg-white rounded-xl p-4 border border-gray-200">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2">
-                          <Phone className="w-4 h-4 text-gray-500" />
-                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Phone</p>
-                        </div>
-                        <CopyButton text={booking!.phone} label="Phone" />
-                      </div>
-                      <p className="text-base font-semibold text-gray-900">{booking!.phone}</p>
-                    </div>
-                  )}
                   <div className="bg-white rounded-xl p-4 border border-gray-200">
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-2">
                         <Phone className="w-4 h-4 text-gray-500" />
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Parent&apos;s Phone</p>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Phone</p>
                       </div>
-                      <CopyButton text={booking!.parentsPhone} label="Parent's Phone" />
+                      <CopyButton text={booking!.phone || ''} label="Phone" />
                     </div>
-                    <p className="text-base font-semibold text-gray-900">{booking!.parentsPhone}</p>
+                    <p className="text-base font-semibold text-gray-900">{booking!.phone || 'N/A'}</p>
                   </div>
+                  {booking!.bkashNumber && (
+                    <div className="bg-white rounded-xl p-4 border border-gray-200">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <Phone className="w-4 h-4 text-gray-500" />
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">bKash Number</p>
+                        </div>
+                        <CopyButton text={booking!.bkashNumber} label="bKash Number" />
+                      </div>
+                      <p className="text-base font-semibold text-gray-900">{booking!.bkashNumber}</p>
+                    </div>
+                  )}
                   <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-200">
                     <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wider mb-1.5">Registered On</p>
                     <p className="text-sm font-bold text-indigo-900">

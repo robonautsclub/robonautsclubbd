@@ -153,13 +153,38 @@ export async function createBooking(formData: {
   name: string
   school: string
   email: string
-  phone?: string
-  parentsPhone: string
+  phone: string
+  bkashNumber?: string
   information: string
 }): Promise<{ success: boolean; error?: string; bookingId?: string }> {
   try {
-    // Validate input (information and phone are optional)
-    if (!formData.eventId || !formData.name || !formData.school || !formData.email || !formData.parentsPhone) {
+    // Check if Admin SDK is available
+    if (!adminDb) {
+      console.error('Firebase Admin SDK not available. Cannot create booking.')
+      return {
+        success: false,
+        error: 'Service temporarily unavailable. Please try again later.',
+      }
+    }
+
+    // Fetch event first (needed for isPaid validation)
+    const eventDoc = await adminDb.collection('events').doc(formData.eventId).get()
+    if (!eventDoc.exists) {
+      return {
+        success: false,
+        error: 'Event not found',
+      }
+    }
+    const eventData = eventDoc.data()!
+    const event: Event = {
+      id: eventDoc.id,
+      ...eventData,
+      createdAt: eventData.createdAt?.toDate?.() || eventData.createdAt,
+      updatedAt: eventData.updatedAt?.toDate?.() || eventData.updatedAt,
+    } as Event
+
+    // Validate required fields
+    if (!formData.eventId || !formData.name || !formData.school || !formData.email || !formData.phone?.trim()) {
       return {
         success: false,
         error: 'All required fields must be filled',
@@ -175,33 +200,27 @@ export async function createBooking(formData: {
       }
     }
 
-    // Validate phone number format (11 digits starting with 01)
-    // Phone number is optional, but if provided, validate format
-    const normalizedPhone = formData.phone?.trim().replace(/\s/g, '') || ''
-    const normalizedParentsPhone = formData.parentsPhone.trim().replace(/\s/g, '')
-    
-    if (normalizedPhone) {
-      if (normalizedPhone.length !== 11 || !normalizedPhone.startsWith('01')) {
-        return {
-          success: false,
-          error: 'Phone number must be 11 digits and start with 01',
-        }
-      }
-    }
-    
-    if (normalizedParentsPhone.length !== 11 || !normalizedParentsPhone.startsWith('01')) {
+    const normalizedPhone = formData.phone.trim().replace(/\s/g, '')
+    if (normalizedPhone.length !== 11 || !normalizedPhone.startsWith('01')) {
       return {
         success: false,
-        error: 'Parent\'s phone number must be 11 digits and start with 01',
+        error: 'Phone number must be 11 digits and start with 01',
       }
     }
 
-    // Check if Admin SDK is available
-    if (!adminDb) {
-      console.error('Firebase Admin SDK not available. Cannot create booking.')
-      return {
-        success: false,
-        error: 'Service temporarily unavailable. Please try again later.',
+    const normalizedBkash = formData.bkashNumber?.trim().replace(/\s/g, '') ?? ''
+    if (event.isPaid) {
+      if (!normalizedBkash) {
+        return {
+          success: false,
+          error: 'bKash number is required for paid events',
+        };
+      }
+      if (normalizedBkash.length !== 11 || !normalizedBkash.startsWith('01')) {
+        return {
+          success: false,
+          error: 'bKash number must be 11 digits and start with 01',
+        };
       }
     }
 
@@ -220,24 +239,6 @@ export async function createBooking(formData: {
       }
     }
 
-    // Step 2: Fetch event details for the email
-    const eventDoc = await adminDb.collection('events').doc(formData.eventId).get()
-    
-    if (!eventDoc.exists) {
-      return {
-        success: false,
-        error: 'Event not found',
-      }
-    }
-
-    const eventData = eventDoc.data()!
-    const event: Event = {
-      id: eventDoc.id,
-      ...eventData,
-      createdAt: eventData.createdAt?.toDate?.() || eventData.createdAt,
-      updatedAt: eventData.updatedAt?.toDate?.() || eventData.updatedAt,
-    } as Event
-
     // Step 3: Generate unique registration ID
     const registrationId = generateRegistrationId()
 
@@ -255,7 +256,7 @@ export async function createBooking(formData: {
       school: string
       email: string
       phone: string
-      parentsPhone: string
+      bkashNumber: string
       information: string
       createdAt: Date
       pdfUrl?: string
@@ -265,8 +266,8 @@ export async function createBooking(formData: {
       name: formData.name.trim(),
       school: formData.school.trim(),
       email: formData.email.trim().toLowerCase(),
-      phone: normalizedPhone || '',
-      parentsPhone: normalizedParentsPhone,
+      phone: normalizedPhone,
+      bkashNumber: normalizedBkash,
       information: formData.information ? formData.information.trim() : '',
       createdAt: now,
     }
@@ -284,8 +285,8 @@ export async function createBooking(formData: {
       bookingId,
       bookingDetails: {
         school: formData.school.trim(),
-        phone: normalizedPhone || '',
-        parentsPhone: normalizedParentsPhone,
+        phone: normalizedPhone,
+        bkashNumber: normalizedBkash,
         information: formData.information ? formData.information.trim() : '',
       },
     })
@@ -310,13 +311,13 @@ export async function createBooking(formData: {
     return {
       success: true,
       bookingId: bookingRef.id,
-    }
+    };
   } catch (error) {
     console.error('Error creating booking:', error)
     return {
       success: false,
       error: 'Failed to create booking. Please try again.',
-    }
+    };
   }
 }
 

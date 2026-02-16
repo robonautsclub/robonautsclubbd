@@ -187,7 +187,7 @@ export default async function EventDetailsPage({
                     Phone
                   </th>
                   <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
-                    Parent&apos;s Phone
+                    bKash Number
                   </th>
                   <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden md:table-cell">
                     Information
@@ -244,7 +244,7 @@ export default async function EventDetailsPage({
                       </td>
                       <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap hidden lg:table-cell">
                         <div className="text-xs sm:text-sm text-gray-900">
-                          {booking.parentsPhone || 'N/A'}
+                          {booking.bkashNumber || '—'}
                         </div>
                       </td>
                       <td className="px-3 sm:px-6 py-3 sm:py-4 hidden md:table-cell">

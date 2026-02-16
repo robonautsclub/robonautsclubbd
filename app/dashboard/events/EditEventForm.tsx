@@ -3,7 +3,7 @@
 import { useState, FormEvent, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateEvent } from '../actions'
-import { X, Calendar, Clock, MapPin, FileText, Users, Image as ImageIcon, Sparkles, Edit, Tag } from 'lucide-react'
+import { X, Calendar, Clock, MapPin, FileText, Users, Image as ImageIcon, Sparkles, Edit, Tag, Banknote } from 'lucide-react'
 import MultiDatePicker from './MultiDatePicker'
 import TimePicker from './TimePicker'
 import type { Event } from '@/types/event'
@@ -41,6 +41,8 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
     agenda: event.agenda || '',
     image: event.image || '',
     tags: event.tags || [],
+    isPaid: event.isPaid ?? false,
+    amount: event.amount ?? '' as '' | number,
   })
   const [tagInput, setTagInput] = useState('')
 
@@ -55,6 +57,14 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
       setLoading(false)
       return
     }
+    if (formData.isPaid) {
+      const amt = typeof formData.amount === 'number' ? formData.amount : Number(formData.amount)
+      if (amt === undefined || amt === null || isNaN(amt) || amt <= 0) {
+        setError('Please enter a valid amount for paid events')
+        setLoading(false)
+        return
+      }
+    }
 
     // Set default time if not provided
     const eventTime = formData.time || '9:00 AM - 5:00 PM'
@@ -67,6 +77,8 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
         ...formData,
         date: dateValue,
         time: eventTime,
+        isPaid: formData.isPaid,
+        amount: formData.isPaid && formData.amount !== '' ? Number(formData.amount) : undefined,
       })
 
       if (result.success) {
@@ -235,6 +247,51 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
               className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
               disabled={loading}
             />
+          </div>
+
+          <div>
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+              <Banknote className="w-4 h-4 text-indigo-500" />
+              Paid event
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.isPaid}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    isPaid: e.target.checked,
+                    amount: e.target.checked ? formData.amount : '',
+                  })
+                }
+                disabled={loading}
+                className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="text-sm text-gray-700">This is a paid event</span>
+            </label>
+            {formData.isPaid && (
+              <div className="mt-2">
+                <label htmlFor="edit-amount" className="block text-sm font-medium text-gray-600 mb-1">
+                  Amount (BDT) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="edit-amount"
+                  type="number"
+                  min={1}
+                  value={formData.amount === '' ? '' : formData.amount}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      amount: e.target.value === '' ? '' : Number(e.target.value),
+                    })
+                  }
+                  placeholder="e.g. 500"
+                  disabled={loading}
+                  className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                />
+              </div>
+            )}
           </div>
 
           <div>

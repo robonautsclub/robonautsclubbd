@@ -80,7 +80,7 @@ export async function GET(request: Request, { params }: RouteParams) {
             school: booking.school,
             email: booking.email,
             phone: booking.phone,
-            parentsPhone: booking.parentsPhone,
+            bkashNumber: booking.bkashNumber,
             createdAt: booking.createdAt,
           },
           event: null,
@@ -108,7 +108,7 @@ export async function GET(request: Request, { params }: RouteParams) {
           school: booking.school,
           email: booking.email,
           phone: booking.phone,
-          parentsPhone: booking.parentsPhone,
+          bkashNumber: booking.bkashNumber,
           createdAt: booking.createdAt,
         },
         event: {
