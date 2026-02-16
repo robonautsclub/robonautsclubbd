@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, FormEvent } from 'react'
-import { CheckCircle } from 'lucide-react'
+import { CheckCircle, Banknote } from 'lucide-react'
 import { Event } from '@/types/event'
 
 export default function BookingForm({ event }: { event: Event }) {
@@ -56,10 +56,10 @@ export default function BookingForm({ event }: { event: Event }) {
     try {
       // Import the server action dynamically
       const { createBooking } = await import('../actions')
-      
+
       // Event ID is now always a string from Firestore
       const eventId = event.id
-      
+
       const result = await createBooking({
         eventId,
         name: formData.name.trim(),
@@ -81,7 +81,7 @@ export default function BookingForm({ event }: { event: Event }) {
         // Show specific error message - this includes email sending failures
         const errorMessage = result.error || 'Failed to submit booking. Please try again.'
         setErrors({ submit: errorMessage })
-        
+
         // If it's a duplicate booking error, highlight it
         if (errorMessage.includes('already registered')) {
           // Optionally clear the form or keep it for user to see
@@ -120,9 +120,20 @@ export default function BookingForm({ event }: { event: Event }) {
   return (
     <div className="bg-white rounded-xl sm:rounded-2xl p-5 sm:p-7 border-2 border-gray-200 shadow-lg hover:shadow-xl transition-shadow duration-300">
       <div className="mb-4 sm:mb-6">
-        <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Book Your Spot</h3>
+        <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Registration Form</h3>
         <p className="text-xs sm:text-sm text-gray-500">{event.title}</p>
       </div>
+      {event.isPaid && event.amount != null && event.amount > 0 && (
+        <div className="mb-5 p-4 rounded-xl bg-amber-50 border-2 border-amber-300 shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <Banknote className="w-5 h-5 text-amber-600 shrink-0" />
+            <span className="text-sm font-semibold text-amber-800 uppercase tracking-wide">Registration Fee</span>
+          </div>
+          <p className="text-2xl sm:text-3xl font-bold text-amber-700">
+            BDT {event.amount}
+          </p>
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="space-y-5">
         {errors.submit && (
           <div className="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
@@ -252,7 +263,7 @@ export default function BookingForm({ event }: { event: Event }) {
             </p>
           </div>
         )}
-       
+
         <div>
           <label
             htmlFor="information"
@@ -288,4 +299,3 @@ export default function BookingForm({ event }: { event: Event }) {
     </div>
   )
 }
-

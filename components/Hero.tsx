@@ -9,7 +9,7 @@ export default function Hero() {
   const [muted, setMuted] = useState(true)
 
   return (
-    <section className="relative overflow-hidden w-full min-w-full">
+    <section className="relative overflow-hidden w-full min-w-full min-h-screen">
       <video
         className="absolute inset-0 w-full h-full object-cover object-center z-0"
         src="https://res.cloudinary.com/digkc0xsk/video/upload/v1771270419/ROBOFESTnew_lj6ak1.mp4"
@@ -27,7 +27,7 @@ export default function Hero() {
         <div className="absolute bottom-0 left-0  h-96 bg-indigo-200 w-full rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2" />
       </div>
 
-      <div className="relative z-10 w-full min-w-full px-4 sm:px-6 lg:px-8 py-16 sm:py-20 md:py-24 lg:py-28 xl:py-36">
+      <div className="relative mt-50 z-10 w-full min-w-full px-4 sm:px-6 lg:px-8 py-16 sm:py-20 md:py-24 lg:py-28 xl:py-36">
         <div className="grid lg:grid-cols-2 gap-8 md:gap-12 lg:gap-16 items-center">
           {/* Left Column - Content */}
           <div className="text-center lg:ml-12 lg:text-left space-y-6 md:space-y-8 lg:space-y-10">

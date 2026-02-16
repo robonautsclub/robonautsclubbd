@@ -174,7 +174,7 @@ export default function AboutPage() {
         style={{
           backgroundImage: "url('/roboclass.jpg')",
           backgroundSize: 'cover',
-          backgroundPosition: 'center',
+          backgroundPosition: 'top',
         }}
       >
         {/* Background decoration */}
@@ -204,7 +204,7 @@ export default function AboutPage() {
       {/* Main Content */}
       <main className="flex-1 py-12 sm:py-16 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
-          
+
              {/* Who We Are Section */}
           <section className="mb-12 sm:mb-16 md:mb-20">
             <div className="grid md:grid-cols-2 gap-6 sm:gap-8 md:gap-12 items-center">
@@ -229,7 +229,7 @@ export default function AboutPage() {
                 <Image
                   src="/pocketcinema.jpg"
                   alt="Robonauts Workshop"
-                  
+
                   priority
                   width={1000}
                   height={1000}
@@ -294,7 +294,7 @@ export default function AboutPage() {
             </div>
           </section>
 
-         
+
 
           {/* Core Values Section */}
           <section className="mb-12 sm:mb-16 md:mb-20">
