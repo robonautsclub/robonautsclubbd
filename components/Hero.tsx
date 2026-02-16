@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { ArrowRight, Volume2, VolumeX } from 'lucide-react'
 
 export default function Hero() {
-  const [muted, setMuted] = useState(true)
+  const [muted, setMuted] = useState(false)
 
   return (
     <section className="relative overflow-hidden w-full min-w-full min-h-screen">
