@@ -3,7 +3,6 @@ import type { Event } from '@/types/event'
 import { SITE_CONFIG } from './site-config'
 import { formatEventDates, getFirstEventDate, parseEventDates } from './dateUtils'
 import { generateBookingConfirmationPDF } from './pdfGenerator'
-import { uploadPDFToStorage } from './pdfStorage'
 
 interface BookingConfirmationEmailProps {
   to: string
@@ -22,7 +21,6 @@ interface BookingConfirmationEmailProps {
 interface EmailResult {
   success: boolean
   error?: string
-  pdfUrl?: string // Cloudinary URL for the uploaded PDF
 }
 
 
@@ -99,7 +97,6 @@ export async function sendBookingConfirmationEmail({
     const verificationUrl = `${baseUrl}/verify-booking?registrationId=${encodeURIComponent(registrationId)}`
     
     let pdfBuffer: Buffer | null = null
-    let pdfUrl: string | null = null
     
     try {
       pdfBuffer = await generateBookingConfirmationPDF({
@@ -113,22 +110,12 @@ export async function sendBookingConfirmationEmail({
         },
         verificationUrl,
       })
-      
-      // Upload PDF to Cloudinary with event-based folder structure
-      // PDFs are stored in: events/<event-id>/booking-<bookingId>.pdf
-      // Cloudinary automatically creates the folder if it doesn't exist
-      if (pdfBuffer) {
-        pdfUrl = await uploadPDFToStorage(pdfBuffer, event.id, bookingId)
-        if (!pdfUrl) {
-          console.warn('Failed to upload PDF to Cloudinary, but continuing with email send')
-        }
-      }
     } catch (pdfError) {
-      console.error('Error generating or storing PDF:', pdfError)
+      console.error('Error generating PDF:', pdfError)
       // Continue without PDF attachment if generation fails
     }
 
-    // Create email HTML content (after PDF is generated so we can include PDF URL if available)
+    // Create email HTML content (after PDF is generated)
     const emailHtml = `
 <!DOCTYPE html>
 <html lang="en">
@@ -136,7 +123,7 @@ export async function sendBookingConfirmationEmail({
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>Booking Confirmation - ${event.title}</title>
+  <title>Registration Confirmation - ${event.title}</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f7fa; line-height: 1.6; color: #374151;">
   <!-- Wrapper Table -->
@@ -158,7 +145,7 @@ export async function sendBookingConfirmationEmail({
                       <span style="font-size: 42px; color: #ffffff;">✓</span>
                     </div>
                     <!-- Title -->
-                    <h1 style="margin: 0 0 12px; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">Booking Confirmed</h1>
+                    <h1 style="margin: 0 0 12px; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">Registration Confirmed</h1>
                     <p style="margin: 0; color: rgba(255, 255, 255, 0.95); font-size: 17px; font-weight: 400;">Your registration has been successfully processed</p>
                   </td>
                 </tr>
@@ -174,7 +161,7 @@ export async function sendBookingConfirmationEmail({
                 Dear <strong style="color: #111827; font-weight: 600;">${name}</strong>,
               </p>
               <p style="margin: 0 0 32px; color: #4b5563; font-size: 16px; line-height: 1.7;">
-                Thank you for registering! We're thrilled to confirm your booking for <strong style="color: #6366f1; font-weight: 600;">${event.title}</strong>. Your spot has been secured and we're looking forward to having you join us.
+                Thank you for registering! We're thrilled to confirm your registration for <strong style="color: #6366f1; font-weight: 600;">${event.title}</strong>. Your spot has been secured and we're looking forward to having you join us.
               </p>
               
               <!-- Event Details Card -->
@@ -292,11 +279,11 @@ export async function sendBookingConfirmationEmail({
               </table>
               ` : ''}
               
-              <!-- Booking Information Highlight -->
+              <!-- Registration Details Highlight -->
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 2px solid #93c5fd; border-radius: 12px; margin-bottom: 32px;">
                 <tr>
                   <td style="padding: 28px;">
-                    <h3 style="margin: 0 0 20px; color: #1e40af; font-size: 18px; font-weight: 600; letter-spacing: -0.2px;">✉️ Your Booking Information</h3>
+                    <h3 style="margin: 0 0 20px; color: #1e40af; font-size: 18px; font-weight: 600; letter-spacing: -0.2px;">✉️ Your Registration Details</h3>
                     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                       <tr>
                         <td style="padding: 10px 0; border-bottom: 1px solid rgba(147, 197, 253, 0.3);">
@@ -361,7 +348,7 @@ export async function sendBookingConfirmationEmail({
                 <tr>
                   <td style="padding: 24px; background-color: #f8fafc; border-radius: 10px; border-left: 4px solid #10b981;">
                     <p style="margin: 0 0 12px; color: #374151; font-size: 15px; line-height: 1.7;">
-                      We look forward to seeing you at the event! If you have any questions or need to make changes to your booking, please don't hesitate to reach out to us.
+                      We look forward to seeing you at the event! If you have any questions or need to make changes to your registration, please don't hesitate to reach out to us.
                     </p>
                     <p style="margin: 0; color: #374151; font-size: 15px; line-height: 1.7;">
                       Best regards,<br>
@@ -436,8 +423,18 @@ export async function sendBookingConfirmationEmail({
     const sendSmtpEmail = new brevo.SendSmtpEmail()
     sendSmtpEmail.sender = { email: senderEmail, name: senderName }
     sendSmtpEmail.to = [{ email: normalizedEmail, name: name }]
-    sendSmtpEmail.subject = `Booking Confirmation: ${event.title} - ${registrationId}`
+    sendSmtpEmail.subject = `Registration Confirmation: ${event.title} - ${registrationId}`
     sendSmtpEmail.htmlContent = emailHtml
+
+    // Development-only: log masked recipient to verify correct address
+    if (process.env.NODE_ENV === 'development') {
+      const at = normalizedEmail.indexOf('@')
+      const local = at > 0 ? normalizedEmail.slice(0, at) : '?'
+      const domain = at > 0 ? normalizedEmail.slice(at + 1) : '?'
+      const domainSuffix = domain.includes('.') ? domain.split('.').pop() : 'com'
+      const masked = `${local[0]}***@***.${domainSuffix}`
+      console.log('Confirmation email sending to:', masked)
+    }
 
     // Attach PDF if generated successfully
     if (pdfBuffer && pdfBuffer.length > 0) {
@@ -446,7 +443,7 @@ export async function sendBookingConfirmationEmail({
         
         // Brevo expects attachments with name and content (base64 encoded)
         const attachment: { name: string; content: string } = {
-          name: `Booking-Confirmation-${registrationId}.pdf`,
+          name: `Registration-Confirmation-${registrationId}.pdf`,
           content: base64Content,
         }
         
@@ -483,10 +480,7 @@ export async function sendBookingConfirmationEmail({
       
       // Handle string responses (messageId as string) - check this first
       if (typeof data === 'string') {
-        return {
-          success: true,
-          pdfUrl: pdfUrl || undefined,
-        }
+        return { success: true }
       }
       
       // Check for error indicators first
@@ -524,28 +518,19 @@ export async function sendBookingConfirmationEmail({
         // Check for success indicators
         if ('messageId' in responseData) {
           // Email was accepted by Brevo - return success
-          return {
-            success: true,
-            pdfUrl: pdfUrl || undefined,
-          }
+          return { success: true }
         }
         
         // If response is an object but has no error or messageId, check if it's empty
         // Empty object from Brevo usually means success (email was queued)
         if (Object.keys(responseData).length === 0) {
-          return {
-            success: true,
-            pdfUrl: pdfUrl || undefined,
-          }
+          return { success: true }
         }
         
         // If we have an object response with no error indicators, consider it success
         // Brevo might return success responses in different formats
         // Only fail if we explicitly see error indicators
-        return {
-          success: true,
-          pdfUrl: pdfUrl || undefined,
-        }
+        return { success: true }
       }
       
       // If we got an unexpected response format, log it and return a more helpful error
@@ -624,7 +609,7 @@ export async function sendBookingConfirmationEmail({
       }
     }
   } catch (error) {
-    console.error('Error sending booking confirmation email:', error)
+    console.error('Error sending registration confirmation email:', error)
     return {
       success: false,
       error: 'An unexpected error occurred while sending the email',
@@ -680,7 +665,7 @@ export async function sendBookingCancellationEmail({
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Booking Cancellation</title>
+  <title>Registration Cancellation</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f3f4f6; padding: 40px 20px;">

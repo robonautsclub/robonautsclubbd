@@ -71,7 +71,7 @@ export default function BookingForm({ event }: { event: Event }) {
       })
 
       if (result.success) {
-        // Only show success message if booking was created AND email was sent
+        // Only show success message if registration was created AND email was sent
         setIsSubmitted(true)
         setFormData({ name: '', school: '', email: '', phone: '', bkashNumber: '', information: '' })
         setTimeout(() => {
@@ -79,16 +79,16 @@ export default function BookingForm({ event }: { event: Event }) {
         }, 5000)
       } else {
         // Show specific error message - this includes email sending failures
-        const errorMessage = result.error || 'Failed to submit booking. Please try again.'
+        const errorMessage = result.error || 'Failed to submit registration. Please try again.'
         setErrors({ submit: errorMessage })
 
-        // If it's a duplicate booking error, highlight it
+        // If it's a duplicate registration error, highlight it
         if (errorMessage.includes('already registered')) {
           // Optionally clear the form or keep it for user to see
         }
       }
     } catch (error) {
-      console.error('Booking error:', error)
+      console.error('Registration error:', error)
       setErrors({ submit: 'An unexpected error occurred. Please try again.' })
     } finally {
       setIsLoading(false)
@@ -103,14 +103,17 @@ export default function BookingForm({ event }: { event: Event }) {
             <CheckCircle className="w-10 h-10 sm:w-12 sm:h-12 text-green-500" />
           </div>
           <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 sm:mb-3">
-            Booking Successful!
+            Registration Successful!
           </h3>
           <p className="text-sm sm:text-base text-gray-600 mb-2">
-            Your booking for <strong className="text-indigo-600">{event.title}</strong> has been
+            Your registration for <strong className="text-indigo-600">{event.title}</strong> has been
             confirmed!
           </p>
           <p className="text-xs sm:text-sm text-gray-500">
             A confirmation email with event details has been sent to your email address. Please check your inbox (and spam folder).
+          </p>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">
+            If you don&apos;t see it in a few minutes, check your spam or junk folder.
           </p>
         </div>
       </div>

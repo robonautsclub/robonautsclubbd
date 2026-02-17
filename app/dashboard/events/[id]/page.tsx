@@ -36,7 +36,7 @@ export default async function EventDetailsPage({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Event Details</h2>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">View event information and bookings</p>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">View event information and registrations</p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           <EventHeaderActions event={event} currentUserId={session.uid} />
@@ -145,13 +145,13 @@ export default async function EventDetailsPage({
         </div>
       </div>
 
-      {/* Bookings Table */}
+      {/* Registrations Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center gap-2">
               <Users className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
-              Bookings
+              Registrations
               <span className="text-xs sm:text-sm font-normal text-gray-500">({bookings.length})</span>
             </h3>
             <ExportBookingsButton bookings={bookings} eventTitle={event.title} />
@@ -163,8 +163,8 @@ export default async function EventDetailsPage({
             <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
               <Users className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
             </div>
-            <h4 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">No bookings yet</h4>
-            <p className="text-sm sm:text-base text-gray-600">Bookings will appear here when users register for this event</p>
+            <h4 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">No registrations yet</h4>
+            <p className="text-sm sm:text-base text-gray-600">Registrations will appear here when users register for this event</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
