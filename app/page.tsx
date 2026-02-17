@@ -6,7 +6,7 @@ import { getPublicCourses } from "@/app/events/actions";
 export const metadata: Metadata = {
   title: "Home",
   description: SITE_CONFIG.extendedDescription,
-  keywords: SITE_CONFIG.metadata.keywords,
+  keywords: [...SITE_CONFIG.metadata.keywords],
   openGraph: {
     title: SITE_CONFIG.metadata.defaultTitle,
     description: SITE_CONFIG.extendedDescription,
