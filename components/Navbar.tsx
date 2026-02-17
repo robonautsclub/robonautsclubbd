@@ -164,7 +164,7 @@ export default function Nav() {
               className='rounded-full object-contain ring-1 ring-gray-200 group-hover:ring-indigo-200 transition'
             />
             <span className='hidden md:block text-2xl font-semibold leading-tight text-gray-900 tracking-tight'>
-            Robonauts Club 
+            Robonauts
             </span>
           </Link>
 
@@ -270,7 +270,7 @@ export default function Nav() {
                 )
               })}
 
-             
+
             </ul>
           </div>
 
@@ -433,8 +433,8 @@ export default function Nav() {
                       )}
                     </div>
                   ))}
-                  
-            
+
+
                 </nav>
               </div>
             </div>
