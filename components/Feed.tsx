@@ -282,16 +282,7 @@ const Feed = ({ initialCourses = [] }: FeedProps) => {
           <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-10 lg:p-12 border-2 border-gray-200 shadow-sm hover:shadow-xl transition-all duration-300">
             <div className="mb-6 sm:mb-8">
               <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-linear-to-br from-indigo-100 to-blue-100 flex items-center justify-center">
-                  <Award className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-500" />
-                </div>
-                <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
-                  Olympiads We&apos;ve Competed In
-                </h3>
               </div>
-              <p className="text-sm sm:text-base text-gray-700 mb-4 sm:mb-6 leading-relaxed">
-                Robonauts Club has previously participated in prestigious robotics competitions at both national and international levels. These experiences have provided our students with real competition exposure and continue to inform our training programs.
-              </p>
             </div>
 
             {/* Olympiad Cards */}

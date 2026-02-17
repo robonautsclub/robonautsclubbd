@@ -11,7 +11,7 @@ import Image from "next/image";
 /* ================== CONSTANTS ================== */
 
 const COMPANY = {
-  name: "Robonauts Club",
+  name: "Robonauts",
   tagline: "Innovation meets curiosity in STEM education",
   email: "info@robonautsclub.com",
   phone: "+8801824863366",
