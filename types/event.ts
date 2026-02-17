@@ -15,6 +15,7 @@ export type Event = {
   tags?: string[] // Event tags for categorization
   isPaid?: boolean
   amount?: number // Fee amount (e.g. BDT)
+  paymentBkashNumber?: string // bKash number for participants to pay to (set by event creator)
   // Firestore metadata
   createdAt: Date | string
   updatedAt: Date | string

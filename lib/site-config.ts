@@ -7,13 +7,13 @@ export const SITE_CONFIG = {
   name: "Robonauts",
   alternateName: "Robonauts  Bangladesh",
   tagline: "Innovation meets curiosity in STEM education",
-  url: process.env.NEXT_PUBLIC_SITE_URL || "https://robonautsclub.com",
+  url: process.env.NEXT_PUBLIC_SITE_URL || "https://www.robonautsltd.com/",
   description:
     "Bangladesh's first youth robotics club preparing students for Robofest & global STEM challenges.",
   extendedDescription:
     "Bangladesh's first youth robotics club preparing students for Robofest & global STEM challenges. Join 500+ members for hands-on robotics workshops, competitions, and international opportunities.",
-  email: "info@robonautsclub.com",
-  noreplyEmail: "noreply@robonautsclub.com",
+  email: "info@robonautsltd.com",
+  noreplyEmail: "no-reply@robonautsltd.com",
   phone: "+8801824863366",
   location: "5B, House #4, Road #7, Sector #3, Uttara",
   address: {

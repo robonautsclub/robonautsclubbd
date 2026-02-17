@@ -44,6 +44,7 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
     tags: event.tags || [],
     isPaid: event.isPaid ?? false,
     amount: event.amount ?? '' as '' | number,
+    paymentBkashNumber: event.paymentBkashNumber ?? '',
   })
   const [tagInput, setTagInput] = useState('')
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -114,6 +115,12 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
         setLoading(false)
         return
       }
+      const bkash = String(formData.paymentBkashNumber ?? '').trim()
+      if (bkash.length !== 11 || !bkash.startsWith('01')) {
+        setError('Please enter a valid 11-digit bKash number (starting with 01) for receiving payment')
+        setLoading(false)
+        return
+      }
     }
 
     // Set default time if not provided
@@ -129,6 +136,7 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
         time: eventTime,
         isPaid: formData.isPaid,
         amount: formData.isPaid && formData.amount !== '' ? Number(formData.amount) : undefined,
+        paymentBkashNumber: formData.isPaid ? (formData.paymentBkashNumber ?? '').trim() : '',
       })
 
       if (result.success) {
@@ -321,25 +329,47 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
               <span className="text-sm text-gray-700">This is a paid event</span>
             </label>
             {formData.isPaid && (
-              <div className="mt-2">
-                <label htmlFor="edit-amount" className="block text-sm font-medium text-gray-600 mb-1">
-                  Amount (BDT) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="edit-amount"
-                  type="number"
-                  min={1}
-                  value={formData.amount === '' ? '' : formData.amount}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      amount: e.target.value === '' ? '' : Number(e.target.value),
-                    })
-                  }
-                  placeholder="e.g. 500"
-                  disabled={loading}
-                  className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
-                />
+              <div className="mt-2 space-y-2">
+                <div>
+                  <label htmlFor="edit-amount" className="block text-sm font-medium text-gray-600 mb-1">
+                    Amount (BDT) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="edit-amount"
+                    type="number"
+                    min={1}
+                    value={formData.amount === '' ? '' : formData.amount}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        amount: e.target.value === '' ? '' : Number(e.target.value),
+                      })
+                    }
+                    placeholder="e.g. 500"
+                    disabled={loading}
+                    className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="edit-payment-bkash" className="block text-sm font-medium text-gray-600 mb-1">
+                    bKash number to receive payment <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="edit-payment-bkash"
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={11}
+                    value={formData.paymentBkashNumber}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/\D/g, '').slice(0, 11)
+                      setFormData({ ...formData, paymentBkashNumber: v })
+                    }}
+                    placeholder="e.g. 01712345678"
+                    disabled={loading}
+                    className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Participants will pay the fee to this number via bKash.</p>
+                </div>
               </div>
             )}
           </div>
