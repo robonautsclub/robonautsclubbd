@@ -1,5 +1,5 @@
 /**
- * PDF Generation Service for Booking Confirmations
+ * PDF Generation Service for Registration Confirmations
  */
 
 import type { Event } from '@/types/event'
@@ -280,7 +280,7 @@ function setupPDFKitFonts(): { originalReadFileSync: ReadFileSyncFn; fontPath: s
 }
 
 /**
- * Generate PDF booking confirmation
+ * Generate PDF registration confirmation
  */
 export async function generateBookingConfirmationPDF({
   registrationId,
@@ -456,7 +456,7 @@ async function generatePDFContent(
     // Add decorative line at bottom of header
     doc.rect(0, headerHeight - 3, pageWidth, 3).fill('#4f46e5')
     
-    doc.font('Times-Roman').fontSize(fontSizes.header).fillColor('#ffffff').text('Booking Confirmed', margin, 20, {
+    doc.font('Times-Roman').fontSize(fontSizes.header).fillColor('#ffffff').text('Registration Confirmed', margin, 20, {
       width: contentWidth,
     })
     

@@ -197,14 +197,16 @@ FIREBASE_ADMIN_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYourPrivateKeyLinesJoin
 CLOUDINARY_URL=cloudinary://your_api_key:your_api_secret@your_cloud_name
 ```
 
-#### Email Service (Resend)
+#### Email Service (Brevo)
 ```env
-# Resend API for sending emails
-# Get your API key from https://resend.com/api-keys
-RESEND_API_KEY=re_your_api_key_here
+# Brevo API key - required for registration confirmation emails
+# Get your API key from https://app.brevo.com/settings/keys/api
+BREVO_API_KEY=your_brevo_api_key_here
 
-# Optional: Custom from email (defaults to onboarding@resend.dev)
-RESEND_FROM_EMAIL=noreply@robonautsclub.com
+# Optional: Custom from address (must be from a verified domain in Brevo)
+# If not set, defaults to SITE_CONFIG name and noreply email
+# Verify your domain at https://app.brevo.com/settings/senders/domains
+BREVO_FROM_EMAIL=Robonauts Club <noreply@robonautsclub.com>
 ```
 
 #### Site Configuration
@@ -240,9 +242,10 @@ FIREBASE_ADMIN_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0
 # Cloudinary
 CLOUDINARY_URL=cloudinary://123456789012345:abcdefghijklmnopqrstuvwxyz@dvxxa4sho
 
-# Resend Email Service
-RESEND_API_KEY=re_1234567890abcdefghijklmnop
-RESEND_FROM_EMAIL=noreply@robonautsclub.com
+# Brevo Email Service (registration confirmation emails)
+BREVO_API_KEY=your_brevo_api_key_here
+# Optional: use a verified sender; see https://app.brevo.com/settings/senders/domains
+BREVO_FROM_EMAIL=Robonauts Club <noreply@robonautsclub.com>
 
 # Super Admin Emails (comma-separated, no spaces)
 SUPER_ADMIN_EMAILS=admin1@company.com,admin2@company.com,admin3@company.com

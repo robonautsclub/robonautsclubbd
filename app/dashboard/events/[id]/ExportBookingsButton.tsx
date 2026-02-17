@@ -77,7 +77,7 @@ export default function ExportBookingsButton({ bookings, eventTitle }: ExportBoo
         ws['!cols'] = columnWidths
 
         // Add the worksheet to the workbook
-        XLSX.utils.book_append_sheet(wb, ws, 'Bookings')
+        XLSX.utils.book_append_sheet(wb, ws, 'Registrations')
 
         // Generate filename with event title and current date
         const sanitizedEventTitle = eventTitle
@@ -86,13 +86,13 @@ export default function ExportBookingsButton({ bookings, eventTitle }: ExportBoo
           .substring(0, 50) // Limit length
         
         const currentDate = new Date().toISOString().split('T')[0] // YYYY-MM-DD format
-        const filename = `Bookings_${sanitizedEventTitle}_${currentDate}.xlsx`
+        const filename = `Registrations_${sanitizedEventTitle}_${currentDate}.xlsx`
 
           // Write the file and trigger download
           XLSX.writeFile(wb, filename)
         } catch (error) {
           console.error('Error exporting to Excel:', error)
-          alert('Failed to export bookings. Please try again.')
+          alert('Failed to export registrations. Please try again.')
         }
       })()
     })
@@ -107,7 +107,7 @@ export default function ExportBookingsButton({ bookings, eventTitle }: ExportBoo
       onClick={exportToExcel}
       disabled={isPending}
       className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
-      title="Download bookings as Excel file"
+      title="Download registrations as Excel file"
     >
       <Download className="w-4 h-4" />
       {isPending ? 'Exporting...' : 'Export to Excel'}

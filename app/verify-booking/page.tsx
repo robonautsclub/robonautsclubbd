@@ -15,18 +15,18 @@ import RetryButton from './RetryButton'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: `Verify Booking | ${SITE_CONFIG.name}`,
-  description: `Verify your event registration with ${SITE_CONFIG.name}. Enter your registration ID to confirm your booking and view event details.`,
+  title: `Verify Registration | ${SITE_CONFIG.name}`,
+  description: `Verify your event registration with ${SITE_CONFIG.name}. Enter your registration ID to confirm your registration and view event details.`,
   keywords: [
     'verify registration',
     'event verification',
-    'robotics event booking',
+    'robotics event registration',
     'registration confirmation',
     `${SITE_CONFIG.name} verification`,
   ],
   openGraph: {
-    title: `Verify Booking | ${SITE_CONFIG.name}`,
-    description: `Verify your event registration with ${SITE_CONFIG.name}. Enter your registration ID to confirm your booking.`,
+    title: `Verify Registration | ${SITE_CONFIG.name}`,
+    description: `Verify your event registration with ${SITE_CONFIG.name}. Enter your registration ID to confirm your registration.`,
     url: '/verify-booking',
     type: 'website',
     images: [
@@ -34,13 +34,13 @@ export const metadata: Metadata = {
         url: '/robotics-event.jpg',
         width: 1200,
         height: 630,
-        alt: `${SITE_CONFIG.name} - Verify Booking`,
+        alt: `${SITE_CONFIG.name} - Verify Registration`,
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: `Verify Booking | ${SITE_CONFIG.name}`,
+    title: `Verify Registration | ${SITE_CONFIG.name}`,
     description: `Verify your event registration with ${SITE_CONFIG.name}.`,
     images: ['/robotics-event.jpg'],
   },

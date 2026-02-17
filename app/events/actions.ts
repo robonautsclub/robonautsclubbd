@@ -316,7 +316,7 @@ export async function createBooking(formData: {
     console.error('Error creating booking:', error)
     return {
       success: false,
-      error: 'Failed to create booking. Please try again.',
+      error: 'Failed to create registration. Please try again.',
     };
   }
 }
