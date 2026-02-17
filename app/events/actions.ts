@@ -247,7 +247,7 @@ export async function createBooking(formData: {
     const bookingRef = adminDb.collection('bookings').doc()
     const bookingId = bookingRef.id
 
-    // Step 5: Create booking document initially (without pdfUrl, will update after PDF generation)
+    // Step 5: Create booking document (PDF is generated and emailed only, not stored)
     const now = new Date()
     const bookingData: {
       eventId: string
@@ -259,7 +259,6 @@ export async function createBooking(formData: {
       bkashNumber: string
       information: string
       createdAt: Date
-      pdfUrl?: string
     } = {
       eventId: formData.eventId,
       registrationId,
@@ -275,8 +274,7 @@ export async function createBooking(formData: {
     // Create booking document first (so we have bookingId for PDF generation)
     await bookingRef.set(bookingData)
 
-    // Step 6: Send confirmation email with PDF attachment
-    // This will generate PDF with bookingId, upload to Cloudinary, and return pdfUrl
+    // Step 6: Send confirmation email with PDF attachment (PDF is not stored)
     const emailResult = await sendBookingConfirmationEmail({
       to: formData.email.trim().toLowerCase(),
       name: formData.name.trim(),
@@ -299,13 +297,6 @@ export async function createBooking(formData: {
         success: false,
         error: emailResult.error || 'Failed to send confirmation email. Please check your email address and try again.',
       }
-    }
-
-    // Step 7: Update booking document with pdfUrl if PDF was uploaded successfully
-    if (emailResult.pdfUrl) {
-      await bookingRef.update({
-        pdfUrl: emailResult.pdfUrl,
-      })
     }
 
     return {

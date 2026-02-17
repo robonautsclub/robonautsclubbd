@@ -6,8 +6,8 @@ import type { Event } from '@/types/event'
 import { SITE_CONFIG } from './site-config'
 import { formatEventDates, getFirstEventDate, parseEventDates } from './dateUtils'
 import { sanitizeEventForPDF, sanitizeBookingDetailsForPDF, sanitizeTextForPDF } from './textSanitizer'
-import { join, dirname } from 'path'
-import { existsSync, readdirSync } from 'fs'
+import { join, dirname, basename } from 'path'
+import { existsSync, readdirSync, readFileSync } from 'fs'
 
 interface BookingDetails {
   name: string
@@ -347,9 +347,20 @@ export async function generateBookingConfirmationPDF({
         reject(error)
       })
       
+      // Load logo from public folder (optional)
+      let logoBuffer: Buffer | null = null
+      try {
+        const logoPath = join(process.cwd(), 'public', basename(SITE_CONFIG.assets.logo))
+        if (existsSync(logoPath)) {
+          logoBuffer = readFileSync(logoPath)
+        }
+      } catch {
+        // Logo optional; continue without it
+      }
+
       // Dynamically import QR code generator only when needed
       const { generateQRCodeBuffer } = await import('./qrCode')
-      await generatePDFContent(doc, registrationId, bookingId, event, bookingDetails, verificationUrl, generateQRCodeBuffer)
+      await generatePDFContent(doc, registrationId, bookingId, event, bookingDetails, verificationUrl, generateQRCodeBuffer, logoBuffer)
       doc.end()
     } catch (error) {
       // Restore original readFileSync on error
@@ -376,7 +387,8 @@ async function generatePDFContent(
   event: Event,
   bookingDetails: BookingDetails,
   verificationUrl: string,
-  generateQRCodeBuffer: (text: string, size?: number) => Promise<Buffer>
+  generateQRCodeBuffer: (text: string, size?: number) => Promise<Buffer>,
+  logoBuffer: Buffer | null = null
 ): Promise<void> {
   try {
     // Sanitize all event and booking data before rendering
@@ -392,8 +404,10 @@ async function generatePDFContent(
     const marginBottom = 40
     const contentWidth = pageWidth - (margin * 2)
     const footerHeight = 45
-    const headerHeight = 80
+    const headerHeight = 88
     const availableHeight = pageHeight - marginTop - marginBottom - footerHeight - headerHeight
+    const logoSize = 44
+    const logoMargin = 14
 
     // Define font sizes for single-page layout (increased for better readability)
     const fontSizes = {
@@ -402,14 +416,14 @@ async function generatePDFContent(
       sectionTitle: 16,
       body: 11,
       small: 9,
-      registrationId: 18,
+      registrationId: 20,
     }
 
     // Calculate spacing (adjusted for larger fonts and colored sections)
     const spacing = {
-      section: 12,
+      section: 14,
       field: 10,
-      subsection: 8,
+      subsection: 10,
     }
 
     // Track Y position for layout management
@@ -456,34 +470,47 @@ async function generatePDFContent(
     // Add decorative line at bottom of header
     doc.rect(0, headerHeight - 3, pageWidth, 3).fill('#4f46e5')
     
-    doc.font('Times-Roman').fontSize(fontSizes.header).fillColor('#ffffff').text('Registration Confirmed', margin, 20, {
-      width: contentWidth,
+    // Logo top-left (optional)
+    const headerContentLeft = margin
+    let titleLeft = margin
+    if (logoBuffer && logoBuffer.length > 0) {
+      try {
+        doc.image(logoBuffer, margin, logoMargin, { width: logoSize, height: logoSize })
+        titleLeft = margin + logoSize + 12
+      } catch {
+        titleLeft = margin
+      }
+    }
+    const titleWidth = contentWidth - (titleLeft - margin)
+    
+    doc.font('Times-Roman').fontSize(fontSizes.header).fillColor('#ffffff').text('Registration Confirmed', titleLeft, 22, {
+      width: titleWidth,
     })
     
-    doc.font('Times-Roman').fontSize(fontSizes.subheader).fillColor('#e0e7ff').text('Event Registration Confirmation', margin, 52, {
-      width: contentWidth,
+    doc.font('Times-Roman').fontSize(fontSizes.subheader).fillColor('#e0e7ff').text('Event Registration Confirmation', titleLeft, 54, {
+      width: titleWidth,
     })
 
-    yPos = headerHeight + 20
+    yPos = headerHeight + 24
 
     // ==================== REGISTRATION ID SECTION ====================
     // Prominent Registration ID display with elegant styling
-    const regIdBoxHeight = 65
+    const regIdBoxHeight = 70
     doc.rect(margin - 8, yPos - 8, contentWidth + 16, regIdBoxHeight).fill('#eff6ff').stroke('#3b82f6').lineWidth(2)
     
     doc.font('Times-Roman').fontSize(12).fillColor('#6366f1').text('Registration ID', margin, yPos)
-    yPos += 15
+    yPos += 16
     doc.font('Times-Roman').fontSize(fontSizes.registrationId).fillColor('#1e3a8a').text(sanitizedRegistrationId || 'N/A', margin, yPos, {
       width: contentWidth,
     })
     
-    yPos += 45
+    yPos += 50
 
     // ==================== EVENT DETAILS SECTION ====================
     // Elegant section header with icon-like styling
-    doc.rect(margin - 8, yPos - 8, contentWidth + 16, 25).fill('#f8fafc').stroke('#cbd5e1').lineWidth(1.5)
-    doc.font('Times-Roman').fontSize(fontSizes.sectionTitle).fillColor('#1e40af').text('Event Details', margin, yPos)
-    yPos += 28
+    doc.rect(margin - 8, yPos - 8, contentWidth + 16, 28).fill('#f8fafc').stroke('#cbd5e1').lineWidth(1.5)
+    doc.font('Times-Roman').fontSize(fontSizes.sectionTitle).fillColor('#1e40af').text('Event Details', margin, yPos + 2)
+    yPos += 32
 
     const firstDate = getFirstEventDate(event.date)
     const formattedDate = firstDate ? formatEventDates(parseEventDates(event.date), 'long') : 'TBA'
@@ -517,9 +544,9 @@ async function generatePDFContent(
 
     // ==================== REGISTRATION INFORMATION SECTION ====================
     // Elegant section header with icon-like styling
-    doc.rect(margin - 8, yPos - 8, contentWidth + 16, 25).fill('#f8fafc').stroke('#cbd5e1').lineWidth(1.5)
-    doc.font('Times-Roman').fontSize(fontSizes.sectionTitle).fillColor('#1e40af').text('Registration Information', margin, yPos)
-    yPos += 28
+    doc.rect(margin - 8, yPos - 8, contentWidth + 16, 28).fill('#f8fafc').stroke('#cbd5e1').lineWidth(1.5)
+    doc.font('Times-Roman').fontSize(fontSizes.sectionTitle).fillColor('#1e40af').text('Registration Information', margin, yPos + 2)
+    yPos += 32
 
     // Name (required)
     yPos = addField('Name', sanitizedBooking.name, true, yPos)

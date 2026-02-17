@@ -3,7 +3,6 @@ import type { Event } from '@/types/event'
 import { SITE_CONFIG } from './site-config'
 import { formatEventDates, getFirstEventDate, parseEventDates } from './dateUtils'
 import { generateBookingConfirmationPDF } from './pdfGenerator'
-import { uploadPDFToStorage } from './pdfStorage'
 
 interface BookingConfirmationEmailProps {
   to: string
@@ -22,7 +21,6 @@ interface BookingConfirmationEmailProps {
 interface EmailResult {
   success: boolean
   error?: string
-  pdfUrl?: string // Cloudinary URL for the uploaded PDF
 }
 
 
@@ -99,7 +97,6 @@ export async function sendBookingConfirmationEmail({
     const verificationUrl = `${baseUrl}/verify-booking?registrationId=${encodeURIComponent(registrationId)}`
     
     let pdfBuffer: Buffer | null = null
-    let pdfUrl: string | null = null
     
     try {
       pdfBuffer = await generateBookingConfirmationPDF({
@@ -113,22 +110,12 @@ export async function sendBookingConfirmationEmail({
         },
         verificationUrl,
       })
-      
-      // Upload PDF to Cloudinary with event-based folder structure
-      // PDFs are stored in: events/<event-id>/booking-<bookingId>.pdf
-      // Cloudinary automatically creates the folder if it doesn't exist
-      if (pdfBuffer) {
-        pdfUrl = await uploadPDFToStorage(pdfBuffer, event.id, bookingId)
-        if (!pdfUrl) {
-          console.warn('Failed to upload PDF to Cloudinary, but continuing with email send')
-        }
-      }
     } catch (pdfError) {
-      console.error('Error generating or storing PDF:', pdfError)
+      console.error('Error generating PDF:', pdfError)
       // Continue without PDF attachment if generation fails
     }
 
-    // Create email HTML content (after PDF is generated so we can include PDF URL if available)
+    // Create email HTML content (after PDF is generated)
     const emailHtml = `
 <!DOCTYPE html>
 <html lang="en">
@@ -493,10 +480,7 @@ export async function sendBookingConfirmationEmail({
       
       // Handle string responses (messageId as string) - check this first
       if (typeof data === 'string') {
-        return {
-          success: true,
-          pdfUrl: pdfUrl || undefined,
-        }
+        return { success: true }
       }
       
       // Check for error indicators first
@@ -534,28 +518,19 @@ export async function sendBookingConfirmationEmail({
         // Check for success indicators
         if ('messageId' in responseData) {
           // Email was accepted by Brevo - return success
-          return {
-            success: true,
-            pdfUrl: pdfUrl || undefined,
-          }
+          return { success: true }
         }
         
         // If response is an object but has no error or messageId, check if it's empty
         // Empty object from Brevo usually means success (email was queued)
         if (Object.keys(responseData).length === 0) {
-          return {
-            success: true,
-            pdfUrl: pdfUrl || undefined,
-          }
+          return { success: true }
         }
         
         // If we have an object response with no error indicators, consider it success
         // Brevo might return success responses in different formats
         // Only fail if we explicitly see error indicators
-        return {
-          success: true,
-          pdfUrl: pdfUrl || undefined,
-        }
+        return { success: true }
       }
       
       // If we got an unexpected response format, log it and return a more helpful error

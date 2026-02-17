@@ -34,25 +34,22 @@ export default function BookingActions({ booking }: BookingActionsProps) {
     }
   }
 
-  // PDF URL from Cloudinary
-  const pdfLink = booking.pdfUrl
+  const pdfUrl = `/api/dashboard/registrations/${booking.id}/pdf`
 
   return (
     <>
       <div className="flex items-center gap-2">
-        {pdfLink && (
-          <a
-            href={pdfLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors"
-            title="View confirmation PDF"
-          >
-            <FileText className="w-4 h-4" />
-            <span className="hidden sm:inline">PDF</span>
-            <ExternalLink className="w-3 h-3 hidden sm:inline" />
-          </a>
-        )}
+        <a
+          href={pdfUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors"
+          title="Download confirmation PDF"
+        >
+          <FileText className="w-4 h-4" />
+          <span className="hidden sm:inline">PDF</span>
+          <ExternalLink className="w-3 h-3 hidden sm:inline" />
+        </a>
         <button
           onClick={() => setShowDeleteConfirm(true)}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
