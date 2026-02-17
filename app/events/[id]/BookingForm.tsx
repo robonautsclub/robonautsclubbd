@@ -127,15 +127,29 @@ export default function BookingForm({ event }: { event: Event }) {
         <p className="text-xs sm:text-sm text-gray-500">{event.title}</p>
       </div>
       {event.isPaid && event.amount != null && event.amount > 0 && (
-        <div className="mb-5 p-4 rounded-xl bg-amber-50 border-2 border-amber-300 shadow-sm">
-          <div className="flex items-center gap-2 mb-1">
-            <Banknote className="w-5 h-5 text-amber-600 shrink-0" />
-            <span className="text-sm font-semibold text-amber-800 uppercase tracking-wide">Registration Fee</span>
+        <>
+          <div className="mb-4 p-4 rounded-xl bg-green-50 border-2 border-green-300 shadow-sm">
+            <p className="text-sm font-semibold text-green-800 mb-1">
+              Pay the registration fee via bKash to the number below:
+            </p>
+            {event.paymentBkashNumber ? (
+              <p className="text-xl sm:text-2xl font-bold text-green-700 font-mono tracking-wide">
+                {event.paymentBkashNumber}
+              </p>
+            ) : (
+              <p className="text-sm text-green-700">bKash number will be shared after registration.</p>
+            )}
           </div>
-          <p className="text-2xl sm:text-3xl font-bold text-amber-700">
-            BDT {event.amount}
-          </p>
-        </div>
+          <div className="mb-5 p-4 rounded-xl bg-amber-50 border-2 border-amber-300 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <Banknote className="w-5 h-5 text-amber-600 shrink-0" />
+              <span className="text-sm font-semibold text-amber-800 uppercase tracking-wide">Registration Fee</span>
+            </div>
+            <p className="text-2xl sm:text-3xl font-bold text-amber-700">
+              BDT {event.amount}
+            </p>
+          </div>
+        </>
       )}
       <form onSubmit={handleSubmit} className="space-y-5">
         {errors.submit && (

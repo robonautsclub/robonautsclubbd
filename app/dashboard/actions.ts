@@ -103,6 +103,7 @@ export async function createEvent(formData: {
   tags?: string[]
   isPaid?: boolean
   amount?: number
+  paymentBkashNumber?: string
 }): Promise<{ success: boolean; error?: string; eventId?: string }> {
   const session = await requireAuth()
 
@@ -169,6 +170,7 @@ export async function createEvent(formData: {
       tags: sanitized.tags,
       isPaid,
       ...(isPaid && { amount: formData.amount ?? 0 }),
+      ...(isPaid && formData.paymentBkashNumber?.trim() && { paymentBkashNumber: formData.paymentBkashNumber.trim() }),
       createdAt: now,
       updatedAt: now,
       createdBy: session.uid,
@@ -219,6 +221,7 @@ export async function updateEvent(
     tags?: string[]
     isPaid?: boolean
     amount?: number
+    paymentBkashNumber?: string
   }
 ): Promise<{ success: boolean; error?: string }> {
   const session = await requireAuth()
@@ -308,6 +311,7 @@ export async function updateEvent(
       tags: sanitized.tags,
       isPaid,
       amount: isPaid ? (formData.amount ?? 0) : 0,
+      paymentBkashNumber: isPaid ? (formData.paymentBkashNumber ?? '').toString().trim() : '',
       updatedAt: new Date(),
     })
 
