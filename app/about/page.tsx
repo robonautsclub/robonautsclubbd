@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-
+import { SITE_CONFIG } from "@/lib/site-config";
 import dynamic from "next/dynamic";
 import {
   Trophy,
@@ -187,7 +187,7 @@ export default function AboutPage() {
           <div className="text-center mb-6 sm:mb-8">
             <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/10 backdrop-blur-sm mb-4 sm:mb-6">
               <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span className="text-xs sm:text-sm font-medium">About Robonauts Club</span>
+              <span className="text-xs sm:text-sm font-medium">About {SITE_CONFIG.name}</span>
             </div>
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4 sm:mb-6 tracking-tight px-2">
               Where Innovation Meets Curiosity
@@ -214,7 +214,7 @@ export default function AboutPage() {
                 </h2>
                 <div className="space-y-3 sm:space-y-4 text-sm sm:text-base text-gray-600 leading-relaxed">
                   <p>
-                    Founded in 2022, <strong className="text-indigo-500">Robonauts Club</strong> delivers engaging
+                    Founded in 2022, <strong className="text-indigo-500">{SITE_CONFIG.name}</strong> delivers engaging
                     STEM education through real-world projects.
                   </p>
                   <p>
@@ -433,8 +433,8 @@ export default function AboutPage() {
                       <Mail className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
                       <div>
                         <p className="text-sm font-medium text-gray-500 mb-1">Email</p>
-                        <a href="mailto:info@robonautsclub.com" className="text-gray-700 hover:text-indigo-600 transition-colors">
-                          info@robonautsclub.com
+                        <a href={`mailto:${SITE_CONFIG.email}`} className="text-gray-700 hover:text-indigo-600 transition-colors">
+                          {SITE_CONFIG.email}
                         </a>
                       </div>
                     </div>

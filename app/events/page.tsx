@@ -1,5 +1,6 @@
 import React from 'react'
 import { Metadata } from 'next'
+import { SITE_CONFIG } from '@/lib/site-config'
 import {
   Calendar,
   Sparkles,
@@ -23,7 +24,7 @@ export const metadata: Metadata = {
     "robotics workshop Dhaka",
   ],
   openGraph: {
-    title: "Robotics Events | Robonauts Club",
+    title: `Robotics Events | ${SITE_CONFIG.name}`,
     description: "Discover upcoming robotics workshops, competitions, bootcamps, and STEM events in Bangladesh.",
     url: "/events",
     images: [
@@ -31,7 +32,7 @@ export const metadata: Metadata = {
         url: "/robotics-event.jpg",
         width: 1200,
         height: 630,
-        alt: "Robonauts Club Events",
+        alt: `${SITE_CONFIG.name} Events`,
       },
     ],
   },
@@ -133,7 +134,7 @@ export default async function EventsPage() {
               communities to bring robotics education to more students.
             </p>
             <a
-              href="mailto:info@robonautsclub.com"
+              href={`mailto:${SITE_CONFIG.email}`}
               className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white text-indigo-500 rounded-lg font-semibold hover:bg-gray-100 transition-colors shadow-lg text-sm sm:text-base"
             >
               Contact Us

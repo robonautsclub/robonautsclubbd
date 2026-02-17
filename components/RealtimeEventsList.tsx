@@ -7,6 +7,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Calendar, Clock, MapPin, ArrowRight } from 'lucide-react'
 import { Event } from '@/types/event'
+import { SITE_CONFIG } from '@/lib/site-config'
 import { differenceInDays, differenceInHours } from 'date-fns'
 
 /**
@@ -413,7 +414,7 @@ export default function RealtimeEventsList({ initialEvents = [] }: RealtimeEvent
               Check back soon for new events and workshops!
             </p>
             <a
-              href="mailto:info@robonautsclub.com"
+              href={`mailto:${SITE_CONFIG.email}`}
               className="inline-block py-2 px-6 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg transition-colors text-sm sm:text-base"
             >
               Contact Us

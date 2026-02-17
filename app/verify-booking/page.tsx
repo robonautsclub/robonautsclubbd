@@ -8,24 +8,25 @@ import { format } from 'date-fns'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Metadata } from 'next'
+import { SITE_CONFIG } from '@/lib/site-config'
 import CopyButton from './CopyButton'
 import RetryButton from './RetryButton'
 
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Verify Booking | Robonauts Club',
-  description: 'Verify your event registration with Robonauts Club. Enter your registration ID to confirm your booking and view event details.',
+  title: `Verify Booking | ${SITE_CONFIG.name}`,
+  description: `Verify your event registration with ${SITE_CONFIG.name}. Enter your registration ID to confirm your booking and view event details.`,
   keywords: [
     'verify registration',
     'event verification',
     'robotics event booking',
     'registration confirmation',
-    'Robonauts Club verification',
+    `${SITE_CONFIG.name} verification`,
   ],
   openGraph: {
-    title: 'Verify Booking | Robonauts Club',
-    description: 'Verify your event registration with Robonauts Club. Enter your registration ID to confirm your booking.',
+    title: `Verify Booking | ${SITE_CONFIG.name}`,
+    description: `Verify your event registration with ${SITE_CONFIG.name}. Enter your registration ID to confirm your booking.`,
     url: '/verify-booking',
     type: 'website',
     images: [
@@ -33,14 +34,14 @@ export const metadata: Metadata = {
         url: '/robotics-event.jpg',
         width: 1200,
         height: 630,
-        alt: 'Robonauts Club - Verify Booking',
+        alt: `${SITE_CONFIG.name} - Verify Booking`,
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Verify Booking | Robonauts Club',
-    description: 'Verify your event registration with Robonauts Club.',
+    title: `Verify Booking | ${SITE_CONFIG.name}`,
+    description: `Verify your event registration with ${SITE_CONFIG.name}.`,
     images: ['/robotics-event.jpg'],
   },
   alternates: {
@@ -160,7 +161,7 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
   const isValid = booking !== null && event !== null
   
   // Generate base URL for QR code display
-  let baseUrl = process.env.NEXT_PUBLIC_BASE_URL
+  let baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL
   if (!baseUrl) {
     if (process.env.VERCEL_URL) {
       baseUrl = `https://${process.env.VERCEL_URL}`
@@ -171,7 +172,7 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
     } else if (process.env.NODE_ENV === 'development') {
       baseUrl = 'http://localhost:3000'
     } else {
-      baseUrl = 'https://robonautsclub.com'
+      baseUrl = SITE_CONFIG.url
     }
   }
   baseUrl = baseUrl.replace(/\/$/, '')
@@ -493,7 +494,7 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
         <div className="text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-md border border-gray-200">
             <ShieldCheck className="w-4 h-4 text-green-600" />
-            <span className="text-xs font-semibold text-gray-700">Securely verified by Robonauts Club</span>
+            <span className="text-xs font-semibold text-gray-700">Securely verified by {SITE_CONFIG.name}</span>
           </div>
         </div>
       </div>

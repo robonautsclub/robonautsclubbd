@@ -3,6 +3,7 @@
  */
 
 import type { Event } from '@/types/event'
+import { SITE_CONFIG } from './site-config'
 import { formatEventDates, getFirstEventDate, parseEventDates } from './dateUtils'
 import { sanitizeEventForPDF, sanitizeBookingDetailsForPDF, sanitizeTextForPDF } from './textSanitizer'
 import { join, dirname } from 'path'
@@ -686,7 +687,7 @@ async function generatePDFContent(
     // Add elegant footer background
     doc.rect(0, footerY - 5, pageWidth, 25).fill('#f3f4f6')
     doc.font('Times-Roman').fontSize(9).fillColor('#6b7280').text(
-      `© ${new Date().getFullYear()} Robonauts Club. All rights reserved.`,
+      `© ${new Date().getFullYear()} ${SITE_CONFIG.name}. All rights reserved.`,
       margin,
       footerY,
       {

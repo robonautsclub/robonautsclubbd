@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { SITE_CONFIG } from '@/lib/site-config'
 import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowRight, Volume2, VolumeX } from 'lucide-react'
@@ -72,7 +73,7 @@ export default function Hero() {
                 <div className="aspect-square relative rounded-3xl overflow-hidden bg-linear-to-br from-sky-100 to-indigo-100">
                   <Image
                     src="/robot.gif"
-                    alt="Robonauts Club Logo"
+                    alt={`${SITE_CONFIG.name} Logo`}
                     fill
                     className="object-contain rounded-3xl"
                     priority
