@@ -2,19 +2,9 @@
  * SEO utility functions and structured data generators
  */
 
-export const SITE_CONFIG = {
-  name: "Robonauts Club",
-  url: process.env.NEXT_PUBLIC_SITE_URL || "https://robonautsclub.com",
-  description: "Bangladesh's first youth robotics club preparing students for Robofest & global STEM challenges.",
-  email: "info@robonautsclub.com",
-  phone: "+8801824863366",
-  location: "5B, House #4, Road #7, Sector #3, Uttara",
-  social: {
-    facebook: "https://www.facebook.com/robonautsclub",
-    instagram: "https://www.instagram.com/robonauts_club",
-    whatsapp: "https://wa.me/8801824863366",
-  },
-};
+import { SITE_CONFIG } from "./site-config";
+
+export { SITE_CONFIG };
 
 /**
  * Generate Organization structured data (JSON-LD)
@@ -24,16 +14,16 @@ export function getOrganizationSchema() {
     "@context": "https://schema.org",
     "@type": "EducationalOrganization",
     name: SITE_CONFIG.name,
-    alternateName: "Robonauts Club Bangladesh",
+    alternateName: SITE_CONFIG.alternateName,
     url: SITE_CONFIG.url,
-    logo: `${SITE_CONFIG.url}/robologo.jpg`,
+    logo: `${SITE_CONFIG.url}${SITE_CONFIG.assets.logo}`,
     description: SITE_CONFIG.description,
     address: {
       "@type": "PostalAddress",
-      streetAddress: "5B, House #4, Road #7, Sector #3",
-      addressLocality: "Uttara",
-      addressRegion: "Dhaka",
-      addressCountry: "BD",
+      streetAddress: SITE_CONFIG.address.streetAddress,
+      addressLocality: SITE_CONFIG.address.locality,
+      addressRegion: SITE_CONFIG.address.region,
+      addressCountry: SITE_CONFIG.address.country,
     },
     contactPoint: {
       "@type": "ContactPoint",
@@ -105,7 +95,7 @@ export function getEventSchema(event: {
       ? event.image.startsWith("http")
         ? event.image
         : `${SITE_CONFIG.url}${event.image}`
-      : `${SITE_CONFIG.url}/robotics-event.jpg`,
+      : `${SITE_CONFIG.url}${SITE_CONFIG.assets.defaultEventImage}`,
     organizer: {
       "@type": "Organization",
       name: SITE_CONFIG.name,

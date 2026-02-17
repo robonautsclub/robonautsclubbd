@@ -1,6 +1,7 @@
 "use client";
 
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { SITE_CONFIG } from "@/lib/site-config";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -30,7 +31,7 @@ export default function MapClient() {
         />
         <Marker position={position} icon={defaultIcon}>
           <Popup>
-            <strong>Robonauts Club</strong>
+            <strong>{SITE_CONFIG.name}</strong>
             <br />
             5B, House #4, Road #7, Sector #3, Uttara
             <br />

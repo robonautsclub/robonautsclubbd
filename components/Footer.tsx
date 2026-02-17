@@ -7,36 +7,16 @@ import {
   FaWhatsapp,
 } from "react-icons/fa";
 import Image from "next/image";
-
-/* ================== CONSTANTS ================== */
-
-const COMPANY = {
-  name: "Robonauts",
-  tagline: "Innovation meets curiosity in STEM education",
-  email: "info@robonautsclub.com",
-  phone: "+8801824863366",
-  location: "5B, House #4, Road #7, Sector #3, Uttara",
-  facebook: "https://www.facebook.com/robonautsclub",
-};
-
-const NAV_LINKS = ["Home", "Events", "About Us"];
-
-const SERVICES = [
-  "Robotics Workshops",
-  "Hands-on Training",
-  "Robo Fair",
-  "Competitions and Simulations",
-];
+import Link from "next/link";
+import { SITE_CONFIG } from "@/lib/site-config";
 
 const SOCIAL_LINKS = [
-  { icon: FaFacebookF, href: COMPANY.facebook, label: "Facebook" },
-  { icon: FaInstagram, href: "https://www.instagram.com/robonauts_club", label: "Instagram" },
-  { icon: FaLinkedinIn, href: "/linkedin", label: "LinkedIn" },
-  { icon: FaYoutube, href: "/youtube", label: "YouTube" },
-  { icon: FaWhatsapp, href: "https://wa.me/8801824863366", label: "WhatsApp" },
+  { icon: FaFacebookF, href: SITE_CONFIG.social.facebook, label: "Facebook" },
+  { icon: FaInstagram, href: SITE_CONFIG.social.instagram, label: "Instagram" },
+  { icon: FaLinkedinIn, href: SITE_CONFIG.social.linkedin, label: "LinkedIn" },
+  { icon: FaYoutube, href: SITE_CONFIG.social.youtube, label: "YouTube" },
+  { icon: FaWhatsapp, href: SITE_CONFIG.social.whatsapp, label: "WhatsApp" },
 ];
-
-/* ================== COMPONENT ================== */
 
 export default function Footer() {
   return (
@@ -50,8 +30,8 @@ export default function Footer() {
           {/* Brand */}
           <div className="flex items-start gap-3 sm:gap-4">
             <Image
-              src="/robologo.jpg"
-              alt="Robonauts Club Logo"
+              src={SITE_CONFIG.assets.logo}
+              alt={`${SITE_CONFIG.name} Logo`}
               width={72}
               height={72}
               className="object-contain w-12 h-12 sm:w-14 sm:h-14"
@@ -59,10 +39,10 @@ export default function Footer() {
             />
             <div>
               <h2 className="text-lg sm:text-xl font-semibold text-brand-blue">
-                {COMPANY.name}
+                {SITE_CONFIG.name}
               </h2>
               <p className="mt-1 max-w-sm text-xs sm:text-sm text-brand-dark/70">
-                {COMPANY.tagline}
+                {SITE_CONFIG.tagline}
               </p>
             </div>
           </div>
@@ -108,11 +88,14 @@ export default function Footer() {
               Quick Links
             </h3>
             <ul className="space-y-2 sm:space-y-3 text-xs sm:text-sm">
-              {NAV_LINKS.map((link) => (
-                <li key={link}>
-                  <a href="#" className="transition hover:text-brand-blue">
-                    {link}
-                  </a>
+              {SITE_CONFIG.navLinks.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="transition hover:text-brand-blue"
+                  >
+                    {link.title}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -124,7 +107,7 @@ export default function Footer() {
               Our Services
             </h3>
             <ul className="space-y-2 sm:space-y-3 text-xs sm:text-sm">
-              {SERVICES.map((service) => (
+              {SITE_CONFIG.services.map((service) => (
                 <li key={service} className="text-brand-dark/70">
                   {service}
                 </li>
@@ -139,22 +122,22 @@ export default function Footer() {
             </h3>
             <div className="space-y-2 sm:space-y-3 text-xs sm:text-sm">
               <a
-                href={`mailto:${COMPANY.email}`}
+                href={`mailto:${SITE_CONFIG.email}`}
                 className="flex items-center gap-2 transition hover:text-brand-blue"
               >
                 <Mail size={16} />
-                {COMPANY.email}
+                {SITE_CONFIG.email}
               </a>
 
               <a
-                href={`tel:${COMPANY.phone}`}
+                href={`tel:${SITE_CONFIG.phone}`}
                 className="flex items-center gap-2 transition hover:text-brand-blue"
               >
                 <Phone size={16} />
-                {COMPANY.phone}
+                {SITE_CONFIG.phone}
               </a>
 
-              <p className="text-brand-dark/70">{COMPANY.location}</p>
+              <p className="text-brand-dark/70">{SITE_CONFIG.location}</p>
             </div>
           </div>
         </div>
@@ -173,16 +156,16 @@ export default function Footer() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex flex-col gap-2 text-xs sm:text-sm text-brand-dark/80 md:flex-row md:items-center md:justify-between text-center md:text-left">
           <span>
-            © {new Date().getFullYear()} {COMPANY.name}. All rights reserved.
+            © {new Date().getFullYear()} {SITE_CONFIG.name}. All rights reserved.
           </span>
 
           <a
-            href="https://github.com/salahakramfuad"
+            href={SITE_CONFIG.developer.url}
             target="_blank"
             rel="noopener noreferrer"
             className="transition hover:text-brand-blue"
           >
-            Developed by <span className="font-semibold">Mohammad Salah</span>
+            Developed by <span className="font-semibold">{SITE_CONFIG.developer.name}</span>
           </a>
         </div>
       </div>

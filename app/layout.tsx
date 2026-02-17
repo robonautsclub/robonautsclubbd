@@ -5,6 +5,7 @@ import "./globals.css";
 import ConditionalLayout from "./ConditionalLayout";
 import OrganizationSchema from "@/components/OrganizationSchema";
 import { getOrganizationSchema } from "@/lib/seo";
+import { SITE_CONFIG } from "@/lib/site-config";
 
 
 
@@ -19,32 +20,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://robonautsclub.com'),
+  metadataBase: new URL(SITE_CONFIG.url),
   title: {
-    default: "Robonauts Club | Bangladesh's Premier Youth Robotics & STEM Education",
-    template: "%s | Robonauts Club"
+    default: SITE_CONFIG.metadata.defaultTitle,
+    template: SITE_CONFIG.metadata.titleTemplate
   },
-  description: "Bangladesh's first youth robotics club preparing students for Robofest & global STEM challenges. Join 500+ members for hands-on robotics workshops, competitions, and international opportunities.",
-  keywords: [
-    "robotics Bangladesh",
-    "STEM education Bangladesh",
-    "Robofest Bangladesh",
-    "youth robotics club",
-    "robotics workshop Dhaka",
-    "STEM training Bangladesh",
-    "robotics competition Bangladesh",
-    "robotics education",
-    "coding workshop Bangladesh",
-    "AI education Bangladesh",
-    "electronics training",
-    "robotics for kids",
-    "robotics for students",
-    "robotics club Dhaka",
-    "STEM club Bangladesh"
-  ],
-  authors: [{ name: "Robonauts Club" }],
-  creator: "Robonauts Club",
-  publisher: "Robonauts Club",
+  description: SITE_CONFIG.metadata.defaultDescription,
+  keywords: SITE_CONFIG.metadata.keywords,
+  authors: [{ name: SITE_CONFIG.name }],
+  creator: SITE_CONFIG.name,
+  publisher: SITE_CONFIG.name,
   formatDetection: {
     email: false,
     address: false,
@@ -55,24 +40,24 @@ export const metadata: Metadata = {
     locale: "en_US",
     alternateLocale: ["bn_BD"],
     url: "/",
-    siteName: "Robonauts Club",
-    title: "Robonauts Club | Bangladesh's Premier Youth Robotics & STEM Education",
-    description: "Bangladesh's first youth robotics club preparing students for Robofest & global STEM challenges. Join 500+ members for hands-on robotics workshops, competitions, and international opportunities.",
+    siteName: SITE_CONFIG.name,
+    title: SITE_CONFIG.metadata.defaultTitle,
+    description: SITE_CONFIG.metadata.defaultDescription,
     images: [
       {
-        url: "/robobanner.gif",
+        url: SITE_CONFIG.metadata.defaultImage,
         width: 1200,
         height: 630,
-        alt: "Robonauts Club - Bangladesh's Premier Youth Robotics Club",
+        alt: SITE_CONFIG.metadata.defaultImageAlt,
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Robonauts Club | Bangladesh's Premier Youth Robotics & STEM Education",
-    description: "Bangladesh's first youth robotics club preparing students for Robofest & global STEM challenges.",
-    images: ["/robobanner.gif"],
-    creator: "@robonauts_club",
+    title: SITE_CONFIG.metadata.defaultTitle,
+    description: SITE_CONFIG.metadata.defaultDescription,
+    images: [SITE_CONFIG.metadata.defaultImage],
+    creator: SITE_CONFIG.metadata.twitterCreator,
   },
   robots: {
     index: true,

@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import { SITE_CONFIG } from '@/lib/site-config'
 import { Inter, Poppins } from 'next/font/google'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
@@ -44,14 +45,7 @@ export default function Nav() {
   const drawerRef = useRef<HTMLElement | null>(null)
   const lastScrollY = useRef(0)
 
-  const menuItems: MenuItem[] = useMemo(
-    () => [
-      { title: 'Home', href: '/' },
-      { title: 'Events', href: '/events' },
-      { title: 'About us', href: '/about' }
-    ],
-    []
-  )
+  const menuItems: readonly MenuItem[] = SITE_CONFIG.navLinks
 
   // Close dropdowns / drawer on outside click & ESC
 
@@ -156,7 +150,7 @@ export default function Nav() {
             className='flex items-center gap-3 group no-underline hover:no-underline focus:no-underline'
           >
             <Image
-              src='/robologo.jpg'
+              src={SITE_CONFIG.assets.logo}
               alt='Hope TTC'
               width={48}
               height={48}

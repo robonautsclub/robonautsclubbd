@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { SITE_CONFIG } from '@/lib/site-config'
 import Hero from './Hero'
 import CourseCard from './CourseCard'
 import FAQAccordion from './FAQAccordion'
@@ -142,9 +143,9 @@ const Feed = ({ initialCourses = [] }: FeedProps) => {
 
   const faqItems = [
     {
-      question: 'Who is eligible to join Robonauts Club?',
+      question: `Who is eligible to join ${SITE_CONFIG.name}?`,
       answer:
-        'Robonauts Club welcomes students from grades 3-12 who have an interest in robotics, STEM, and innovation. No prior experience is required for beginner courses.',
+        `${SITE_CONFIG.name} welcomes students from grades 3-12 who have an interest in robotics, STEM, and innovation. No prior experience is required for beginner courses.`,
     },
     {
       question: 'What age groups do you serve?',
@@ -171,7 +172,7 @@ const Feed = ({ initialCourses = [] }: FeedProps) => {
       <section className="py-12 sm:py-16 md:py-20 lg:py-24 bg-linear-to-br from-indigo-50/50 via-blue-50/50 to-purple-50/30 relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <SectionHeader
-            title="Why Choose Robonauts Club?"
+            title={`Why Choose ${SITE_CONFIG.name}?`}
             subtitle="Experience the best in robotics education with hands-on learning and expert guidance"
           />
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
@@ -202,8 +203,8 @@ const Feed = ({ initialCourses = [] }: FeedProps) => {
         <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-gray-200 to-transparent" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <SectionHeader
-            title="Choose Your Learning Path with HOPE TTC"
-            subtitle="Explore our comprehensive robotics courses designed for all skill levels"
+            title="Learn with Robonauts"
+            subtitle="Explore our comprehensive courses designed for all skill levels"
           />
           {courses.length === 0 ? (
             <div className="text-center py-12">
@@ -404,7 +405,7 @@ const Feed = ({ initialCourses = [] }: FeedProps) => {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <SectionHeader
             title="Frequently Asked Questions"
-            subtitle="Everything you need to know about joining Robonauts Club"
+            subtitle={`Everything you need to know about joining ${SITE_CONFIG.name}`}
           />
           <FAQAccordion items={faqItems} />
         </div>

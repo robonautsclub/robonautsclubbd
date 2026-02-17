@@ -1,5 +1,6 @@
 import * as brevo from '@getbrevo/brevo'
 import type { Event } from '@/types/event'
+import { SITE_CONFIG } from './site-config'
 import { formatEventDates, getFirstEventDate, parseEventDates } from './dateUtils'
 import { generateBookingConfirmationPDF } from './pdfGenerator'
 import { uploadPDFToStorage } from './pdfStorage'
@@ -82,9 +83,9 @@ export async function sendBookingConfirmationEmail({
       else if (process.env.NODE_ENV === 'development') {
         baseUrl = 'http://localhost:3000'
       }
-      // Production fallback - you should set NEXT_PUBLIC_BASE_URL in production
+      // Production fallback from site config
       else {
-        baseUrl = 'https://robonautsclub.com' // Update this to your actual production domain
+        baseUrl = SITE_CONFIG.url
       }
     }
     
@@ -364,7 +365,7 @@ export async function sendBookingConfirmationEmail({
                     </p>
                     <p style="margin: 0; color: #374151; font-size: 15px; line-height: 1.7;">
                       Best regards,<br>
-                      <strong style="color: #6366f1; font-weight: 600; font-size: 16px;">The Robonauts Club Team</strong>
+                      <strong style="color: #6366f1; font-weight: 600; font-size: 16px;">The ${SITE_CONFIG.name} Team</strong>
                     </p>
                   </td>
                 </tr>
@@ -387,7 +388,7 @@ export async function sendBookingConfirmationEmail({
                 <tr>
                   <td align="center" style="padding: 16px 0; border-top: 1px solid #e5e7eb;">
                     <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                      © ${new Date().getFullYear()} Robonauts Club. All rights reserved.
+                      © ${new Date().getFullYear()} ${SITE_CONFIG.name}. All rights reserved.
                     </p>
                   </td>
                 </tr>
@@ -413,12 +414,12 @@ export async function sendBookingConfirmationEmail({
     // If no custom from email is set, use the default sender
     // For production, verify your domain at https://app.brevo.com/settings/senders/domains and set BREVO_FROM_EMAIL
     if (!fromEmail || fromEmail.trim() === '') {
-      fromEmail = 'Robonauts Club <noreply@robonautsclub.com>'
+      fromEmail = `${SITE_CONFIG.name} <${SITE_CONFIG.noreplyEmail}>`
     }
 
     // Parse sender email and name
-    let senderEmail = fromEmail
-    let senderName = 'Robonauts Club'
+    let senderEmail: string = fromEmail
+    let senderName: string = SITE_CONFIG.name
     
     // Check if fromEmail contains name in format "Name <email@domain.com>"
     const nameMatch = fromEmail.match(/^(.+?)\s*<(.+?)>$/)
@@ -861,7 +862,7 @@ export async function sendBookingCancellationEmail({
                 <tr>
                   <td style="padding: 24px; background-color: #f8fafc; border-radius: 10px; border-left: 4px solid #ef4444;">
                     <p style="margin: 0 0 12px; color: #374151; font-size: 15px; line-height: 1.7;">
-                      We sincerely apologize for any inconvenience this cancellation may have caused. Thank you for your interest in Robonauts Club, and we hope to see you at future events.
+                      We sincerely apologize for any inconvenience this cancellation may have caused. Thank you for your interest in ${SITE_CONFIG.name}, and we hope to see you at future events.
                     </p>
                     <p style="margin: 0; color: #374151; font-size: 15px; line-height: 1.7; font-weight: 600;">
                       If you have any questions or concerns, please don't hesitate to contact us.
@@ -879,7 +880,7 @@ export async function sendBookingCancellationEmail({
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                 <tr>
                   <td style="text-align: center; padding: 0 0 20px;">
-                    <p style="margin: 0; color: #6b7280; font-size: 14px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">Robonauts Club</p>
+                    <p style="margin: 0; color: #6b7280; font-size: 14px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">${SITE_CONFIG.name}</p>
                   </td>
                 </tr>
                 <tr>
@@ -912,12 +913,12 @@ export async function sendBookingCancellationEmail({
     let fromEmail = process.env.BREVO_FROM_EMAIL
     
     if (!fromEmail || fromEmail.trim() === '') {
-      fromEmail = 'Robonauts Club <noreply@robonautsclub.com>'
+      fromEmail = `${SITE_CONFIG.name} <${SITE_CONFIG.noreplyEmail}>`
     }
 
     // Parse sender email and name
-    let senderEmail = fromEmail
-    let senderName = 'Robonauts Club'
+    let senderEmail: string = fromEmail
+    let senderName: string = SITE_CONFIG.name
     
     const nameMatch = fromEmail.match(/^(.+?)\s*<(.+?)>$/)
     if (nameMatch) {

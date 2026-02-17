@@ -1,4 +1,5 @@
 import { requireAuth } from '@/lib/auth'
+import { SITE_CONFIG } from '@/lib/site-config'
 import { Sparkles } from 'lucide-react'
 import LogoutButton from './LogoutButton'
 import Sidebar from './Sidebar'
@@ -33,7 +34,7 @@ export default async function DashboardLayout({
               </div>
               <div>
                 <h1 className="text-base sm:text-lg font-bold text-gray-900">Admin Dashboard</h1>
-                <p className="text-xs text-gray-500 hidden sm:block">Robonauts Club</p>
+                <p className="text-xs text-gray-500 hidden sm:block">{SITE_CONFIG.name}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-4">
