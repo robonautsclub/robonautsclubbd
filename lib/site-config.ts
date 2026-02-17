@@ -1,6 +1,6 @@
 /**
  * Single source of truth for all website constants.
- * Import from here instead of hardcoding values across the codebase.
+ * Import from here instead of hardcoding values across the codebase.qwqweeew
  */
 
 export const SITE_CONFIG = {
