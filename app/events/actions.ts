@@ -6,6 +6,7 @@ import { Event } from '@/types/event'
 import { Course } from '@/types/course'
 import { sendBookingConfirmationEmail } from '@/lib/email'
 import { generateRegistrationId } from '@/lib/registrationId'
+import { isRegistrationOpen } from '@/lib/dateUtils'
 
 /**
  * Get all events from Firestore (public - no auth required)
@@ -182,6 +183,13 @@ export async function createBooking(formData: {
       createdAt: eventData.createdAt?.toDate?.() || eventData.createdAt,
       updatedAt: eventData.updatedAt?.toDate?.() || eventData.updatedAt,
     } as Event
+
+    if (!isRegistrationOpen(event)) {
+      return {
+        success: false,
+        error: 'Registration for this event is closed.',
+      }
+    }
 
     // Validate required fields
     if (!formData.eventId || !formData.name || !formData.school || !formData.email || !formData.phone?.trim()) {

@@ -89,3 +89,32 @@ export function isEventUpcoming(date: string | string[] | undefined): boolean {
   })
 }
 
+/**
+ * Check if registration is closed by the optional closing date.
+ * If registrationClosingDate is missing/empty, returns false (not closed by date).
+ * Returns true when today is after the closing date.
+ */
+export function isRegistrationClosedByDate(registrationClosingDate?: string): boolean {
+  if (!registrationClosingDate || String(registrationClosingDate).trim() === '') return false
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
+  const closing = new Date(registrationClosingDate.trim())
+  closing.setHours(0, 0, 0, 0)
+  return now > closing
+}
+
+/**
+ * Check if registration is open for an event.
+ * Registration is open only when: event has not passed, not manually disabled, and not past closing date.
+ */
+export function isRegistrationOpen(event: {
+  date: string | string[]
+  registrationDisabled?: boolean
+  registrationClosingDate?: string
+}): boolean {
+  if (event.registrationDisabled) return false
+  if (isRegistrationClosedByDate(event.registrationClosingDate)) return false
+  if (hasEventPassed(event.date)) return false
+  return true
+}
+
