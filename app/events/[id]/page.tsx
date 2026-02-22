@@ -9,7 +9,7 @@ import BookingForm from './BookingForm'
 import EventImage from './EventImage'
 import AutoRefresh from '../AutoRefresh'
 import { SITE_CONFIG, getEventSchema, getBreadcrumbSchema } from '@/lib/seo'
-import { parseEventDates, formatEventDates, hasEventPassed } from '@/lib/dateUtils'
+import { parseEventDates, formatEventDates, hasEventPassed, isRegistrationOpen } from '@/lib/dateUtils'
 
 
 // Helper function to validate and get image URL
@@ -89,6 +89,32 @@ const EventPassedMessage = () => {
   )
 }
 
+// Registration Closed Component
+const RegistrationClosedMessage = () => {
+  return (
+    <div className="bg-white rounded-xl sm:rounded-2xl p-6 sm:p-8 border border-gray-200 shadow-sm">
+      <div className="text-center">
+        <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-3 sm:mb-4">
+          <Users className="w-6 h-6 sm:w-8 sm:h-8 text-amber-600" />
+        </div>
+        <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">
+          Registration Closed
+        </h3>
+        <p className="text-sm sm:text-base text-gray-600 mb-4">
+          Registration for this event is closed. Check out our other events for
+          new opportunities!
+        </p>
+        <Link
+          href="/events"
+          className="inline-block py-2 px-6 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg transition-colors text-sm sm:text-base"
+        >
+          View Other Events
+        </Link>
+      </div>
+    </div>
+  )
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -154,6 +180,7 @@ export default async function EventDetailPage({
 
   const eventDates = parseEventDates(event.date)
   const hasPassed = hasEventPassed(event.date)
+  const registrationOpen = isRegistrationOpen(event)
   const tags = getEventTags(event)
   const isOnline = event.location.toLowerCase().includes('online') || event.venue?.toLowerCase().includes('online')
 
@@ -369,6 +396,8 @@ export default async function EventDetailPage({
             <div className="sticky top-4 sm:top-6">
               {hasPassed ? (
                 <EventPassedMessage />
+              ) : !registrationOpen ? (
+                <RegistrationClosedMessage />
               ) : (
                 <BookingForm event={event} />
               )}

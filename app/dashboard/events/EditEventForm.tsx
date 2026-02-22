@@ -4,7 +4,7 @@ import { useState, FormEvent, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { updateEvent } from '../actions'
-import { X, Calendar, Clock, MapPin, FileText, Users, Image as ImageIcon, Sparkles, Edit, Tag, Banknote, Upload, Trash2 } from 'lucide-react'
+import { X, Calendar, Clock, MapPin, FileText, Users, Image as ImageIcon, Sparkles, Edit, Tag, Banknote, Upload, Trash2, Lock } from 'lucide-react'
 import MultiDatePicker from './MultiDatePicker'
 import TimePicker from './TimePicker'
 import type { Event } from '@/types/event'
@@ -45,6 +45,8 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
     isPaid: event.isPaid ?? false,
     amount: event.amount ?? '' as '' | number,
     paymentBkashNumber: event.paymentBkashNumber ?? '',
+    registrationClosingDate: (typeof event.registrationClosingDate === 'string' ? event.registrationClosingDate : '') ?? '',
+    registrationDisabled: event.registrationDisabled ?? false,
   })
   const [tagInput, setTagInput] = useState('')
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -137,6 +139,8 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
         isPaid: formData.isPaid,
         amount: formData.isPaid && formData.amount !== '' ? Number(formData.amount) : undefined,
         paymentBkashNumber: formData.isPaid ? (formData.paymentBkashNumber ?? '').trim() : '',
+        registrationClosingDate: formData.registrationClosingDate?.trim() ?? '',
+        registrationDisabled: formData.registrationDisabled,
       })
 
       if (result.success) {
@@ -226,6 +230,41 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
                 disabled={loading}
               />
             </div>
+          </div>
+
+          <div>
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+              <Calendar className="w-4 h-4 text-indigo-500" />
+              Registration closes on
+            </label>
+            <MultiDatePicker
+              value={formData.registrationClosingDate ? [formData.registrationClosingDate] : []}
+              onChange={(dates) =>
+                setFormData({
+                  ...formData,
+                  registrationClosingDate: dates.length === 0 ? '' : dates[dates.length - 1] ?? '',
+                })
+              }
+              disabled={loading || uploading}
+            />
+            <p className="text-xs text-gray-500 mt-1">Optional. Select one date to close registration; leave empty to keep registration open until the event date.</p>
+          </div>
+
+          <div>
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+              <Lock className="w-4 h-4 text-indigo-500" />
+              Disable registration
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.registrationDisabled}
+                onChange={(e) => setFormData({ ...formData, registrationDisabled: e.target.checked })}
+                disabled={loading}
+                className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="text-sm text-gray-700">Close registration now (only you or a Super Admin can change this)</span>
+            </label>
           </div>
 
           <div>

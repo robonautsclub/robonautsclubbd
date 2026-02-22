@@ -31,6 +31,7 @@ export default function CreateEventForm() {
     isPaid: false,
     amount: '' as '' | number,
     paymentBkashNumber: '',
+    registrationClosingDate: '',
   })
   const [tagInput, setTagInput] = useState('')
 
@@ -161,6 +162,7 @@ export default function CreateEventForm() {
         isPaid: formData.isPaid,
         amount: formData.isPaid && formData.amount !== '' ? Number(formData.amount) : undefined,
         paymentBkashNumber: formData.isPaid ? (formData.paymentBkashNumber ?? '').trim() : undefined,
+        registrationClosingDate: formData.registrationClosingDate?.trim() || undefined,
       })
 
       if (result.success) {
@@ -180,6 +182,7 @@ export default function CreateEventForm() {
           isPaid: false,
           amount: '',
           paymentBkashNumber: '',
+          registrationClosingDate: '',
         })
         setTagInput('')
         setImagePreview(null)
@@ -301,6 +304,25 @@ export default function CreateEventForm() {
                   disabled={loading}
                 />
               </div>
+            </div>
+
+            {/* Registration closes on (optional) */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Calendar className="w-4 h-4 text-indigo-600" />
+                Registration closes on
+              </label>
+              <MultiDatePicker
+                value={formData.registrationClosingDate ? [formData.registrationClosingDate] : []}
+                onChange={(dates) =>
+                  setFormData({
+                    ...formData,
+                    registrationClosingDate: dates.length === 0 ? '' : dates[dates.length - 1] ?? '',
+                  })
+                }
+                disabled={loading || uploading}
+              />
+              <p className="text-xs text-gray-500">Optional. Select one date to close registration; leave empty to keep registration open until the event date.</p>
             </div>
 
             {/* Description */}
