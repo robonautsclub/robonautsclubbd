@@ -1,7 +1,8 @@
 import { Metadata } from "next";
 import Feed from "@/components/Feed";
 import { SITE_CONFIG } from "@/lib/site-config";
-import { getPublicCourses } from "@/app/events/actions";
+import { getPublicCourses, getPublicEvents } from "@/app/events/actions";
+import { isEventUpcoming } from "@/lib/dateUtils";
 
 export const metadata: Metadata = {
   title: "Home",
@@ -25,13 +26,22 @@ export const metadata: Metadata = {
   },
 };
 
+// Keep home hero “next event” strip reasonably fresh (matches /events ISR)
+export const revalidate = 60;
+
 export default async function Home() {
-  // Fetch courses from Firestore (non-archived only)
-  const courses = await getPublicCourses()
+  const [courses, events] = await Promise.all([
+    getPublicCourses(),
+    getPublicEvents(),
+  ])
+  const initialUpcomingEvents = events.filter((e) => isEventUpcoming(e.date))
 
   return (
     <main className="flex flex-col w-full min-w-full">
-      <Feed initialCourses={courses} />
+      <Feed
+        initialCourses={courses}
+        initialUpcomingEvents={initialUpcomingEvents}
+      />
     </main>
   );
 }
