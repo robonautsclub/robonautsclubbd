@@ -7,7 +7,7 @@ import type { Event } from '@/types/event'
 import { format } from 'date-fns'
 import Image from 'next/image'
 import { Metadata } from 'next'
-import { SITE_CONFIG } from '@/lib/seo'
+import { absoluteSiteUrl } from '@/lib/seo'
 
 export const dynamic = 'force-dynamic'
 
@@ -75,18 +75,33 @@ export async function generateMetadata({
   const { registrationId } = await params
   const { booking, event } = await getBookingByRegistrationId(registrationId)
 
+  const noindex = {
+    robots: {
+      index: false,
+      follow: false,
+      googleBot: { index: false, follow: false },
+    },
+  } as const
+
   if (!booking || !event) {
     return {
       title: 'Registration Not Found | Robonauts Club',
-      description: 'The registration ID you provided could not be found. Please verify your registration number and try again.',
+      description:
+        'The registration ID you provided could not be found. Please verify your registration number and try again.',
       alternates: {
         canonical: `/verify/${registrationId}`,
       },
+      ...noindex,
     }
   }
 
   const title = `Registration Verified - ${event.title} | Robonauts Club`
-  const description = `Verified registration for ${event.title}. Registration ID: ${booking.registrationId}. Event date: ${formatEventDates(parseEventDates(event.date), 'long')}.`
+  const description = `Your registration for ${event.title} is verified. Event date: ${formatEventDates(parseEventDates(event.date), 'long')}.`
+
+  const ogImage =
+    event.image && event.image.startsWith('http')
+      ? event.image
+      : absoluteSiteUrl(event.image || '/robotics-event.jpg')
 
   return {
     title,
@@ -105,9 +120,7 @@ export async function generateMetadata({
       type: 'website',
       images: [
         {
-          url: event.image && event.image.startsWith('http')
-            ? event.image
-            : `${SITE_CONFIG.url}${event.image || '/robotics-event.jpg'}`,
+          url: ogImage,
           width: 1200,
           height: 630,
           alt: event.title,
@@ -118,15 +131,12 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title,
       description,
-      images: [
-        event.image && event.image.startsWith('http')
-          ? event.image
-          : `${SITE_CONFIG.url}${event.image || '/robotics-event.jpg'}`,
-      ],
+      images: [ogImage],
     },
     alternates: {
       canonical: `/verify/${registrationId}`,
     },
+    ...noindex,
   }
 }
 

@@ -47,6 +47,11 @@ export const metadata: Metadata = {
   alternates: {
     canonical: '/verify-booking',
   },
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: { index: false, follow: false },
+  },
 }
 
 interface VerificationPageProps {
