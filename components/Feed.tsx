@@ -24,6 +24,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowRight } from 'lucide-react'
 import type { Course } from '@/types/course'
+import type { Event } from '@/types/event'
 
 const SectionHeader = ({
   title,
@@ -103,9 +104,10 @@ const OLYMPIADS = [
 
 interface FeedProps {
   initialCourses?: Course[]
+  initialUpcomingEvents?: Event[]
 }
 
-const Feed = ({ initialCourses = [] }: FeedProps) => {
+const Feed = ({ initialCourses = [], initialUpcomingEvents = [] }: FeedProps) => {
   const features = [
     {
       icon: Wrench,
@@ -174,7 +176,7 @@ const Feed = ({ initialCourses = [] }: FeedProps) => {
 
   return (
     <div className="w-full min-w-full">
-      <Hero />
+      <Hero upcomingEvents={initialUpcomingEvents} />
 
       {/* Why Us Section - less vertical padding on mobile */}
       <section className="py-8 sm:py-16 md:py-20 lg:py-24 bg-linear-to-br from-indigo-50/50 via-blue-50/50 to-purple-50/30 relative overflow-hidden">

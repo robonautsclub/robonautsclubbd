@@ -98,12 +98,11 @@ export default async function EventsPage() {
               </span>
             </div>
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4 sm:mb-6 tracking-tight px-2">
-              Events & Workshops
+              Events &amp; Competitions
             </h1>
             <p className="text-base sm:text-lg md:text-xl text-blue-100 max-w-3xl mx-auto leading-relaxed px-2">
-              Join us for exciting robotics competitions, hands-on STEM
-              workshops, and educational bootcamps designed to inspire the next
-              generation of innovators.
+              Discover robotics competitions, workshops, and club events—build
+              skills, compete, and connect with the Robonauts community.
             </p>
           </div>
 

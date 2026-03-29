@@ -382,7 +382,7 @@ export default function RealtimeEventsList({ initialEvents = [] }: RealtimeEvent
         <section className="mb-12 sm:mb-16 md:mb-20">
           <SectionHeader
             title="Upcoming Events"
-            subtitle="Don't miss out on these exciting opportunities to learn and compete"
+            subtitle="Browse the full list—tap an event for details and registration"
             count={upcomingEvents.length}
           />
           {loading && displayEvents.length === 0 ? (
@@ -403,7 +403,27 @@ export default function RealtimeEventsList({ initialEvents = [] }: RealtimeEvent
             </div>
           )}
         </section>
-      ) : !loading ? (
+      ) : loading ? (
+        <section className="mb-12 sm:mb-16 md:mb-20" aria-busy="true" aria-label="Loading events">
+          <div className="rounded-2xl border border-gray-200 bg-gray-100 overflow-hidden animate-pulse mb-10">
+            <div className="h-56 sm:h-72 bg-gray-200" />
+            <div className="p-6 space-y-3">
+              <div className="h-6 bg-gray-200 rounded w-1/2" />
+              <div className="h-4 bg-gray-200 rounded w-full" />
+              <div className="h-4 bg-gray-200 rounded w-4/5" />
+            </div>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-2xl border-2 border-gray-200 p-6 animate-pulse">
+                <div className="h-48 bg-gray-200 rounded-xl mb-4" />
+                <div className="h-4 bg-gray-200 rounded mb-2" />
+                <div className="h-4 bg-gray-200 rounded w-3/4" />
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : (
         <section className="mb-12 sm:mb-16 md:mb-20">
           <div className="bg-white rounded-2xl p-8 sm:p-12 border-2 border-dashed border-gray-300 text-center">
             <Calendar className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-4" />
@@ -421,7 +441,7 @@ export default function RealtimeEventsList({ initialEvents = [] }: RealtimeEvent
             </a>
           </div>
         </section>
-      ) : null}
+      )}
 
       {/* Past Events Section */}
       {pastEvents.length > 0 && (

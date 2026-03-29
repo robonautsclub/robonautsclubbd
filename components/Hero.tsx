@@ -5,8 +5,10 @@ import { SITE_CONFIG } from '@/lib/site-config'
 import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowRight, Volume2, VolumeX } from 'lucide-react'
+import FeaturedUpcomingCarousel from '@/components/FeaturedUpcomingCarousel'
+import type { Event } from '@/types/event'
 
-export default function Hero() {
+export default function Hero({ upcomingEvents = [] }: { upcomingEvents?: Event[] }) {
   const [muted, setMuted] = useState(true)
 
   return (
@@ -85,6 +87,18 @@ export default function Hero() {
             </div>
           </div>
         </div>
+
+        {upcomingEvents.length > 0 && (
+          <div className="mt-8 sm:mt-10 w-full">
+            <FeaturedUpcomingCarousel
+              events={upcomingEvents}
+              variant="compact"
+              showIntroText={false}
+              autoAdvanceMs={8000}
+              wrapperClassName="mb-0 w-full"
+            />
+          </div>
+        )}
       </div>
 
       {/* Sound toggle - video starts muted (required for autoplay); click to hear sound */}
