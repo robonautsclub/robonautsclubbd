@@ -1,6 +1,8 @@
 import React from 'react'
+import Script from 'next/script'
 import { Metadata } from 'next'
 import { SITE_CONFIG } from '@/lib/site-config'
+import { getEventsItemListSchema } from '@/lib/seo'
 import {
   Calendar,
   Sparkles,
@@ -55,8 +57,23 @@ export default async function EventsPage() {
     return isEventUpcoming(event.date)
   })
 
+  const itemListJsonLd = JSON.stringify(
+    getEventsItemListSchema(
+      initialUpcoming.map((e) => ({ id: e.id, title: e.title })),
+      20,
+    ),
+  )
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
+      {initialUpcoming.length > 0 ? (
+        <Script
+          id="events-itemlist-schema"
+          type="application/ld+json"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: itemListJsonLd }}
+        />
+      ) : null}
       {/* Hero Header */}
       <section
         className="relative text-white py-16 sm:py-20 md:py-24 px-4 sm:px-6 overflow-hidden"

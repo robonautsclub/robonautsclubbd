@@ -1,28 +1,29 @@
 import { MetadataRoute } from 'next'
-import { SITE_CONFIG } from '@/lib/seo'
+import { getSiteOrigin } from '@/lib/site-config'
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = SITE_CONFIG.url
+  const baseUrl = getSiteOrigin()
+
+  const disallow = ['/dashboard/', '/login/', '/api/', '/verify/', '/verify-booking']
 
   return {
     rules: [
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/dashboard/', '/login/', '/api/'],
+        disallow: disallow,
       },
       {
         userAgent: 'Googlebot',
         allow: '/',
-        disallow: ['/dashboard/', '/login/', '/api/'],
+        disallow: disallow,
       },
       {
         userAgent: 'Bingbot',
         allow: '/',
-        disallow: ['/dashboard/', '/login/', '/api/'],
+        disallow: disallow,
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,
   }
 }
-

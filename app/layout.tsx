@@ -4,8 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 import ConditionalLayout from "./ConditionalLayout";
 import OrganizationSchema from "@/components/OrganizationSchema";
-import { getOrganizationSchema } from "@/lib/seo";
-import { SITE_CONFIG } from "@/lib/site-config";
+import { SITE_CONFIG, getSiteOrigin } from "@/lib/site-config";
 
 
 
@@ -20,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(SITE_CONFIG.url),
+  metadataBase: new URL(`${getSiteOrigin()}/`),
   title: {
     default: SITE_CONFIG.metadata.defaultTitle,
     template: SITE_CONFIG.metadata.titleTemplate
@@ -72,10 +71,9 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: "/",
-    languages: {
-      'en-US': '/en',
-      'bn-BD': '/bn',
-    },
+  },
+  icons: {
+    icon: "/favicon.ico",
   },
   category: "Education",
   classification: "Robotics Education, STEM Training, Youth Development",

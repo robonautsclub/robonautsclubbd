@@ -2,21 +2,36 @@
  * SEO utility functions and structured data generators
  */
 
-import { SITE_CONFIG } from "./site-config";
+import { SITE_CONFIG, getSiteOrigin } from "./site-config";
 
-export { SITE_CONFIG };
+export { SITE_CONFIG, getSiteOrigin };
+
+/** Absolute URL for a site path (path must start with `/` or be empty). */
+export function absoluteSiteUrl(path: string): string {
+  const origin = getSiteOrigin();
+  if (!path || path === "/") return `${origin}/`;
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return `${origin}${p}`;
+}
+
+function sameAsFromSocial(): string[] {
+  return (Object.values(SITE_CONFIG.social) as string[]).filter(
+    (u) => u.startsWith("http"),
+  );
+}
 
 /**
  * Generate Organization structured data (JSON-LD)
  */
 export function getOrganizationSchema() {
+  const origin = getSiteOrigin();
   return {
     "@context": "https://schema.org",
     "@type": "EducationalOrganization",
     name: SITE_CONFIG.name,
     alternateName: SITE_CONFIG.alternateName,
-    url: SITE_CONFIG.url,
-    logo: `${SITE_CONFIG.url}${SITE_CONFIG.assets.logo}`,
+    url: `${origin}/`,
+    logo: absoluteSiteUrl(SITE_CONFIG.assets.logo),
     description: SITE_CONFIG.description,
     address: {
       "@type": "PostalAddress",
@@ -33,11 +48,7 @@ export function getOrganizationSchema() {
       areaServed: "BD",
       availableLanguage: ["en", "bn"],
     },
-    sameAs: [
-      SITE_CONFIG.social.facebook,
-      SITE_CONFIG.social.instagram,
-      SITE_CONFIG.social.whatsapp,
-    ],
+    sameAs: sameAsFromSocial(),
     areaServed: {
       "@type": "Country",
       name: "Bangladesh",
@@ -74,6 +85,14 @@ export function getEventSchema(event: {
     ? `${dateValue}T${event.time}:00`
     : `${dateValue}T00:00:00`;
 
+  const imageUrl = event.image
+    ? event.image.startsWith("http")
+      ? event.image
+      : absoluteSiteUrl(
+          event.image.startsWith("/") ? event.image : `/${event.image}`,
+        )
+    : absoluteSiteUrl(SITE_CONFIG.assets.defaultEventImage);
+
   return {
     "@context": "https://schema.org",
     "@type": "Event",
@@ -91,19 +110,15 @@ export function getEventSchema(event: {
         addressCountry: "BD",
       },
     },
-    image: event.image
-      ? event.image.startsWith("http")
-        ? event.image
-        : `${SITE_CONFIG.url}${event.image}`
-      : `${SITE_CONFIG.url}${SITE_CONFIG.assets.defaultEventImage}`,
+    image: imageUrl,
     organizer: {
       "@type": "Organization",
       name: SITE_CONFIG.name,
-      url: SITE_CONFIG.url,
+      url: `${getSiteOrigin()}/`,
     },
     offers: {
       "@type": "Offer",
-      url: event.url,
+      url: event.url.startsWith("http") ? event.url : absoluteSiteUrl(event.url),
       price: "0",
       priceCurrency: "BDT",
       availability: "https://schema.org/InStock",
@@ -122,8 +137,26 @@ export function getBreadcrumbSchema(items: Array<{ name: string; url: string }>)
       "@type": "ListItem",
       position: index + 1,
       name: item.name,
-      item: item.url.startsWith("http") ? item.url : `${SITE_CONFIG.url}${item.url}`,
+      item: item.url.startsWith("http") ? item.url : absoluteSiteUrl(item.url),
     })),
   };
 }
 
+export type ItemListEventItem = { id: string; title: string };
+
+/**
+ * ItemList JSON-LD for an events index (cap length for reasonable payload size).
+ */
+export function getEventsItemListSchema(events: ItemListEventItem[], maxItems = 20) {
+  const slice = events.slice(0, maxItems);
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    itemListElement: slice.map((e, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: e.title,
+      url: absoluteSiteUrl(`/events/${e.id}`),
+    })),
+  };
+}

@@ -1,14 +1,14 @@
 import { MetadataRoute } from 'next'
 import { getPublicEvents } from './events/actions'
-import { SITE_CONFIG } from '@/lib/seo'
+import { getSiteOrigin } from '@/lib/site-config'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = SITE_CONFIG.url
+  const baseUrl = getSiteOrigin()
 
   // Static pages
   const staticPages: MetadataRoute.Sitemap = [
     {
-      url: baseUrl,
+      url: `${baseUrl}/`,
       lastModified: new Date(),
       changeFrequency: 'daily',
       priority: 1,
@@ -47,4 +47,3 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return staticPages
   }
 }
-

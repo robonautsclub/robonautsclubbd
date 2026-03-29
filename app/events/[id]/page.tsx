@@ -8,7 +8,7 @@ import { notFound } from 'next/navigation'
 import BookingForm from './BookingForm'
 import EventImage from './EventImage'
 import AutoRefresh from '../AutoRefresh'
-import { SITE_CONFIG, getEventSchema, getBreadcrumbSchema } from '@/lib/seo'
+import { getEventSchema, getBreadcrumbSchema, absoluteSiteUrl } from '@/lib/seo'
 import { parseEventDates, formatEventDates, hasEventPassed, isRegistrationOpen } from '@/lib/dateUtils'
 
 
@@ -129,8 +129,22 @@ export async function generateMetadata({
     }
   }
 
-  const eventUrl = `${SITE_CONFIG.url}/events/${id}`
+  const eventPageUrl = absoluteSiteUrl(`/events/${id}`)
   const eventImage = getEventImageUrl(event.image)
+  const ogImageUrl = eventImage.startsWith('http')
+    ? eventImage
+    : absoluteSiteUrl(eventImage)
+
+  const publishedTime = (() => {
+    const d =
+      event.createdAt instanceof Date ? event.createdAt : new Date(event.createdAt as string)
+    return Number.isNaN(d.getTime()) ? undefined : d.toISOString()
+  })()
+  const modifiedTime = (() => {
+    const d =
+      event.updatedAt instanceof Date ? event.updatedAt : new Date(event.updatedAt as string)
+    return Number.isNaN(d.getTime()) ? undefined : d.toISOString()
+  })()
 
   return {
     title: event.title,
@@ -139,11 +153,13 @@ export async function generateMetadata({
     openGraph: {
       title: event.title,
       description: event.fullDescription || event.description,
-      url: eventUrl,
-      type: 'website',
+      url: eventPageUrl,
+      type: 'article',
+      ...(publishedTime ? { publishedTime } : {}),
+      ...(modifiedTime ? { modifiedTime } : {}),
       images: [
         {
-          url: eventImage.startsWith('http') ? eventImage : `${SITE_CONFIG.url}${eventImage}`,
+          url: ogImageUrl,
           width: 1200,
           height: 630,
           alt: event.title,
@@ -154,7 +170,7 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title: event.title,
       description: event.description,
-      images: [eventImage.startsWith('http') ? eventImage : `${SITE_CONFIG.url}${eventImage}`],
+      images: [ogImageUrl],
     },
     alternates: {
       canonical: `/events/${id}`,
@@ -185,7 +201,7 @@ export default async function EventDetailPage({
   const isOnline = event.location.toLowerCase().includes('online') || event.venue?.toLowerCase().includes('online')
 
   // Generate structured data
-  const eventUrl = `${SITE_CONFIG.url}/events/${id}`
+  const eventUrl = absoluteSiteUrl(`/events/${id}`)
   // For structured data, use first date or comma-separated string
   const schemaDate = Array.isArray(event.date) 
     ? event.date.length > 0 ? event.date[0] : ''

@@ -1,12 +1,21 @@
 /**
  * Single source of truth for all website constants.
- * Import from here instead of hardcoding values across the codebase.qwqweeew
+ * Import from here instead of hardcoding values across the codebase.
  */
+
+/** Canonical site origin with no trailing slash (safe for string concatenation). */
+export function getSiteOrigin(): string {
+  return (process.env.NEXT_PUBLIC_SITE_URL || "https://www.robonautsltd.com").replace(
+    /\/+$/,
+    "",
+  );
+}
 
 export const SITE_CONFIG = {
   name: "Robonauts",
   alternateName: "Robonauts  Bangladesh",
   tagline: "Innovation meets curiosity in STEM education",
+  /** Prefer `getSiteOrigin()` when building absolute URLs; kept for env compatibility. */
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://www.robonautsltd.com/",
   description:
     "Bangladesh's first youth robotics club preparing students for Robofest & global STEM challenges.",
@@ -63,14 +72,14 @@ export const SITE_CONFIG = {
       "robotics club Dhaka",
       "STEM club Bangladesh",
     ],
-    defaultImage: "/robobanner.gif",
+    defaultImage: "/robotics-event.gif",
     defaultImageAlt:
       "Robonauts Club - Bangladesh's Premier Youth Robotics",
     twitterCreator: "@robonauts_club",
   },
   assets: {
     logo: "/robologo.png",
-    defaultEventImage: "/robotics-event.jpg",
+    defaultEventImage: "/robotics-event.gif",
   },
   developer: {
     name: "Mohammad Salah",
