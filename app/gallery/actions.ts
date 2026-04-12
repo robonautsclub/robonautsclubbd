@@ -43,6 +43,18 @@ function mapGalleryDoc(id: string, data: Record<string, unknown>): GalleryGroup 
   }
 }
 
+export const getPublicGalleryGroupById = cache(async (id: string): Promise<GalleryGroup | null> => {
+  if (!adminDb || !id?.trim()) return null
+  try {
+    const doc = await adminDb.collection('galleryGroups').doc(id.trim()).get()
+    if (!doc.exists) return null
+    return mapGalleryDoc(doc.id, doc.data() as Record<string, unknown>)
+  } catch (e) {
+    console.error('Error fetching gallery group:', e)
+    return null
+  }
+})
+
 export const getGalleryGroups = cache(async (): Promise<GalleryGroup[]> => {
   if (!adminDb) {
     console.warn('Firebase Admin SDK not available. Cannot fetch gallery.')

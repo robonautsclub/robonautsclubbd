@@ -1,8 +1,9 @@
-import Image from 'next/image'
 import { Metadata } from 'next'
 import { Calendar, Images, MapPin } from 'lucide-react'
 import { SITE_CONFIG } from '@/lib/site-config'
 import { effectiveGalleryDisplayRaw } from '@/lib/publicContentDates'
+import { GALLERY_ALBUM_PREVIEW_MAX } from '@/lib/media-gallery'
+import ImageLightboxGallery from '@/components/ImageLightboxGallery'
 import { getGalleryGroups } from './actions'
 
 export const metadata: Metadata = {
@@ -92,22 +93,13 @@ export default async function GalleryPage() {
                 {group.images.length === 0 ? (
                   <p className="text-gray-500 text-sm">No images in this album yet.</p>
                 ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
-                    {group.images.map((img, i) => (
-                      <div
-                        key={`${img.url}-${i}`}
-                        className="relative aspect-square rounded-xl overflow-hidden bg-gray-200 border border-gray-200 shadow-sm"
-                      >
-                        <Image
-                          src={img.url}
-                          alt=""
-                          fill
-                          className="object-cover hover:scale-105 transition-transform duration-300"
-                          sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                        />
-                      </div>
-                    ))}
-                  </div>
+                  <ImageLightboxGallery
+                    images={group.images.map((img) => img.url)}
+                    maxGridImages={GALLERY_ALBUM_PREVIEW_MAX}
+                    viewAllHref={`/gallery/album/${group.id}`}
+                    viewAllLabel={`See all ${group.images.length} images`}
+                    aspect="square"
+                  />
                 )}
               </section>
             )})

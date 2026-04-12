@@ -1,10 +1,12 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, Calendar, Newspaper } from 'lucide-react'
 import { SITE_CONFIG } from '@/lib/site-config'
+import { NEWS_ARTICLE_IMAGES_PREVIEW_MAX } from '@/lib/media-gallery'
 import { effectiveNewsDisplayRaw } from '@/lib/publicContentDates'
+import ArticleCoverLightbox from '@/components/ArticleCoverLightbox'
+import ImageLightboxGallery from '@/components/ImageLightboxGallery'
 import { getNewsArticleBySlug } from '../actions'
 
 export const revalidate = 60
@@ -53,6 +55,8 @@ export default async function NewsArticlePage({ params }: Props) {
 
   const extraImages = article.images?.filter(Boolean) ?? []
   const displayLabel = formatDate(effectiveNewsDisplayRaw(article))
+  const totalWithCover = (article.coverImageUrl ? 1 : 0) + extraImages.length
+  const moreThanFourImages = totalWithCover > 4
 
   return (
     <article className="min-h-screen bg-gray-50">
@@ -77,16 +81,7 @@ export default async function NewsArticlePage({ params }: Props) {
         </h1>
 
         {article.coverImageUrl ? (
-          <div className="relative aspect-video rounded-2xl overflow-hidden bg-gray-200 mb-10 shadow-md">
-            <Image
-              src={article.coverImageUrl}
-              alt=""
-              fill
-              className="object-cover"
-              priority
-              sizes="(max-width: 768px) 100vw, 48rem"
-            />
-          </div>
+          <ArticleCoverLightbox coverUrl={article.coverImageUrl} extraUrls={extraImages} />
         ) : null}
 
         <div className="prose prose-lg max-w-none">
@@ -101,16 +96,14 @@ export default async function NewsArticlePage({ params }: Props) {
               <Newspaper className="w-5 h-5 text-indigo-600" />
               Gallery
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {extraImages.map((url) => (
-                <div
-                  key={url}
-                  className="relative aspect-video rounded-xl overflow-hidden bg-gray-200 border border-gray-200"
-                >
-                  <Image src={url} alt="" fill className="object-cover" sizes="(max-width: 640px) 100vw, 50vw" />
-                </div>
-              ))}
-            </div>
+            <ImageLightboxGallery
+              images={extraImages}
+              maxGridImages={moreThanFourImages ? NEWS_ARTICLE_IMAGES_PREVIEW_MAX : undefined}
+              viewAllHref={moreThanFourImages ? `/news/${article.slug}/photos` : undefined}
+              showViewAllLink={moreThanFourImages}
+              viewAllLabel={`See all ${totalWithCover} images`}
+              aspect="video"
+            />
           </div>
         ) : null}
       </div>
