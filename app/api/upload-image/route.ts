@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import cloudinary from '@/lib/cloudinary'
+import { getServerSession } from '@/lib/auth'
 import { Readable } from 'stream'
 
 // Maximum file size: 5MB
@@ -14,6 +15,18 @@ const ALLOWED_MIME_TYPES = [
   'image/gif',
 ]
 
+const ALLOWED_CLOUDINARY_FOLDERS = ['events', 'news', 'gallery'] as const
+type CloudinaryFolder = (typeof ALLOWED_CLOUDINARY_FOLDERS)[number]
+
+function parseFolder(formData: FormData): CloudinaryFolder {
+  const raw = formData.get('folder')
+  const s = typeof raw === 'string' ? raw.trim().toLowerCase() : ''
+  if (s && (ALLOWED_CLOUDINARY_FOLDERS as readonly string[]).includes(s)) {
+    return s as CloudinaryFolder
+  }
+  return 'events'
+}
+
 /**
  * Convert buffer to stream for Cloudinary upload
  */
@@ -26,6 +39,11 @@ function bufferToStream(buffer: Buffer): Readable {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession()
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     // Check if Cloudinary is configured
     if (!process.env.CLOUDINARY_URL) {
       return NextResponse.json(
@@ -36,6 +54,7 @@ export async function POST(request: NextRequest) {
 
     // Parse form data
     const formData = await request.formData()
+    const cloudinaryFolder = parseFolder(formData)
     const file = formData.get('image') as File | null
 
     if (!file) {
@@ -72,7 +91,7 @@ export async function POST(request: NextRequest) {
     return new Promise<NextResponse>((resolve) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
-          folder: 'events', // Optional: organize uploads in a folder
+          folder: cloudinaryFolder,
           format: 'avif', // Convert to AVIF format for optimized storage
           quality: 'auto', // Automatic quality optimization
         },

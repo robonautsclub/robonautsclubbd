@@ -83,6 +83,55 @@ service cloud.firestore {
         || (request.auth.token.role == 'admin' && isOwner());
     }
     
+    // News articles — public read only when published; admin writes
+    match /news/{articleId} {
+      function newsIsSuperAdmin() {
+        return request.auth != null && request.auth.token.role == 'superAdmin';
+      }
+      function newsIsAdmin() {
+        return request.auth != null && (request.auth.token.role == 'admin' || request.auth.token.role == 'superAdmin');
+      }
+      function newsIsOwner() {
+        return request.auth != null && resource.data.createdBy == request.auth.uid;
+      }
+
+      allow read: if resource.data.published == true
+        || (request.auth != null && newsIsAdmin());
+
+      allow create: if newsIsAdmin()
+        && request.resource.data.createdBy == request.auth.uid;
+
+      allow update: if newsIsSuperAdmin()
+        || (request.auth.token.role == 'admin' && newsIsOwner());
+
+      allow delete: if newsIsSuperAdmin()
+        || (request.auth.token.role == 'admin' && newsIsOwner());
+    }
+
+    // Gallery image groups — public read; admin writes
+    match /galleryGroups/{groupId} {
+      function galleryIsSuperAdmin() {
+        return request.auth != null && request.auth.token.role == 'superAdmin';
+      }
+      function galleryIsAdmin() {
+        return request.auth != null && (request.auth.token.role == 'admin' || request.auth.token.role == 'superAdmin');
+      }
+      function galleryIsOwner() {
+        return request.auth != null && resource.data.createdBy == request.auth.uid;
+      }
+
+      allow read: if true;
+
+      allow create: if galleryIsAdmin()
+        && request.resource.data.createdBy == request.auth.uid;
+
+      allow update: if galleryIsSuperAdmin()
+        || (request.auth.token.role == 'admin' && galleryIsOwner());
+
+      allow delete: if galleryIsSuperAdmin()
+        || (request.auth.token.role == 'admin' && galleryIsOwner());
+    }
+
     // Notifications collection - authenticated read/write for admins
     match /notifications/{notificationId} {
       // Only authenticated users (admins/super admins) can read notifications

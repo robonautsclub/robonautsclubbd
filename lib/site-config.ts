@@ -41,6 +41,8 @@ export const SITE_CONFIG = {
   navLinks: [
     { title: "Home", href: "/" },
     { title: "Events", href: "/events" },
+    { title: "News", href: "/news" },
+    { title: "Gallery", href: "/gallery" },
     { title: "About us", href: "/about" },
   ],
   services: [
