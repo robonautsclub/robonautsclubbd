@@ -70,13 +70,14 @@ export const getPublishedNews = cache(async (): Promise<NewsArticle[]> => {
   }
 })
 
-export const getNewsArticleBySlug = cache(async (slug: string): Promise<NewsArticle | null> => {
-  if (!adminDb || !slug.trim()) {
+export const getNewsArticleBySlug = cache(async (slug: string | null | undefined): Promise<NewsArticle | null> => {
+  const normalizedSlug = typeof slug === 'string' ? slug.trim() : ''
+  if (!adminDb || !normalizedSlug) {
     return null
   }
 
   try {
-    const snap = await adminDb.collection('news').where('slug', '==', slug.trim()).limit(1).get()
+    const snap = await adminDb.collection('news').where('slug', '==', normalizedSlug).limit(1).get()
     if (snap.empty) return null
     const doc = snap.docs[0]
     const data = doc.data()
