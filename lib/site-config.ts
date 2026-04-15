@@ -32,10 +32,10 @@ export const SITE_CONFIG = {
     country: "BD",
   },
   social: {
-    facebook: "https://www.facebook.com/robonautsclub",
-    instagram: "https://www.instagram.com/robonauts_club",
+    facebook: "https://www.facebook.com/robonautsltd",
+    instagram: "https://www.instagram.com/robonauts_ltd/",
     whatsapp: "https://wa.me/8801824863366",
-    linkedin: "/linkedin",
+    linkedin: "https://www.linkedin.com/company/robonauts-ltd/",
     youtube: "/youtube",
   },
   navLinks: [
