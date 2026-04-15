@@ -53,7 +53,7 @@ export const SITE_CONFIG = {
   ],
   metadata: {
     defaultTitle:
-      "Robonauts Club | Bangladesh's Premier Youth Robotics & STEM Education",
+      "Robonauts Club | A dynamic community of Youth Robotics and STEM Education",
     titleTemplate: "%s | Robonauts Club",
     defaultDescription:
       "Bangladesh's first youth robotics club preparing students for Robofest & global STEM challenges. Join 500+ members for hands-on robotics workshops, competitions, and international opportunities.",

@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     "Robofest preparation",
   ],
   openGraph: {
-    title: `${SITE_CONFIG.name} | Bangladesh's Premier Robotics Education`,
+    title: `${SITE_CONFIG.name} | A dynamic community of Youth Robotics and STEM Education`,
     description: `Learn about ${SITE_CONFIG.name} - Bangladesh's first youth robotics club preparing students for global STEM challenges.`,
     url: "/about",
     images: [
@@ -37,4 +37,3 @@ export default function AboutLayout({
 }) {
   return <>{children}</>;
 }
-
