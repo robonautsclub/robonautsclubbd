@@ -5,17 +5,16 @@ import { useRouter } from 'next/navigation'
 
 interface AutoRefreshProps {
   /**
-   * Refresh interval in milliseconds
-   * Default: 10000ms (10 seconds) for near real-time updates
+   * Refresh interval in milliseconds.
+   * Default 5 minutes: balances fresh registration data with fewer origin/edge hits.
    */
   interval?: number
 }
 
-export default function AutoRefresh({ interval = 10000 }: AutoRefreshProps) {
+export default function AutoRefresh({ interval = 300000 }: AutoRefreshProps) {
   const router = useRouter()
 
   useEffect(() => {
-    // Refresh at the specified interval (default: 5 seconds for near real-time updates)
     const intervalId = setInterval(() => {
       router.refresh()
     }, interval)

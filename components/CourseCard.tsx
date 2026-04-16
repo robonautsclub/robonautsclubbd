@@ -34,7 +34,7 @@ export default function CourseCard({
   }
 
   return (
-    <Link href={href}>
+    <Link href={href} prefetch={false}>
       <div className="group relative bg-white rounded-xl sm:rounded-2xl border-2 border-gray-200 hover:border-indigo-300 overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 h-full flex flex-col transform hover:-translate-y-1 sm:hover:-translate-y-2">
         {/* Image Section - shorter on mobile */}
         <div className="relative h-36 sm:h-52 bg-linear-to-br from-indigo-400 via-blue-400 to-purple-400 overflow-hidden">

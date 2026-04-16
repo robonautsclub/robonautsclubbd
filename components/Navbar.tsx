@@ -147,6 +147,7 @@ export default function Nav() {
           {/* Brand */}
           <Link
             href='/'
+            prefetch={false}
             className='flex items-center gap-3 group no-underline hover:no-underline focus:no-underline'
           >
             <Image
@@ -226,6 +227,7 @@ export default function Nav() {
                                 <li key={sIdx}>
                                   <Link
                                     href={sub.href}
+                                    prefetch={false}
                                     className={classNames(
                                       'block px-4 py-2 rounded-md transition-colors no-underline hover:no-underline focus:no-underline',
                                       subActive
@@ -250,6 +252,7 @@ export default function Nav() {
                   <li key={idx}>
                     <Link
                       href={item.href as string}
+                      prefetch={false}
                       className={classNames(
                         'py-2 px-3 font-medium rounded-lg transition-colors no-underline hover:no-underline focus:no-underline',
                         active
@@ -393,6 +396,7 @@ export default function Nav() {
                                 <Link
                                   key={sIdx}
                                   href={sub.href}
+                                  prefetch={false}
                                   onClick={() => setIsDrawerOpen(false)}
                                   className={classNames(
                                     'block p-2 text-sm rounded-md no-underline hover:no-underline focus:no-underline text-indigo-700',
@@ -411,6 +415,7 @@ export default function Nav() {
                       ) : (
                         <Link
                           href={item.href as string}
+                          prefetch={false}
                           onClick={() => setIsDrawerOpen(false)}
                           className={classNames(
                             'block p-2 text-sm font-medium rounded-lg no-underline hover:no-underline focus:no-underline',

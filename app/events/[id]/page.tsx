@@ -80,6 +80,7 @@ const EventPassedMessage = () => {
         </p>
         <Link
           href="/events"
+          prefetch={false}
           className="inline-block py-2 px-6 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg transition-colors text-sm sm:text-base"
         >
           View Upcoming Events
@@ -106,6 +107,7 @@ const RegistrationClosedMessage = () => {
         </p>
         <Link
           href="/events"
+          prefetch={false}
           className="inline-block py-2 px-6 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg transition-colors text-sm sm:text-base"
         >
           View Other Events
@@ -178,9 +180,8 @@ export async function generateMetadata({
   }
 }
 
-// ISR: Revalidate every 60 seconds to keep content fresh
-// Pages are statically generated and updated on-demand when events change
-export const revalidate = 60
+// ISR: 5m default; AutoRefresh + revalidatePath cover fresher registration UX when needed
+export const revalidate = 300
 
 export default async function EventDetailPage({
   params,
@@ -251,6 +252,7 @@ export default async function EventDetailPage({
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6 md:pt-8 pb-4 sm:pb-6">
           <Link
             href="/events"
+            prefetch={false}
             className="inline-flex items-center gap-2 text-gray-700 hover:text-indigo-600 mb-3 sm:mb-4 transition-colors group text-sm sm:text-base"
           >
             <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 group-hover:-translate-x-1 transition-transform" />

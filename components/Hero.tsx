@@ -59,6 +59,7 @@ export default function Hero({ upcomingEvents = [] }: { upcomingEvents?: Event[]
               </Link>
               <Link
                 href="/about"
+                prefetch={false}
                 className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white text-indigo-500 rounded-lg font-semibold border-2 border-indigo-100 hover:border-indigo-200 hover:bg-indigo-50 transition-colors text-sm sm:text-base"
               >
                 Learn More

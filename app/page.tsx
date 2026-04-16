@@ -26,8 +26,8 @@ export const metadata: Metadata = {
   },
 };
 
-// Keep home hero “next event” strip reasonably fresh (matches /events ISR)
-export const revalidate = 60;
+// ISR: public marketing content; on-demand revalidatePath still invalidates immediately
+export const revalidate = 300;
 
 export default async function Home() {
   const [courses, events] = await Promise.all([

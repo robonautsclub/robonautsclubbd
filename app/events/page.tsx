@@ -43,9 +43,8 @@ export const metadata: Metadata = {
   },
 };
 
-// ISR: Revalidate every 60 seconds to keep content fresh
-// Pages are statically generated and updated on-demand when events change
-export const revalidate = 60
+// ISR: 5m window reduces edge/ISR churn; admin actions still call revalidatePath
+export const revalidate = 300
 
 // --- Main Page ---
 export default async function EventsPage() {

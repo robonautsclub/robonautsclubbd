@@ -6,7 +6,7 @@ import { SITE_CONFIG } from '@/lib/site-config'
 import { getNewsArticleBySlug } from '../../actions'
 import ImageLightboxGallery from '@/components/ImageLightboxGallery'
 
-export const revalidate = 60
+export const revalidate = 300
 
 type Props = { params: Promise<{ slug: string }> }
 
@@ -63,6 +63,7 @@ export default async function NewsArticlePhotosPage({ params }: Props) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
         <Link
           href={`/news/${article.slug}`}
+          prefetch={false}
           className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-800 mb-8"
         >
           <ArrowLeft className="w-4 h-4" />

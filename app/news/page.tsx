@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
 }
 
-export const revalidate = 60
+export const revalidate = 300
 
 function formatDate(iso: string | Date | null) {
   if (iso == null) return ''
@@ -78,6 +78,7 @@ export default async function NewsPage() {
                 <li key={article.id}>
                   <Link
                     href={`/news/${article.slug}`}
+                    prefetch={false}
                     className="group block h-full bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md hover:border-indigo-200 transition-all"
                   >
                     <div className="aspect-video relative bg-gray-100">

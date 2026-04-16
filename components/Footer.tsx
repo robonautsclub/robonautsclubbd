@@ -92,6 +92,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
+                    prefetch={false}
                     className="transition hover:text-brand-blue"
                   >
                     {link.title}

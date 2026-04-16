@@ -196,7 +196,7 @@ const EventCard = memo(({ event }: { event: Event }) => {
   }
 
   return (
-    <Link href={`/events/${event.id}`}>
+    <Link href={`/events/${event.id}`} prefetch={false}>
       <div className="group relative bg-white rounded-2xl border-2 border-gray-200 hover:border-indigo-300 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 h-full flex flex-col">
         {/* Status Badge */}
         <div className="absolute top-4 right-4 z-10">

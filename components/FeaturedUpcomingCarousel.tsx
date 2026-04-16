@@ -227,6 +227,7 @@ export default function FeaturedUpcomingCarousel({
               <div className="flex shrink-0 items-center gap-2 sm:gap-2.5 sm:pl-1">
                 <Link
                   href={`/events/${featured.id}`}
+                  prefetch={false}
                   className={`inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-md text-[10px] sm:text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90 whitespace-nowrap ${gradientClass}`}
                 >
                   {registrationOpen ? 'Register' : 'Details'}
@@ -388,6 +389,7 @@ export default function FeaturedUpcomingCarousel({
             <div className="mt-auto">
               <Link
                 href={`/events/${featured.id}`}
+                prefetch={false}
                 className={`inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-white shadow-lg transition-opacity hover:opacity-90 ${gradientClass}`}
               >
                 {registrationOpen ? 'Register' : 'View details'}

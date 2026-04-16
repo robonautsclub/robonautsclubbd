@@ -446,6 +446,7 @@ const Feed = ({ initialCourses = [], initialUpcomingEvents = [] }: FeedProps) =>
             </Link>
             <Link
               href="/about"
+              prefetch={false}
               className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-white text-gray-700 rounded-lg font-medium border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 text-sm sm:text-base"
             >
               Learn More About Us
