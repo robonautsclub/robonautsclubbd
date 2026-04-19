@@ -74,9 +74,9 @@ export const SITE_CONFIG = {
       "robotics club Dhaka",
       "STEM club Bangladesh",
     ],
-    defaultImage: "/robotics-event.gif",
-    defaultImageAlt:
-      "Robonauts Club - Bangladesh's Premier Youth Robotics",
+    /** Used for Open Graph / Twitter link previews (not in-page hero art). */
+    defaultImage: "/robologo.png",
+    defaultImageAlt: "Robonauts Club logo",
     twitterCreator: "@robonauts_club",
   },
   assets: {

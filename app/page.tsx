@@ -15,9 +15,9 @@ export const metadata: Metadata = {
     images: [
       {
         url: SITE_CONFIG.metadata.defaultImage,
-        width: 1200,
-        height: 630,
-        alt: `${SITE_CONFIG.name} - Robotics Education in Bangladesh`,
+        width: 407,
+        height: 407,
+        alt: `${SITE_CONFIG.name} logo`,
       },
     ],
   },

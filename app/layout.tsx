@@ -45,14 +45,14 @@ export const metadata: Metadata = {
     images: [
       {
         url: SITE_CONFIG.metadata.defaultImage,
-        width: 1200,
-        height: 630,
+        width: 407,
+        height: 407,
         alt: SITE_CONFIG.metadata.defaultImageAlt,
       },
     ],
   },
   twitter: {
-    card: "summary_large_image",
+    card: "summary",
     title: SITE_CONFIG.metadata.defaultTitle,
     description: SITE_CONFIG.metadata.defaultDescription,
     images: [SITE_CONFIG.metadata.defaultImage],
