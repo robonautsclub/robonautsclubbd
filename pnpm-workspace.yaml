@@ -6,3 +6,6 @@ ignoredBuiltDependencies:
   - protobufjs
   - sharp
   - unrs-resolver
+
+patchedDependencies:
+  jose@4.15.9: patches/jose@4.15.9.patch
