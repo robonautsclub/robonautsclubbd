@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase-admin'
@@ -11,6 +11,30 @@ import {
   slugifyForUrl,
 } from '@/lib/multilingualText'
 import { parseDateInputToTimestamp, timestampUtcNoonToday } from '@/lib/dateInput'
+
+const DASHBOARD_NEWS_LIST_TAG = 'dashboard-news-list'
+
+const getCachedNewsArticles = unstable_cache(
+  async (): Promise<NewsArticle[]> => {
+    if (!adminDb) throw new Error('Firebase Admin SDK is not configured.')
+
+    const snap = await adminDb.collection('news').get()
+    const items: NewsArticle[] = []
+    snap.forEach((doc) => {
+      items.push(mapNewsDoc(doc.id, doc.data() as Record<string, unknown>))
+    })
+    items.sort((a, b) => {
+      const ca = new Date(a.createdAt).getTime()
+      const cb = new Date(b.createdAt).getTime()
+      return cb - ca
+    })
+    return items
+  },
+  [DASHBOARD_NEWS_LIST_TAG],
+  {
+    tags: [DASHBOARD_NEWS_LIST_TAG],
+  }
+)
 
 function toIso(v: unknown): string | null {
   if (v == null) return null
@@ -61,19 +85,11 @@ async function ensureUniqueSlug(baseSlug: string, excludeDocId?: string): Promis
 
 export async function getNewsArticles(): Promise<NewsArticle[]> {
   await requireAuth()
-  if (!adminDb) throw new Error('Firebase Admin SDK is not configured.')
-
-  const snap = await adminDb.collection('news').get()
-  const items: NewsArticle[] = []
-  snap.forEach((doc) => {
-    items.push(mapNewsDoc(doc.id, doc.data() as Record<string, unknown>))
-  })
-  items.sort((a, b) => {
-    const ca = new Date(a.createdAt).getTime()
-    const cb = new Date(b.createdAt).getTime()
-    return cb - ca
-  })
-  return items
+  try {
+    return await getCachedNewsArticles()
+  } catch {
+    throw new Error('Failed to fetch news articles')
+  }
 }
 
 export async function getNewsArticleForDashboard(id: string): Promise<NewsArticle | null> {
@@ -129,6 +145,7 @@ export async function createNewsArticle(input: {
   await adminDb.collection('news').add(doc)
   revalidatePath('/news')
   revalidatePath('/')
+  revalidateTag(DASHBOARD_NEWS_LIST_TAG, 'max')
 }
 
 export async function updateNewsArticle(
@@ -196,6 +213,7 @@ export async function updateNewsArticle(
   revalidatePath(`/news/${data.slug as string}`)
   revalidatePath(`/news/${slug}`)
   revalidatePath('/')
+  revalidateTag(DASHBOARD_NEWS_LIST_TAG, 'max')
 }
 
 export async function deleteNewsArticle(id: string) {
@@ -216,4 +234,5 @@ export async function deleteNewsArticle(id: string) {
   revalidatePath('/news')
   revalidatePath(`/news/${String(data.slug)}`)
   revalidatePath('/')
+  revalidateTag(DASHBOARD_NEWS_LIST_TAG, 'max')
 }
