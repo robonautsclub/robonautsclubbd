@@ -57,5 +57,10 @@
   },
   "optionalDependencies": {
     "@react-pdf/renderer": "^4.3.2"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "jose@4.15.9": "patches/jose@4.15.9.patch"
+    }
   }
 }
