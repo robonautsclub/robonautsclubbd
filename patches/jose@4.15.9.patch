@@ -1,0 +1,15 @@
+diff --git a/package.json b/package.json
+index 14c76877d59c82afedb5168746c7d0fa5ed386f9..0c84d45c272c1c7d8ed941fb28464537d75abced 100644
+--- a/package.json
++++ b/package.json
+@@ -64,8 +64,8 @@
+       "bun": "./dist/browser/index.js",
+       "deno": "./dist/browser/index.js",
+       "browser": "./dist/browser/index.js",
+-      "worker": "./dist/browser/index.js",
+-      "workerd": "./dist/browser/index.js",
++      "worker": "./dist/node/cjs/index.js",
++      "workerd": "./dist/node/cjs/index.js",
+       "import": "./dist/node/esm/index.js",
+       "require": "./dist/node/cjs/index.js"
+     },
