@@ -1,12 +1,35 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { requireAuth } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase-admin'
 import type { GalleryGroup, GalleryImage } from '@/types/gallery'
 import { sanitizeGalleryLocation, sanitizeGalleryTitle } from '@/lib/multilingualText'
 import { parseDateInputToTimestamp, timestampUtcNoonToday } from '@/lib/dateInput'
+
+const DASHBOARD_GALLERY_LIST_TAG = 'dashboard-gallery-list'
+
+const getCachedDashboardGalleryGroups = unstable_cache(
+  async (): Promise<GalleryGroup[]> => {
+    if (!adminDb) throw new Error('Firebase Admin SDK is not configured.')
+
+    const snap = await adminDb.collection('galleryGroups').get()
+    const items: GalleryGroup[] = []
+    snap.forEach((doc) => {
+      items.push(mapGalleryDoc(doc.id, doc.data() as Record<string, unknown>))
+    })
+    items.sort((a, b) => {
+      if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
+    return items
+  },
+  [DASHBOARD_GALLERY_LIST_TAG],
+  {
+    tags: [DASHBOARD_GALLERY_LIST_TAG],
+  }
+)
 
 function toIso(v: unknown): string {
   if (v instanceof Date) return v.toISOString()
@@ -53,18 +76,7 @@ function resolveGalleryDisplayDate(ymd: string | undefined) {
 
 export async function getGalleryGroupsForDashboard(): Promise<GalleryGroup[]> {
   await requireAuth()
-  if (!adminDb) throw new Error('Firebase Admin SDK is not configured.')
-
-  const snap = await adminDb.collection('galleryGroups').get()
-  const items: GalleryGroup[] = []
-  snap.forEach((doc) => {
-    items.push(mapGalleryDoc(doc.id, doc.data() as Record<string, unknown>))
-  })
-  items.sort((a, b) => {
-    if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  })
-  return items
+  return await getCachedDashboardGalleryGroups()
 }
 
 export async function getGalleryGroupForDashboard(id: string): Promise<GalleryGroup | null> {
@@ -108,6 +120,7 @@ export async function createGalleryGroup(input: {
 
   revalidatePath('/gallery')
   revalidatePath('/')
+  revalidateTag(DASHBOARD_GALLERY_LIST_TAG, 'max')
 }
 
 export async function updateGalleryGroup(
@@ -153,6 +166,7 @@ export async function updateGalleryGroup(
 
   revalidatePath('/gallery')
   revalidatePath('/')
+  revalidateTag(DASHBOARD_GALLERY_LIST_TAG, 'max')
 }
 
 export async function deleteGalleryGroup(id: string) {
@@ -172,4 +186,5 @@ export async function deleteGalleryGroup(id: string) {
   await ref.delete()
   revalidatePath('/gallery')
   revalidatePath('/')
+  revalidateTag(DASHBOARD_GALLERY_LIST_TAG, 'max')
 }

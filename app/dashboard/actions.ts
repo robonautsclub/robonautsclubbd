@@ -11,6 +11,8 @@ import { createNotification } from '@/lib/notifications'
 
 export type DashboardEventSummary = Pick<Event, 'id' | 'date' | 'createdAt' | 'title' | 'description'>
 const DASHBOARD_EVENTS_SUMMARY_TAG = 'dashboard-events-summary'
+const DASHBOARD_EVENTS_LIST_TAG = 'dashboard-events-list'
+const DASHBOARD_COURSES_LIST_TAG = 'dashboard-courses-list'
 
 const getCachedDashboardEventsSummary = unstable_cache(
   async (): Promise<DashboardEventSummary[]> => {
@@ -55,22 +57,14 @@ const getCachedDashboardEventsSummary = unstable_cache(
   }
 )
 
-/**
- * Get all events from Firestore
- */
-export async function getEvents(): Promise<Event[]> {
-  await requireAuth() // Ensure user is authenticated
+const getCachedEventsList = unstable_cache(
+  async (): Promise<Event[]> => {
+    if (!adminDb) {
+      console.error('Firebase Admin SDK not available. Cannot fetch events.')
+      throw new Error('Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.')
+    }
 
-  if (!adminDb) {
-    console.error('Firebase Admin SDK not available. Cannot fetch events.')
-    throw new Error('Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.')
-  }
-
-  try {
-    // Query without orderBy to avoid requiring a composite index
-    // We'll sort in memory instead
     const eventsSnapshot = await adminDb.collection('events').get()
-    
     const events: Event[] = []
     eventsSnapshot.forEach((doc) => {
       const data = doc.data()
@@ -82,18 +76,68 @@ export async function getEvents(): Promise<Event[]> {
       } as Event)
     })
 
-    // Sort by createdAt in descending order (newest first)
     events.sort((a, b) => {
       if (!a.createdAt && !b.createdAt) return 0
       if (!a.createdAt) return 1
       if (!b.createdAt) return -1
-      
+
       const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime()
       const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime()
-      return dateB - dateA // Descending order
+      return dateB - dateA
     })
 
     return events
+  },
+  [DASHBOARD_EVENTS_LIST_TAG],
+  {
+    tags: [DASHBOARD_EVENTS_LIST_TAG],
+  }
+)
+
+const getCachedCoursesList = unstable_cache(
+  async (): Promise<Course[]> => {
+    if (!adminDb) {
+      console.error('Firebase Admin SDK not available. Cannot fetch courses.')
+      throw new Error('Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.')
+    }
+
+    const coursesSnapshot = await adminDb.collection('courses').get()
+    const courses: Course[] = []
+    coursesSnapshot.forEach((doc) => {
+      const data = doc.data()
+      courses.push({
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate?.() || data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+      } as Course)
+    })
+
+    courses.sort((a, b) => {
+      if (!a.createdAt && !b.createdAt) return 0
+      if (!a.createdAt) return 1
+      if (!b.createdAt) return -1
+
+      const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime()
+      const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime()
+      return dateB - dateA
+    })
+
+    return courses
+  },
+  [DASHBOARD_COURSES_LIST_TAG],
+  {
+    tags: [DASHBOARD_COURSES_LIST_TAG],
+  }
+)
+
+/**
+ * Get all events from Firestore
+ */
+export async function getEvents(): Promise<Event[]> {
+  await requireAuth() // Ensure user is authenticated
+  try {
+    return await getCachedEventsList()
   } catch (error) {
     console.error('Error fetching events:', error)
     throw new Error('Failed to fetch events')
@@ -244,6 +288,7 @@ export async function createEvent(formData: {
     // Revalidate ISR pages to show new event immediately
     revalidatePath('/events')
     revalidatePath(`/events/${eventRef.id}`)
+    revalidateTag(DASHBOARD_EVENTS_LIST_TAG, 'max')
     revalidateTag(DASHBOARD_EVENTS_SUMMARY_TAG, 'max')
 
     // Create notification for event creation
@@ -386,6 +431,7 @@ export async function updateEvent(
     // Revalidate ISR pages to show updated event immediately
     revalidatePath('/events')
     revalidatePath(`/events/${eventId}`)
+    revalidateTag(DASHBOARD_EVENTS_LIST_TAG, 'max')
     revalidateTag(DASHBOARD_EVENTS_SUMMARY_TAG, 'max')
 
     // Create notification for event update
@@ -466,6 +512,7 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
     // Revalidate ISR pages to remove deleted event immediately
     revalidatePath('/events')
     revalidatePath(`/events/${eventId}`)
+    revalidateTag(DASHBOARD_EVENTS_LIST_TAG, 'max')
     revalidateTag(DASHBOARD_EVENTS_SUMMARY_TAG, 'max')
 
     // Create notification for event deletion
@@ -632,38 +679,8 @@ export async function cancelBooking(bookingId: string): Promise<{ success: boole
  */
 export async function getCourses(): Promise<Course[]> {
   await requireAuth() // Ensure user is authenticated
-
-  if (!adminDb) {
-    console.error('Firebase Admin SDK not available. Cannot fetch courses.')
-    throw new Error('Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.')
-  }
-
   try {
-    const coursesSnapshot = await adminDb.collection('courses').get()
-    
-    const courses: Course[] = []
-    coursesSnapshot.forEach((doc) => {
-      const data = doc.data()
-      courses.push({
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate?.() || data.createdAt,
-        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
-      } as Course)
-    })
-
-    // Sort by createdAt in descending order (newest first)
-    courses.sort((a, b) => {
-      if (!a.createdAt && !b.createdAt) return 0
-      if (!a.createdAt) return 1
-      if (!b.createdAt) return -1
-      
-      const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime()
-      const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime()
-      return dateB - dateA // Descending order
-    })
-
-    return courses
+    return await getCachedCoursesList()
   } catch (error) {
     console.error('Error fetching courses:', error)
     throw new Error('Failed to fetch courses')
@@ -761,6 +778,7 @@ export async function createCourse(formData: {
     // Revalidate pages to show new course immediately
     revalidatePath('/')
     revalidatePath('/dashboard/courses')
+    revalidateTag(DASHBOARD_COURSES_LIST_TAG, 'max')
 
     // Create notification for course creation
     await createNotification(
@@ -862,6 +880,7 @@ export async function updateCourse(
     // Revalidate pages to show updated course immediately
     revalidatePath('/')
     revalidatePath('/dashboard/courses')
+    revalidateTag(DASHBOARD_COURSES_LIST_TAG, 'max')
 
     // Create notification for course update
     await createNotification(
@@ -929,6 +948,7 @@ export async function archiveCourse(courseId: string): Promise<{ success: boolea
     // Revalidate pages
     revalidatePath('/')
     revalidatePath('/dashboard/courses')
+    revalidateTag(DASHBOARD_COURSES_LIST_TAG, 'max')
 
     // Create notification for course archive/unarchive
     const action = !currentArchiveStatus ? 'archived' : 'unarchived'
@@ -992,6 +1012,7 @@ export async function deleteCourse(courseId: string): Promise<{ success: boolean
     // Revalidate pages to remove deleted course immediately
     revalidatePath('/')
     revalidatePath('/dashboard/courses')
+    revalidateTag(DASHBOARD_COURSES_LIST_TAG, 'max')
 
     // Create notification for course deletion
     await createNotification(
