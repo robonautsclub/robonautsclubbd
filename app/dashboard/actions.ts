@@ -13,6 +13,16 @@ export type DashboardEventSummary = Pick<Event, 'id' | 'date' | 'createdAt' | 't
 const DASHBOARD_EVENTS_SUMMARY_TAG = 'dashboard-events-summary'
 const DASHBOARD_EVENTS_LIST_TAG = 'dashboard-events-list'
 const DASHBOARD_COURSES_LIST_TAG = 'dashboard-courses-list'
+const DASHBOARD_EVENT_DETAIL_TAG_PREFIX = 'dashboard-event'
+const DASHBOARD_EVENT_BOOKINGS_TAG_PREFIX = 'dashboard-event-bookings'
+
+function getEventDetailTag(eventId: string): string {
+  return `${DASHBOARD_EVENT_DETAIL_TAG_PREFIX}-${eventId}`
+}
+
+function getEventBookingsTag(eventId: string): string {
+  return `${DASHBOARD_EVENT_BOOKINGS_TAG_PREFIX}-${eventId}`
+}
 
 const getCachedDashboardEventsSummary = unstable_cache(
   async (): Promise<DashboardEventSummary[]> => {
@@ -165,25 +175,32 @@ export async function getDashboardEventsSummary(): Promise<DashboardEventSummary
 export async function getEvent(id: string): Promise<Event | null> {
   await requireAuth()
 
-  if (!adminDb) {
-    console.error('Firebase Admin SDK not available. Cannot fetch event.')
-    throw new Error('Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.')
-  }
-
   try {
-    const eventDoc = await adminDb.collection('events').doc(id).get()
-    
-    if (!eventDoc.exists) {
-      return null
-    }
+    return await unstable_cache(
+      async (): Promise<Event | null> => {
+        if (!adminDb) {
+          console.error('Firebase Admin SDK not available. Cannot fetch event.')
+          throw new Error('Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.')
+        }
 
-    const data = eventDoc.data()!
-    return {
-      id: eventDoc.id,
-      ...data,
-      createdAt: data.createdAt?.toDate?.() || data.createdAt,
-      updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
-    } as Event
+        const eventDoc = await adminDb.collection('events').doc(id).get()
+        if (!eventDoc.exists) {
+          return null
+        }
+
+        const data = eventDoc.data()!
+        return {
+          id: eventDoc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate?.() || data.createdAt,
+          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+        } as Event
+      },
+      [DASHBOARD_EVENT_DETAIL_TAG_PREFIX, id],
+      {
+        tags: [getEventDetailTag(id)],
+      }
+    )()
   } catch (error) {
     console.error('Error fetching event:', error)
     throw new Error('Failed to fetch event')
@@ -433,6 +450,7 @@ export async function updateEvent(
     revalidatePath(`/events/${eventId}`)
     revalidateTag(DASHBOARD_EVENTS_LIST_TAG, 'max')
     revalidateTag(DASHBOARD_EVENTS_SUMMARY_TAG, 'max')
+    revalidateTag(getEventDetailTag(eventId), 'max')
 
     // Create notification for event update
     await createNotification(
@@ -514,6 +532,8 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
     revalidatePath(`/events/${eventId}`)
     revalidateTag(DASHBOARD_EVENTS_LIST_TAG, 'max')
     revalidateTag(DASHBOARD_EVENTS_SUMMARY_TAG, 'max')
+    revalidateTag(getEventDetailTag(eventId), 'max')
+    revalidateTag(getEventBookingsTag(eventId), 'max')
 
     // Create notification for event deletion
     await createNotification(
@@ -541,48 +561,56 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
 export async function getBookings(eventId: string): Promise<Booking[]> {
   await requireAuth()
 
-  if (!adminDb) {
-    console.error('Firebase Admin SDK not available. Cannot fetch bookings.')
-    throw new Error('Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.')
-  }
-
   try {
-    // Query without orderBy to avoid requiring a composite index
-    // We'll sort in memory instead
-    const bookingsSnapshot = await adminDb
-      .collection('bookings')
-      .where('eventId', '==', eventId)
-      .get()
+    return await unstable_cache(
+      async (): Promise<Booking[]> => {
+        if (!adminDb) {
+          console.error('Firebase Admin SDK not available. Cannot fetch bookings.')
+          throw new Error('Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.')
+        }
 
-    const bookings: Booking[] = []
-    bookingsSnapshot.forEach((doc) => {
-      const data = doc.data()
-      // Convert Firestore Timestamp to ISO string for consistent serialization
-      const createdAt = data.createdAt?.toDate 
-        ? data.createdAt.toDate().toISOString()
-        : data.createdAt instanceof Date
-        ? data.createdAt.toISOString()
-        : data.createdAt
-      
-      bookings.push({
-        id: doc.id,
-        ...data,
-        createdAt,
-      } as Booking)
-    })
+        // Query without orderBy to avoid requiring a composite index
+        // We'll sort in memory instead
+        const bookingsSnapshot = await adminDb
+          .collection('bookings')
+          .where('eventId', '==', eventId)
+          .get()
 
-    // Sort by createdAt in descending order (newest first)
-    bookings.sort((a, b) => {
-      if (!a.createdAt && !b.createdAt) return 0
-      if (!a.createdAt) return 1
-      if (!b.createdAt) return -1
-      
-      const dateA = new Date(a.createdAt).getTime()
-      const dateB = new Date(b.createdAt).getTime()
-      return dateB - dateA // Descending order
-    })
+        const bookings: Booking[] = []
+        bookingsSnapshot.forEach((doc) => {
+          const data = doc.data()
+          // Convert Firestore Timestamp to ISO string for consistent serialization
+          const createdAt = data.createdAt?.toDate 
+            ? data.createdAt.toDate().toISOString()
+            : data.createdAt instanceof Date
+            ? data.createdAt.toISOString()
+            : data.createdAt
+          
+          bookings.push({
+            id: doc.id,
+            ...data,
+            createdAt,
+          } as Booking)
+        })
 
-    return bookings
+        // Sort by createdAt in descending order (newest first)
+        bookings.sort((a, b) => {
+          if (!a.createdAt && !b.createdAt) return 0
+          if (!a.createdAt) return 1
+          if (!b.createdAt) return -1
+          
+          const dateA = new Date(a.createdAt).getTime()
+          const dateB = new Date(b.createdAt).getTime()
+          return dateB - dateA // Descending order
+        })
+
+        return bookings
+      },
+      [DASHBOARD_EVENT_BOOKINGS_TAG_PREFIX, eventId],
+      {
+        tags: [getEventBookingsTag(eventId)],
+      }
+    )()
   } catch (error) {
     console.error('Error fetching bookings:', error)
     throw new Error('Failed to fetch bookings')
@@ -659,6 +687,7 @@ export async function cancelBooking(bookingId: string): Promise<{ success: boole
 
     // Delete the booking after sending email
     await adminDb.collection('bookings').doc(bookingId).delete()
+    revalidateTag(getEventBookingsTag(booking.eventId), 'max')
 
     return {
       success: true,

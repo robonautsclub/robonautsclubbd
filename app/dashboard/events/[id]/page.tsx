@@ -20,8 +20,7 @@ export default async function EventDetailsPage({
 }) {
   const session = await requireAuth()
   const { id } = await params
-  const event = await getEvent(id)
-  const bookings = await getBookings(id)
+  const [event, bookings] = await Promise.all([getEvent(id), getBookings(id)])
 
   if (!event) {
     notFound()
