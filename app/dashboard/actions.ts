@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
 import { requireAuth, isSuperAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase-admin'
 import { Event } from '@/types/event'
@@ -8,6 +8,52 @@ import { Booking } from '@/types/booking'
 import { Course } from '@/types/course'
 import { sanitizeEventForDatabase } from '@/lib/textSanitizer'
 import { createNotification } from '@/lib/notifications'
+
+export type DashboardEventSummary = Pick<Event, 'id' | 'date' | 'createdAt' | 'title' | 'description'>
+const DASHBOARD_EVENTS_SUMMARY_TAG = 'dashboard-events-summary'
+
+const getCachedDashboardEventsSummary = unstable_cache(
+  async (): Promise<DashboardEventSummary[]> => {
+    if (!adminDb) {
+      console.error('Firebase Admin SDK not available. Cannot fetch dashboard events.')
+      throw new Error('Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.')
+    }
+
+    const eventsSnapshot = await adminDb
+      .collection('events')
+      .select('date', 'createdAt', 'title', 'description')
+      .get()
+
+    const events: DashboardEventSummary[] = []
+    eventsSnapshot.forEach((doc) => {
+      const data = doc.data()
+      events.push({
+        id: doc.id,
+        date: data.date,
+        title: data.title,
+        description: data.description,
+        createdAt: data.createdAt?.toDate?.() || data.createdAt,
+      } as DashboardEventSummary)
+    })
+
+    // Sort by createdAt in descending order (newest first)
+    events.sort((a, b) => {
+      if (!a.createdAt && !b.createdAt) return 0
+      if (!a.createdAt) return 1
+      if (!b.createdAt) return -1
+
+      const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime()
+      const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime()
+      return dateB - dateA // Descending order
+    })
+
+    return events
+  },
+  [DASHBOARD_EVENTS_SUMMARY_TAG],
+  {
+    tags: [DASHBOARD_EVENTS_SUMMARY_TAG],
+  }
+)
 
 /**
  * Get all events from Firestore
@@ -51,6 +97,21 @@ export async function getEvents(): Promise<Event[]> {
   } catch (error) {
     console.error('Error fetching events:', error)
     throw new Error('Failed to fetch events')
+  }
+}
+
+/**
+ * Get dashboard event summary data from Firestore
+ * Reads only fields needed by dashboard home stats and recent events
+ */
+export async function getDashboardEventsSummary(): Promise<DashboardEventSummary[]> {
+  await requireAuth() // Ensure user is authenticated
+
+  try {
+    return await getCachedDashboardEventsSummary()
+  } catch (error) {
+    console.error('Error fetching dashboard events summary:', error)
+    throw new Error('Failed to fetch dashboard events summary')
   }
 }
 
@@ -183,6 +244,7 @@ export async function createEvent(formData: {
     // Revalidate ISR pages to show new event immediately
     revalidatePath('/events')
     revalidatePath(`/events/${eventRef.id}`)
+    revalidateTag(DASHBOARD_EVENTS_SUMMARY_TAG, 'max')
 
     // Create notification for event creation
     await createNotification(
@@ -324,6 +386,7 @@ export async function updateEvent(
     // Revalidate ISR pages to show updated event immediately
     revalidatePath('/events')
     revalidatePath(`/events/${eventId}`)
+    revalidateTag(DASHBOARD_EVENTS_SUMMARY_TAG, 'max')
 
     // Create notification for event update
     await createNotification(
@@ -403,6 +466,7 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
     // Revalidate ISR pages to remove deleted event immediately
     revalidatePath('/events')
     revalidatePath(`/events/${eventId}`)
+    revalidateTag(DASHBOARD_EVENTS_SUMMARY_TAG, 'max')
 
     // Create notification for event deletion
     await createNotification(
