@@ -417,6 +417,16 @@ pnpm lint         # Run ESLint
 
 ### Other Platforms
 
+#### Cloudflare (OpenNext + Workers/Pages)
+- Do not use `@cloudflare/next-on-pages` (deprecated and requires Edge runtime on all dynamic routes).
+- Build command:
+  - `pnpm cf:build`
+- Deploy command (Workers):
+  - `pnpm cf:deploy`
+- Preview locally:
+  - `pnpm cf:preview`
+- If deploying from Cloudflare Pages UI, set build command to `pnpm cf:build` and do not run `npx @cloudflare/next-on-pages@1`.
+
 #### Netlify
 - Use Next.js build command: `next build`
 - Output directory: `.next`
