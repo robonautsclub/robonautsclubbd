@@ -4,6 +4,7 @@ import { Calendar, Plus, MapPin, Clock, Users, User, Archive } from 'lucide-reac
 import CreateEventForm from './CreateEventForm'
 import EventActions from './EventActions'
 import { parseEventDates, formatEventDates, isEventUpcoming, hasEventPassed } from '@/lib/dateUtils'
+import Link from 'next/link'
 
 // Force dynamic rendering since this page uses cookies for authentication
 export const dynamic = 'force-dynamic'
@@ -124,7 +125,12 @@ export default async function EventsPage() {
                       return (
                         <tr key={event.id} className="hover:bg-green-50/50 transition-colors">
                           <td className="px-3 sm:px-6 py-4">
-                            <div className="text-sm font-semibold text-gray-900 mb-1">{event.title}</div>
+                            <Link
+                              href={`/dashboard/events/${event.id}`}
+                              className="text-sm font-semibold text-gray-900 mb-1 hover:text-indigo-600 transition-colors"
+                            >
+                              {event.title}
+                            </Link>
                             <div className="text-xs text-gray-500 line-clamp-1 max-w-md">{event.description}</div>
                           </td>
                           <td className="px-3 sm:px-6 py-4">
@@ -232,7 +238,12 @@ export default async function EventsPage() {
                       return (
                         <tr key={event.id} className="hover:bg-slate-100/50 transition-colors opacity-90">
                           <td className="px-3 sm:px-6 py-4">
-                            <div className="text-sm font-semibold text-gray-700 mb-1">{event.title}</div>
+                            <Link
+                              href={`/dashboard/events/${event.id}`}
+                              className="text-sm font-semibold text-gray-700 mb-1 hover:text-indigo-600 transition-colors"
+                            >
+                              {event.title}
+                            </Link>
                             <div className="text-xs text-gray-500 line-clamp-1 max-w-md">{event.description}</div>
                           </td>
                           <td className="px-3 sm:px-6 py-4">
