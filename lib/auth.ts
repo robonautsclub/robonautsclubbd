@@ -2,12 +2,13 @@ import { cookies } from 'next/headers'
 import { adminAuth } from './firebase-admin'
 import { redirect } from 'next/navigation'
 import { SESSION_DURATION_SECONDS } from './session'
+import { cache } from 'react'
 
 /**
  * Get the current user session from the auth token cookie (server-side)
  * Returns the decoded token with user info, or null if not authenticated
  */
-export async function getServerSession() {
+export const getServerSession = cache(async () => {
   try {
     const cookieStore = await cookies()
     const token = cookieStore.get('auth-token')?.value
@@ -92,7 +93,7 @@ export async function getServerSession() {
     console.error('Error getting server session:', error)
     return null
   }
-}
+})
 
 /**
  * Require authentication - redirects to login if not authenticated

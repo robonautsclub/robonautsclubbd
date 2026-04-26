@@ -1,5 +1,5 @@
 import { requireAuth } from '@/lib/auth'
-import { getEvents } from './actions'
+import { getDashboardEventsSummary } from './actions'
 import { User, Mail, Key, Calendar, TrendingUp, Activity } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
@@ -9,8 +9,7 @@ import { isEventUpcoming, getFirstEventDate, formatEventDates, parseEventDates }
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
-  const session = await requireAuth()
-  const events = await getEvents()
+  const [session, events] = await Promise.all([requireAuth(), getDashboardEventsSummary()])
 
   // Calculate stats
   const totalEvents = events.length

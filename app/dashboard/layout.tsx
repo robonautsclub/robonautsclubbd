@@ -3,7 +3,6 @@ import { SITE_CONFIG } from '@/lib/site-config'
 import { Sparkles } from 'lucide-react'
 import LogoutButton from './LogoutButton'
 import Sidebar from './Sidebar'
-import AutoRefresh from './AutoRefresh'
 import TokenExpirationChecker from './TokenExpirationChecker'
 import SessionTimer from './SessionTimer'
 import Notifications from './Notifications'
@@ -21,7 +20,6 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100">
-      <AutoRefresh />
       <TokenExpirationChecker />
       <SessionTimer />
       {/* Top Navigation Bar */}
