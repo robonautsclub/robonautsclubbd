@@ -93,7 +93,7 @@ The system implements a comprehensive RBAC system with two roles:
   - Can view all notifications
 
 #### Admin
-- **Definition**: Any authenticated user not in the Super Admin email list
+- **Definition**: Any authenticated user not in the Super Admin email 
 - **Permissions**:
   - Can create events
   - Can only update/delete events they created
