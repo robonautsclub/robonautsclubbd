@@ -3,24 +3,20 @@ import { getAuth, Auth } from 'firebase-admin/auth'
 import { getFirestore, Firestore } from 'firebase-admin/firestore'
 import { getStorage } from 'firebase-admin/storage'
 import type { Storage } from 'firebase-admin/storage'
-import { readFileSync } from 'fs'
-import { join } from 'path'
 
-// Firebase Admin configuration
-// Supports both JSON file and environment variables
+// Firebase Admin configuration (env-only for serverless/Workers compatibility)
 let adminApp: App | undefined
 let adminAuth: Auth | undefined
 let adminDb: Firestore | undefined
 let adminStorage: Storage | undefined
 
-// Try to load service account from environment variables first, then JSON file as fallback
+// Load service account from environment variables only
 let serviceAccount: {
   projectId: string
   clientEmail: string
   privateKey: string
 } | null = null
 
-// Priority 1: Check environment variables first
 const hasEnvCredentials = 
   process.env.FIREBASE_ADMIN_PRIVATE_KEY &&
   process.env.FIREBASE_ADMIN_CLIENT_EMAIL &&
@@ -41,22 +37,7 @@ if (hasEnvCredentials) {
   }
   console.log('Firebase Admin SDK: Loaded from environment variables')
 } else {
-  // Priority 2: Fallback to JSON file if environment variables are not available
-  try {
-    const serviceAccountPath = join(process.cwd(), 'lib', 'firebase-service-account.json')
-    const serviceAccountFile = readFileSync(serviceAccountPath, 'utf8')
-    const serviceAccountData = JSON.parse(serviceAccountFile)
-    
-    serviceAccount = {
-      projectId: serviceAccountData.project_id,
-      clientEmail: serviceAccountData.client_email,
-      privateKey: serviceAccountData.private_key.replace(/\\n/g, '\n'),
-    }
-    console.log('Firebase Admin SDK: Loaded from service account JSON file')
-  } catch {
-    // Neither environment variables nor JSON file available
-    console.warn('Firebase Admin SDK: No credentials found in environment variables or JSON file')
-  }
+  console.warn('Firebase Admin SDK: Missing FIREBASE_ADMIN_* environment variables')
 }
 
 // Initialize Firebase Admin if credentials are available
@@ -85,9 +66,7 @@ if (serviceAccount) {
   }
 } else {
   console.warn('Firebase Admin credentials not found. Admin SDK features will be unavailable.')
-  console.warn('Please provide either:')
-  console.warn('  1. lib/firebase-service-account.json file, or')
-  console.warn('  2. FIREBASE_ADMIN_* environment variables')
+  console.warn('Please provide FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, and FIREBASE_ADMIN_PRIVATE_KEY.')
 }
 
 export { adminAuth, adminDb, adminStorage }

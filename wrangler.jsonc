@@ -4,6 +4,22 @@
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-04-24",
   "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "NODE_ENV": "production",
+    "NEXT_PUBLIC_BASE_URL": "https://robonautsclub.com",
+    "NEXT_PUBLIC_SITE_URL": "https://robonautsclub.com",
+    "NEXT_PUBLIC_FIREBASE_API_KEY": "SET_IN_CLOUDFLARE_DASHBOARD_OR_WRANGLER",
+    "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN": "SET_IN_CLOUDFLARE_DASHBOARD_OR_WRANGLER",
+    "NEXT_PUBLIC_FIREBASE_PROJECT_ID": "SET_IN_CLOUDFLARE_DASHBOARD_OR_WRANGLER",
+    "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET": "SET_IN_CLOUDFLARE_DASHBOARD_OR_WRANGLER",
+    "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "SET_IN_CLOUDFLARE_DASHBOARD_OR_WRANGLER",
+    "NEXT_PUBLIC_FIREBASE_APP_ID": "SET_IN_CLOUDFLARE_DASHBOARD_OR_WRANGLER",
+    "NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID": "SET_IN_CLOUDFLARE_DASHBOARD_OR_WRANGLER"
+  },
   "observability": {
     "enabled": true
   }
