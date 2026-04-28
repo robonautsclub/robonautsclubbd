@@ -75,11 +75,12 @@ export async function POST(request: NextRequest) {
     const user = await adminAuth.getUser(uid)
     const currentRole = user.customClaims?.role as string | undefined
 
-    // Always update claims to ensure they're set (even if same, to handle edge cases)
-    // Set custom claims
-    await adminAuth.setCustomUserClaims(uid, {
-      role,
-    })
+    // Skip writes when role is already correct to keep login fast.
+    if (currentRole !== role) {
+      await adminAuth.setCustomUserClaims(uid, {
+        role,
+      })
+    }
 
     // Only revoke tokens if role changed for an existing user
     // During initial login (currentRole is undefined), we don't revoke tokens
