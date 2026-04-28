@@ -64,16 +64,19 @@ export default function BookingForm({ event }: { event: Event }) {
         information: formData.information.trim(),
       }
 
-      const result =
-        event.isPaid
-          ? await initiatePaidEventCheckout(payload)
-          : await createBooking(payload)
-
-      if (result.success) {
-        if (event.isPaid && result.checkoutUrl) {
+      if (event.isPaid) {
+        const result = await initiatePaidEventCheckout(payload)
+        if (result.success && result.checkoutUrl) {
           window.location.assign(result.checkoutUrl)
           return
         }
+        const errorMessage = result.error || 'Failed to submit registration. Please try again.'
+        setErrors({ submit: errorMessage })
+        return
+      }
+
+      const result = await createBooking(payload)
+      if (result.success) {
         setIsSubmitted(true)
         setFormData({ name: '', school: '', email: '', phone: '', category: '', information: '' })
         setTimeout(() => {
