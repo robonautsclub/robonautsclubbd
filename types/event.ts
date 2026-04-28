@@ -1,3 +1,8 @@
+export type EventCategory = {
+  name: string
+  amount?: number
+}
+
 // Event type extending the existing structure from app/events/data.ts
 // with Firestore-specific fields
 export type Event = {
@@ -13,9 +18,13 @@ export type Event = {
   venue?: string
   agenda?: string
   tags?: string[] // Event tags for categorization
+  categories?: EventCategory[] // Optional categories (paid events can have per-category fee)
   isPaid?: boolean
   amount?: number // Fee amount (e.g. BDT)
   paymentBkashNumber?: string // bKash number for participants to pay to (set by event creator)
+  contactPersonName?: string
+  contactPersonDesignation?: string
+  contactPersonMobileOrEmail?: string
   registrationClosingDate?: string // Optional ISO date (YYYY-MM-DD); registration closes at end of this day
   registrationDisabled?: boolean // When true, registration is closed regardless of date (Super Admin or event creator can toggle)
   // Firestore metadata

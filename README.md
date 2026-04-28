@@ -209,6 +209,18 @@ BREVO_API_KEY=your_brevo_api_key_here
 BREVO_FROM_EMAIL=Robonauts Club <noreply@robonautsclub.com>
 ```
 
+#### bKash Checkout URL (Paid Events)
+```env
+# Optional base URL override (default is sandbox shown below)
+BKASH_CHECKOUT_URL_BASE=https://tokenized.sandbox.bka.sh/v1.2.0-beta
+
+# bKash app credentials (server-side only)
+BKASH_CHECKOUT_URL_APP_KEY=your_bkash_app_key
+BKASH_CHECKOUT_URL_APP_SECRET=your_bkash_app_secret
+BKASH_CHECKOUT_URL_USER_NAME=your_bkash_username
+BKASH_CHECKOUT_URL_PASSWORD=your_bkash_password
+```
+
 #### Site Configuration
 ```env
 # Your production website URL (for SEO and absolute URLs)
@@ -246,6 +258,13 @@ CLOUDINARY_URL=cloudinary://123456789012345:abcdefghijklmnopqrstuvwxyz@dvxxa4sho
 BREVO_API_KEY=your_brevo_api_key_here
 # Optional: use a verified sender; see https://app.brevo.com/settings/senders/domains
 BREVO_FROM_EMAIL=Robonauts Club <noreply@robonautsclub.com>
+
+# bKash Checkout URL (paid event flow)
+BKASH_CHECKOUT_URL_BASE=https://tokenized.sandbox.bka.sh/v1.2.0-beta
+BKASH_CHECKOUT_URL_APP_KEY=your_bkash_app_key
+BKASH_CHECKOUT_URL_APP_SECRET=your_bkash_app_secret
+BKASH_CHECKOUT_URL_USER_NAME=your_bkash_username
+BKASH_CHECKOUT_URL_PASSWORD=your_bkash_password
 
 # Super Admin Emails (comma-separated, no spaces)
 SUPER_ADMIN_EMAILS=admin1@company.com,admin2@company.com,admin3@company.com

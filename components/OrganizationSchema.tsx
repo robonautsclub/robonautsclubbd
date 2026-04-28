@@ -1,15 +1,13 @@
-import Script from 'next/script'
 import { getOrganizationSchema } from '@/lib/seo'
 
 export default function OrganizationSchema() {
-  const schema = getOrganizationSchema()
+  const schemaJson = JSON.stringify(getOrganizationSchema())
   
   return (
-    <Script
+    <template
       id="organization-schema"
-      type="application/ld+json"
-      strategy="beforeInteractive"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      suppressHydrationWarning
+      dangerouslySetInnerHTML={{ __html: schemaJson }}
     />
   )
 }

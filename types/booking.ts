@@ -8,7 +8,14 @@ export type Booking = {
   school: string
   email: string
   phone: string
+  category?: string
   bkashNumber?: string
+  paymentGateway?: 'bkash'
+  paymentStatus?: 'paid'
+  paymentId?: string
+  trxId?: string
+  amountPaid?: number
+  paidAt?: Date | string
   information: string
   createdAt: Date | string
 }

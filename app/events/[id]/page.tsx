@@ -200,6 +200,16 @@ export default async function EventDetailPage({
   const registrationOpen = isRegistrationOpen(event)
   const tags = getEventTags(event)
   const isOnline = event.location.toLowerCase().includes('online') || event.venue?.toLowerCase().includes('online')
+  const categoryFees =
+    Array.isArray(event.categories) && event.categories.length > 0
+      ? event.categories
+          .map((category) => category.amount)
+          .filter((amount): amount is number => amount != null && amount > 0)
+      : []
+  const minCategoryFee = categoryFees.length > 0 ? Math.min(...categoryFees) : null
+  const hasContactDetails = Boolean(
+    event.contactPersonName || event.contactPersonDesignation || event.contactPersonMobileOrEmail
+  )
 
   // Generate structured data
   const eventUrl = absoluteSiteUrl(`/events/${id}`)
@@ -364,12 +374,38 @@ export default async function EventDetailPage({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs sm:text-sm font-medium text-gray-500 mb-1">Fee</p>
-                      <p className="text-sm sm:text-base font-semibold text-gray-900">BDT {event.amount}</p>
+                      <p className="text-sm sm:text-base font-semibold text-gray-900">
+                        {minCategoryFee != null ? `Starts from BDT ${minCategoryFee}` : `BDT ${event.amount}`}
+                      </p>
                     </div>
                   </div>
                 )}
               </div>
             </div>
+
+            {/* Contact person */}
+            {hasContactDetails && (
+              <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 border-2 border-gray-200 shadow-lg">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Contact Person</h3>
+                <div className="space-y-3">
+                  {event.contactPersonName && (
+                    <p className="text-sm sm:text-base text-gray-800">
+                      <span className="font-semibold">Name:</span> {event.contactPersonName}
+                    </p>
+                  )}
+                  {event.contactPersonDesignation && (
+                    <p className="text-sm sm:text-base text-gray-800">
+                      <span className="font-semibold">Designation:</span> {event.contactPersonDesignation}
+                    </p>
+                  )}
+                  {event.contactPersonMobileOrEmail && (
+                    <p className="text-sm sm:text-base text-gray-800">
+                      <span className="font-semibold">Mobile/Email:</span> {event.contactPersonMobileOrEmail}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Agenda Section */}
             {event.agenda && (
