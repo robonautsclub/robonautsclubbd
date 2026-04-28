@@ -7,6 +7,7 @@ import { Course } from '@/types/course'
 import { sendBookingConfirmationEmail } from '@/lib/email'
 import { generateRegistrationId } from '@/lib/registrationId'
 import { isRegistrationOpen } from '@/lib/dateUtils'
+import { bkashCreateCheckout, bkashExecutePayment } from '@/lib/bkash'
 
 /**
  * Get all events from Firestore (public - no auth required)
@@ -144,12 +145,7 @@ export const getPublicEvent = cache(async (id: string): Promise<Event | null> =>
   }
 })
 
-/**
- * Create a booking for an event
- * This is a public action (no auth required) as users need to book events
- * IMPORTANT: Email confirmation is sent FIRST, booking is only saved if email succeeds
- */
-export async function createBooking(formData: {
+type BookingInput = {
   eventId: string
   name: string
   school: string
@@ -157,24 +153,143 @@ export async function createBooking(formData: {
   phone: string
   bkashNumber?: string
   information: string
-}): Promise<{ success: boolean; error?: string; bookingId?: string }> {
+}
+
+type PendingPaidRegistration = {
+  paymentId: string
+  eventId: string
+  name: string
+  school: string
+  email: string
+  phone: string
+  information: string
+  amount: number
+  status: 'pending' | 'completed' | 'failed'
+  bookingId?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+function getBaseUrl(): string {
+  let baseUrl = process.env.NEXT_PUBLIC_BASE_URL
+  if (!baseUrl) {
+    if (process.env.VERCEL_URL) {
+      baseUrl = `https://${process.env.VERCEL_URL}`
+    } else if (process.env.VERCEL_BRANCH_URL) {
+      baseUrl = process.env.VERCEL_BRANCH_URL.startsWith('http')
+        ? process.env.VERCEL_BRANCH_URL
+        : `https://${process.env.VERCEL_BRANCH_URL}`
+    } else if (process.env.NODE_ENV === 'development') {
+      baseUrl = 'http://localhost:3000'
+    } else {
+      baseUrl = 'https://robonautsclub.com'
+    }
+  }
+  return baseUrl.replace(/\/$/, '')
+}
+
+async function createBookingRecordAndSendEmail(
+  event: Event,
+  formData: BookingInput,
+  paymentMeta?: {
+    paymentId: string
+    trxId: string
+    amountPaid: number
+  }
+): Promise<{ success: boolean; error?: string; bookingId?: string }> {
+  if (!adminDb) {
+    return { success: false, error: 'Service temporarily unavailable. Please try again later.' }
+  }
+
+  const normalizedPhone = formData.phone.trim().replace(/\s/g, '')
+  const normalizedBkash = formData.bkashNumber?.trim().replace(/\s/g, '') ?? ''
+  const normalizedEmail = formData.email.trim().toLowerCase()
+
+  const existingBookings = await adminDb
+    .collection('bookings')
+    .where('eventId', '==', formData.eventId)
+    .where('email', '==', normalizedEmail)
+    .get()
+
+  if (!existingBookings.empty) {
+    return {
+      success: false,
+      error: 'You have already registered for this event with this email address.',
+    }
+  }
+
+  const registrationId = generateRegistrationId()
+  const bookingRef = adminDb.collection('bookings').doc()
+  const bookingId = bookingRef.id
+  const now = new Date()
+
+  const bookingData: Record<string, unknown> = {
+    eventId: formData.eventId,
+    registrationId,
+    name: formData.name.trim(),
+    school: formData.school.trim(),
+    email: normalizedEmail,
+    phone: normalizedPhone,
+    bkashNumber: normalizedBkash,
+    information: formData.information ? formData.information.trim() : '',
+    createdAt: now,
+  }
+
+  if (paymentMeta) {
+    bookingData.paymentGateway = 'bkash'
+    bookingData.paymentStatus = 'paid'
+    bookingData.paymentId = paymentMeta.paymentId
+    bookingData.trxId = paymentMeta.trxId
+    bookingData.amountPaid = paymentMeta.amountPaid
+    bookingData.paidAt = now
+  }
+
+  await bookingRef.set(bookingData)
+
+  const emailResult = await sendBookingConfirmationEmail({
+    to: normalizedEmail,
+    name: formData.name.trim(),
+    event,
+    registrationId,
+    bookingId,
+    bookingDetails: {
+      school: formData.school.trim(),
+      phone: normalizedPhone,
+      bkashNumber: normalizedBkash,
+      information: formData.information ? formData.information.trim() : '',
+    },
+  })
+
+  if (!emailResult.success) {
+    await bookingRef.delete()
+    return {
+      success: false,
+      error: emailResult.error || 'Failed to send confirmation email. Please try again.',
+    }
+  }
+
+  return { success: true, bookingId }
+}
+
+/**
+ * Create a booking for an event
+ * This is a public action (no auth required) as users need to book events
+ * IMPORTANT: Email confirmation is sent FIRST, booking is only saved if email succeeds
+ */
+export async function createBooking(
+  formData: BookingInput
+): Promise<{ success: boolean; error?: string; bookingId?: string }> {
   try {
-    // Check if Admin SDK is available
     if (!adminDb) {
-      console.error('Firebase Admin SDK not available. Cannot create booking.')
       return {
         success: false,
         error: 'Service temporarily unavailable. Please try again later.',
       }
     }
 
-    // Fetch event first (needed for isPaid validation)
     const eventDoc = await adminDb.collection('events').doc(formData.eventId).get()
     if (!eventDoc.exists) {
-      return {
-        success: false,
-        error: 'Event not found',
-      }
+      return { success: false, error: 'Event not found' }
     }
     const eventData = eventDoc.data()!
     const event: Event = {
@@ -185,138 +300,205 @@ export async function createBooking(formData: {
     } as Event
 
     if (!isRegistrationOpen(event)) {
-      return {
-        success: false,
-        error: 'Registration for this event is closed.',
-      }
+      return { success: false, error: 'Registration for this event is closed.' }
     }
 
-    // Validate required fields
     if (!formData.eventId || !formData.name || !formData.school || !formData.email || !formData.phone?.trim()) {
-      return {
-        success: false,
-        error: 'All required fields must be filled',
-      }
+      return { success: false, error: 'All required fields must be filled' }
     }
 
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(formData.email)) {
-      return {
-        success: false,
-        error: 'Invalid email format',
-      }
+      return { success: false, error: 'Invalid email format' }
     }
 
     const normalizedPhone = formData.phone.trim().replace(/\s/g, '')
     if (normalizedPhone.length !== 11 || !normalizedPhone.startsWith('01')) {
-      return {
-        success: false,
-        error: 'Phone number must be 11 digits and start with 01',
-      }
+      return { success: false, error: 'Phone number must be 11 digits and start with 01' }
     }
 
-    const normalizedBkash = formData.bkashNumber?.trim().replace(/\s/g, '') ?? ''
     if (event.isPaid) {
-      if (!normalizedBkash) {
-        return {
-          success: false,
-          error: 'bKash number is required for paid events',
-        };
-      }
-      if (normalizedBkash.length !== 11 || !normalizedBkash.startsWith('01')) {
-        return {
-          success: false,
-          error: 'bKash number must be 11 digits and start with 01',
-        };
-      }
-    }
-
-    // Step 1: Check if user has already booked this event with the same email
-    const normalizedEmail = formData.email.trim().toLowerCase()
-    const existingBookings = await adminDb
-      .collection('bookings')
-      .where('eventId', '==', formData.eventId)
-      .where('email', '==', normalizedEmail)
-      .get()
-
-    if (!existingBookings.empty) {
       return {
         success: false,
-        error: 'You have already registered for this event with this email address.',
+        error: 'Paid event registration requires bKash checkout flow.',
       }
     }
 
-    // Step 3: Generate unique registration ID
-    const registrationId = generateRegistrationId()
-
-    // Step 4: Create booking document reference to get bookingId
-    // We'll create the document first, then update it with pdfPath after PDF is generated
-    const bookingRef = adminDb.collection('bookings').doc()
-    const bookingId = bookingRef.id
-
-    // Step 5: Create booking document (PDF is generated and emailed only, not stored)
-    const now = new Date()
-    const bookingData: {
-      eventId: string
-      registrationId: string
-      name: string
-      school: string
-      email: string
-      phone: string
-      bkashNumber: string
-      information: string
-      createdAt: Date
-    } = {
-      eventId: formData.eventId,
-      registrationId,
-      name: formData.name.trim(),
-      school: formData.school.trim(),
-      email: formData.email.trim().toLowerCase(),
-      phone: normalizedPhone,
-      bkashNumber: normalizedBkash,
-      information: formData.information ? formData.information.trim() : '',
-      createdAt: now,
-    }
-
-    // Create booking document first (so we have bookingId for PDF generation)
-    await bookingRef.set(bookingData)
-
-    // Step 6: Send confirmation email with PDF attachment (PDF is not stored)
-    const emailResult = await sendBookingConfirmationEmail({
-      to: formData.email.trim().toLowerCase(),
-      name: formData.name.trim(),
-      event,
-      registrationId,
-      bookingId,
-      bookingDetails: {
-        school: formData.school.trim(),
-        phone: normalizedPhone,
-        bkashNumber: normalizedBkash,
-        information: formData.information ? formData.information.trim() : '',
-      },
-    })
-
-    if (!emailResult.success) {
-      // If email fails, delete the booking document we just created
-      await bookingRef.delete()
-      console.error('Failed to send confirmation email:', emailResult.error)
-      return {
-        success: false,
-        error: emailResult.error || 'Failed to send confirmation email. Please check your email address and try again.',
-      }
-    }
-
-    return {
-      success: true,
-      bookingId: bookingRef.id,
-    };
+    return await createBookingRecordAndSendEmail(event, formData)
   } catch (error) {
     console.error('Error creating booking:', error)
     return {
       success: false,
       error: 'Failed to create registration. Please try again.',
     };
+  }
+}
+
+export async function initiatePaidEventCheckout(
+  formData: BookingInput
+): Promise<{ success: boolean; error?: string; checkoutUrl?: string }> {
+  try {
+    if (!adminDb) {
+      return { success: false, error: 'Service temporarily unavailable. Please try again later.' }
+    }
+
+    const eventDoc = await adminDb.collection('events').doc(formData.eventId).get()
+    if (!eventDoc.exists) {
+      return { success: false, error: 'Event not found' }
+    }
+
+    const eventData = eventDoc.data()!
+    const event: Event = {
+      id: eventDoc.id,
+      ...eventData,
+      createdAt: eventData.createdAt?.toDate?.() || eventData.createdAt,
+      updatedAt: eventData.updatedAt?.toDate?.() || eventData.updatedAt,
+    } as Event
+
+    if (!event.isPaid || !event.amount || event.amount <= 0) {
+      return { success: false, error: 'This event does not require payment.' }
+    }
+    if (!isRegistrationOpen(event)) {
+      return { success: false, error: 'Registration for this event is closed.' }
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const normalizedPhone = formData.phone.trim().replace(/\s/g, '')
+    const normalizedEmail = formData.email.trim().toLowerCase()
+
+    if (!formData.name.trim() || !formData.school.trim() || !normalizedEmail || !normalizedPhone) {
+      return { success: false, error: 'All required fields must be filled' }
+    }
+    if (!emailRegex.test(normalizedEmail)) {
+      return { success: false, error: 'Invalid email format' }
+    }
+    if (normalizedPhone.length !== 11 || !normalizedPhone.startsWith('01')) {
+      return { success: false, error: 'Phone number must be 11 digits and start with 01' }
+    }
+
+    const duplicate = await adminDb
+      .collection('bookings')
+      .where('eventId', '==', formData.eventId)
+      .where('email', '==', normalizedEmail)
+      .get()
+    if (!duplicate.empty) {
+      return {
+        success: false,
+        error: 'You have already registered for this event with this email address.',
+      }
+    }
+
+    const callbackUrl = `${getBaseUrl()}/api/payments/bkash/success`
+    const checkout = await bkashCreateCheckout({
+      amount: Number(event.amount),
+      payerReference: normalizedPhone,
+      callbackUrl,
+      merchantInvoiceNumber: `${event.id}-${Date.now()}`.slice(0, 40),
+    })
+
+    const now = new Date()
+    const pending: PendingPaidRegistration = {
+      paymentId: checkout.paymentId,
+      eventId: formData.eventId,
+      name: formData.name.trim(),
+      school: formData.school.trim(),
+      email: normalizedEmail,
+      phone: normalizedPhone,
+      information: formData.information ? formData.information.trim() : '',
+      amount: Number(event.amount),
+      status: 'pending',
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    await adminDb.collection('bkash_pending_registrations').doc(checkout.paymentId).set(pending)
+    return { success: true, checkoutUrl: checkout.checkoutUrl }
+  } catch (error) {
+    console.error('Error initiating bKash checkout:', error)
+    return { success: false, error: 'Failed to initiate bKash payment. Please try again.' }
+  }
+}
+
+export async function finalizePaidEventBooking(paymentId: string): Promise<{
+  success: boolean
+  error?: string
+  bookingId?: string
+}> {
+  try {
+    if (!adminDb) {
+      return { success: false, error: 'Service temporarily unavailable. Please try again later.' }
+    }
+
+    const pendingRef = adminDb.collection('bkash_pending_registrations').doc(paymentId)
+    const pendingSnap = await pendingRef.get()
+    if (!pendingSnap.exists) {
+      return { success: false, error: 'Payment session not found or expired.' }
+    }
+
+    const pending = pendingSnap.data() as PendingPaidRegistration
+    if (pending.status === 'completed' && pending.bookingId) {
+      return { success: true, bookingId: pending.bookingId }
+    }
+
+    const execution = await bkashExecutePayment(paymentId)
+    const transactionStatus = execution.transactionStatus.toLowerCase()
+    if (transactionStatus !== 'completed' && transactionStatus !== 'success') {
+      await pendingRef.update({ status: 'failed', updatedAt: new Date() })
+      return { success: false, error: `Payment is not successful (${execution.transactionStatus}).` }
+    }
+
+    const eventDoc = await adminDb.collection('events').doc(pending.eventId).get()
+    if (!eventDoc.exists) {
+      await pendingRef.update({ status: 'failed', updatedAt: new Date() })
+      return { success: false, error: 'Event no longer exists.' }
+    }
+
+    const eventData = eventDoc.data()!
+    const event: Event = {
+      id: eventDoc.id,
+      ...eventData,
+      createdAt: eventData.createdAt?.toDate?.() || eventData.createdAt,
+      updatedAt: eventData.updatedAt?.toDate?.() || eventData.updatedAt,
+    } as Event
+
+    if (!isRegistrationOpen(event)) {
+      await pendingRef.update({ status: 'failed', updatedAt: new Date() })
+      return { success: false, error: 'Registration for this event is closed.' }
+    }
+
+    const result = await createBookingRecordAndSendEmail(
+      event,
+      {
+        eventId: pending.eventId,
+        name: pending.name,
+        school: pending.school,
+        email: pending.email,
+        phone: pending.phone,
+        information: pending.information,
+      },
+      {
+        paymentId: execution.paymentId,
+        trxId: execution.trxId,
+        amountPaid: execution.amount || pending.amount,
+      }
+    )
+
+    if (!result.success) {
+      await pendingRef.update({ status: 'failed', updatedAt: new Date() })
+      return result
+    }
+
+    await pendingRef.update({
+      status: 'completed',
+      bookingId: result.bookingId,
+      updatedAt: new Date(),
+      trxId: execution.trxId,
+    })
+
+    return result
+  } catch (error) {
+    console.error('Error finalizing paid booking:', error)
+    return { success: false, error: 'Failed to finalize payment. Please contact support.' }
   }
 }
 

@@ -140,12 +140,6 @@ export default function CreateEventForm() {
         setLoading(false)
         return
       }
-      const bkash = String(formData.paymentBkashNumber ?? '').trim()
-      if (bkash.length !== 11 || !bkash.startsWith('01')) {
-        setError('Please enter a valid 11-digit bKash number (starting with 01) for receiving payment')
-        setLoading(false)
-        return
-      }
     }
 
     // Set default time if not provided
@@ -161,7 +155,7 @@ export default function CreateEventForm() {
         time: eventTime,
         isPaid: formData.isPaid,
         amount: formData.isPaid && formData.amount !== '' ? Number(formData.amount) : undefined,
-        paymentBkashNumber: formData.isPaid ? (formData.paymentBkashNumber ?? '').trim() : undefined,
+        paymentBkashNumber: undefined,
         registrationClosingDate: formData.registrationClosingDate?.trim() || undefined,
       })
 
@@ -427,6 +421,7 @@ export default function CreateEventForm() {
                       ...formData,
                       isPaid: e.target.checked,
                       amount: e.target.checked ? formData.amount : '',
+                      paymentBkashNumber: '',
                     })
                   }
                   disabled={loading}
@@ -455,26 +450,6 @@ export default function CreateEventForm() {
                       disabled={loading}
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
                     />
-                  </div>
-                  <div>
-                    <label htmlFor="payment-bkash" className="block text-sm font-medium text-gray-600 mb-1">
-                      bKash number to receive payment <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="payment-bkash"
-                      type="tel"
-                      inputMode="numeric"
-                      maxLength={11}
-                      value={formData.paymentBkashNumber}
-                      onChange={(e) => {
-                        const v = e.target.value.replace(/\D/g, '').slice(0, 11)
-                        setFormData({ ...formData, paymentBkashNumber: v })
-                      }}
-                      placeholder="e.g. 01712345678"
-                      disabled={loading}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Participants will pay the fee to this number via bKash.</p>
                   </div>
                 </div>
               )}

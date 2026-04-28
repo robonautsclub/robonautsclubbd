@@ -9,6 +9,12 @@ export type Booking = {
   email: string
   phone: string
   bkashNumber?: string
+  paymentGateway?: 'bkash'
+  paymentStatus?: 'paid'
+  paymentId?: string
+  trxId?: string
+  amountPaid?: number
+  paidAt?: Date | string
   information: string
   createdAt: Date | string
 }
