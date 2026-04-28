@@ -1,6 +1,7 @@
 'use server'
 
 import { cache } from 'react'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { adminDb } from '@/lib/firebase-admin'
 import { Event } from '@/types/event'
 import { Course } from '@/types/course'
@@ -172,6 +173,21 @@ type PendingPaidRegistration = {
   updatedAt: Date
 }
 
+async function hasExistingRegistration(
+  eventId: string,
+  normalizedEmail: string
+): Promise<boolean> {
+  if (!adminDb) return false
+
+  const existingBookings = await adminDb
+    .collection('bookings')
+    .where('eventId', '==', eventId)
+    .where('email', '==', normalizedEmail)
+    .get()
+
+  return !existingBookings.empty
+}
+
 function getBaseUrl(): string {
   let baseUrl = process.env.NEXT_PUBLIC_BASE_URL
   if (!baseUrl) {
@@ -207,13 +223,8 @@ async function createBookingRecordAndSendEmail(
   const normalizedBkash = formData.bkashNumber?.trim().replace(/\s/g, '') ?? ''
   const normalizedEmail = formData.email.trim().toLowerCase()
 
-  const existingBookings = await adminDb
-    .collection('bookings')
-    .where('eventId', '==', formData.eventId)
-    .where('email', '==', normalizedEmail)
-    .get()
-
-  if (!existingBookings.empty) {
+  const alreadyExists = await hasExistingRegistration(formData.eventId, normalizedEmail)
+  if (alreadyExists) {
     return {
       success: false,
       error: 'You have already registered for this event with this email address.',
@@ -270,6 +281,9 @@ async function createBookingRecordAndSendEmail(
       error: emailResult.error || 'Failed to send confirmation email. Please try again.',
     }
   }
+
+  revalidatePath(`/dashboard/events/${formData.eventId}`)
+  revalidateTag(`dashboard-event-bookings-${formData.eventId}`, 'max')
 
   return { success: true, bookingId }
 }
@@ -415,12 +429,8 @@ export async function initiatePaidEventCheckout(
       return { success: false, error: 'Paid event amount is not configured properly.' }
     }
 
-    const duplicate = await adminDb
-      .collection('bookings')
-      .where('eventId', '==', formData.eventId)
-      .where('email', '==', normalizedEmail)
-      .get()
-    if (!duplicate.empty) {
+    const duplicate = await hasExistingRegistration(formData.eventId, normalizedEmail)
+    if (duplicate) {
       return {
         success: false,
         error: 'You have already registered for this event with this email address.',
