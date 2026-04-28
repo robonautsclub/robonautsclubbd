@@ -20,6 +20,8 @@ export type DashboardEventSummary = Pick<Event, 'id' | 'date' | 'createdAt' | 't
 const DASHBOARD_EVENTS_SUMMARY_TAG = 'dashboard-events-summary'
 const DASHBOARD_EVENTS_LIST_TAG = 'dashboard-events-list'
 const DASHBOARD_COURSES_LIST_TAG = 'dashboard-courses-list'
+const PUBLIC_EVENTS_TAG = 'public-events'
+const PUBLIC_COURSES_TAG = 'public-courses'
 const DASHBOARD_EVENT_DETAIL_TAG_PREFIX = 'dashboard-event'
 const DASHBOARD_EVENT_BOOKINGS_TAG_PREFIX = 'dashboard-event-bookings'
 
@@ -351,6 +353,7 @@ export async function createEvent(formData: {
     revalidatePath(`/events/${eventRef.id}`)
     revalidateTag(DASHBOARD_EVENTS_LIST_TAG, 'max')
     revalidateTag(DASHBOARD_EVENTS_SUMMARY_TAG, 'max')
+    revalidateTag(PUBLIC_EVENTS_TAG, 'max')
 
     // Create notification for event creation
     await createNotification(
@@ -504,6 +507,7 @@ export async function updateEvent(
     revalidateTag(DASHBOARD_EVENTS_LIST_TAG, 'max')
     revalidateTag(DASHBOARD_EVENTS_SUMMARY_TAG, 'max')
     revalidateTag(getEventDetailTag(eventId), 'max')
+    revalidateTag(PUBLIC_EVENTS_TAG, 'max')
 
     // Create notification for event update
     await createNotification(
@@ -587,6 +591,7 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
     revalidateTag(DASHBOARD_EVENTS_SUMMARY_TAG, 'max')
     revalidateTag(getEventDetailTag(eventId), 'max')
     revalidateTag(getEventBookingsTag(eventId), 'max')
+    revalidateTag(PUBLIC_EVENTS_TAG, 'max')
 
     // Create notification for event deletion
     await createNotification(
@@ -861,6 +866,7 @@ export async function createCourse(formData: {
     revalidatePath('/')
     revalidatePath('/dashboard/courses')
     revalidateTag(DASHBOARD_COURSES_LIST_TAG, 'max')
+    revalidateTag(PUBLIC_COURSES_TAG, 'max')
 
     // Create notification for course creation
     await createNotification(
@@ -963,6 +969,7 @@ export async function updateCourse(
     revalidatePath('/')
     revalidatePath('/dashboard/courses')
     revalidateTag(DASHBOARD_COURSES_LIST_TAG, 'max')
+    revalidateTag(PUBLIC_COURSES_TAG, 'max')
 
     // Create notification for course update
     await createNotification(
@@ -1031,6 +1038,7 @@ export async function archiveCourse(courseId: string): Promise<{ success: boolea
     revalidatePath('/')
     revalidatePath('/dashboard/courses')
     revalidateTag(DASHBOARD_COURSES_LIST_TAG, 'max')
+    revalidateTag(PUBLIC_COURSES_TAG, 'max')
 
     // Create notification for course archive/unarchive
     const action = !currentArchiveStatus ? 'archived' : 'unarchived'
@@ -1095,6 +1103,7 @@ export async function deleteCourse(courseId: string): Promise<{ success: boolean
     revalidatePath('/')
     revalidatePath('/dashboard/courses')
     revalidateTag(DASHBOARD_COURSES_LIST_TAG, 'max')
+    revalidateTag(PUBLIC_COURSES_TAG, 'max')
 
     // Create notification for course deletion
     await createNotification(

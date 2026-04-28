@@ -1,7 +1,7 @@
 'use server'
 
 import { cache } from 'react'
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
 import { adminDb } from '@/lib/firebase-admin'
 import { Event } from '@/types/event'
 import { Course } from '@/types/course'
@@ -10,12 +10,23 @@ import { generateRegistrationId } from '@/lib/registrationId'
 import { isRegistrationOpen } from '@/lib/dateUtils'
 import { bkashCreateCheckout, bkashExecutePayment, bkashQueryPayment } from '@/lib/bkash'
 
+const PUBLIC_EVENTS_TAG = 'public-events'
+const PUBLIC_EVENT_TAG_PREFIX = 'public-event'
+const PUBLIC_COURSES_TAG = 'public-courses'
+const PUBLIC_EVENTS_MAX = 200
+const PUBLIC_COURSES_MAX = 100
+
+function getPublicEventTag(id: string): string {
+  return `${PUBLIC_EVENT_TAG_PREFIX}-${id}`
+}
+
 /**
  * Get all events from Firestore (public - no auth required)
  * Used with ISR (Incremental Static Regeneration) for fast page loads
  * Wrapped with cache() for request deduplication
  */
-export const getPublicEvents = cache(async (): Promise<Event[]> => {
+const getCachedPublicEvents = unstable_cache(
+  async (): Promise<Event[]> => {
   if (!adminDb) {
     console.warn('Firebase Admin SDK not available. Cannot fetch events.')
     // Return empty array instead of throwing for public pages
@@ -23,9 +34,11 @@ export const getPublicEvents = cache(async (): Promise<Event[]> => {
   }
 
   try {
-    // Query without orderBy to avoid requiring a composite index
-    // We'll sort in memory instead
-    const eventsSnapshot = await adminDb.collection('events').get()
+    const eventsSnapshot = await adminDb
+      .collection('events')
+      .orderBy('createdAt', 'desc')
+      .limit(PUBLIC_EVENTS_MAX)
+      .get()
     
     const events: Event[] = []
     eventsSnapshot.forEach((doc) => {
@@ -84,14 +97,24 @@ export const getPublicEvents = cache(async (): Promise<Event[]> => {
     // Return empty array instead of throwing for public pages
     return []
   }
-})
+  },
+  [PUBLIC_EVENTS_TAG],
+  {
+    tags: [PUBLIC_EVENTS_TAG],
+    revalidate: 900,
+  }
+)
+
+export const getPublicEvents = cache(async (): Promise<Event[]> => getCachedPublicEvents())
 
 /**
  * Get a single event by ID (public - no auth required)
  * Used with ISR (Incremental Static Regeneration) for fast page loads
  * Wrapped with cache() for request deduplication
  */
-export const getPublicEvent = cache(async (id: string): Promise<Event | null> => {
+const getCachedPublicEvent = (id: string) =>
+  unstable_cache(
+    async (): Promise<Event | null> => {
   if (!adminDb) {
     console.error('Firebase Admin SDK not available. Cannot fetch event.')
     return null
@@ -144,7 +167,15 @@ export const getPublicEvent = cache(async (id: string): Promise<Event | null> =>
     console.error('Error fetching event:', error)
     return null
   }
-})
+    },
+    [PUBLIC_EVENT_TAG_PREFIX, id],
+    {
+      tags: [getPublicEventTag(id), PUBLIC_EVENTS_TAG],
+      revalidate: 900,
+    }
+  )()
+
+export const getPublicEvent = cache(async (id: string): Promise<Event | null> => getCachedPublicEvent(id))
 
 type BookingInput = {
   eventId: string
@@ -581,7 +612,8 @@ export async function finalizePaidEventBooking(paymentId: string): Promise<{
  * Used by Feed component for public display
  * Wrapped with cache() for request deduplication
  */
-export const getPublicCourses = cache(async (): Promise<Course[]> => {
+const getCachedPublicCourses = unstable_cache(
+  async (): Promise<Course[]> => {
   if (!adminDb) {
     console.warn('Firebase Admin SDK not available. Cannot fetch courses.')
     return []
@@ -592,6 +624,7 @@ export const getPublicCourses = cache(async (): Promise<Course[]> => {
     const coursesSnapshot = await adminDb
       .collection('courses')
       .where('isArchived', '==', false)
+      .limit(PUBLIC_COURSES_MAX)
       .get()
     
     const courses: Course[] = []
@@ -639,4 +672,12 @@ export const getPublicCourses = cache(async (): Promise<Course[]> => {
     console.error('Error fetching public courses:', error)
     return []
   }
-})
+  },
+  [PUBLIC_COURSES_TAG],
+  {
+    tags: [PUBLIC_COURSES_TAG],
+    revalidate: 1800,
+  }
+)
+
+export const getPublicCourses = cache(async (): Promise<Course[]> => getCachedPublicCourses())

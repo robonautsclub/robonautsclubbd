@@ -26,8 +26,8 @@ export const metadata: Metadata = {
   },
 };
 
-// ISR: public marketing content; on-demand revalidatePath still invalidates immediately
-export const revalidate = 300;
+// ISR: longer window minimizes edge recompute frequency for mostly static content
+export const revalidate = 1800;
 
 export default async function Home() {
   const [courses, events] = await Promise.all([
