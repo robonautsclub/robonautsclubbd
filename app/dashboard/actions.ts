@@ -3,11 +3,18 @@
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
 import { requireAuth, isSuperAdmin } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase-admin'
+import { adminAuth } from '@/lib/firebase-admin'
 import { Event } from '@/types/event'
 import { Booking } from '@/types/booking'
 import { Course } from '@/types/course'
 import { sanitizeEventForDatabase } from '@/lib/textSanitizer'
 import { createNotification } from '@/lib/notifications'
+import type { Session } from '@/lib/auth'
+import type {
+  DashboardBootstrapData,
+  DashboardMember,
+  DashboardNotification,
+} from './types'
 
 export type DashboardEventSummary = Pick<Event, 'id' | 'date' | 'createdAt' | 'title' | 'description'>
 const DASHBOARD_EVENTS_SUMMARY_TAG = 'dashboard-events-summary'
@@ -1105,6 +1112,79 @@ export async function deleteCourse(courseId: string): Promise<{ success: boolean
       success: false,
       error: 'Failed to delete course. Please try again.',
     }
+  }
+}
+
+function toIso(value: unknown): string {
+  if (value == null) return ''
+  if (value instanceof Date) return value.toISOString()
+  if (typeof value === 'object' && value !== null && 'toDate' in value && typeof (value as { toDate: () => Date }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate().toISOString()
+  }
+  if (typeof value === 'string') return value
+  return ''
+}
+
+async function getDashboardMembers(session: Session): Promise<DashboardMember[]> {
+  if (session.role !== 'superAdmin' || !adminAuth) return []
+
+  const listUsersResult = await adminAuth.listUsers(1000)
+  return listUsersResult.users.map((user) => {
+    const role = (user.customClaims?.role as 'superAdmin' | 'admin' | undefined) || 'admin'
+    return {
+      uid: user.uid,
+      email: user.email || '',
+      displayName: user.displayName || '',
+      emailVerified: user.emailVerified,
+      role,
+      createdAt: user.metadata.creationTime,
+      lastSignIn: user.metadata.lastSignInTime,
+      disabled: user.disabled,
+    }
+  })
+}
+
+async function getDashboardNotifications(session: Session): Promise<DashboardNotification[]> {
+  if (!adminDb) return []
+
+  const snapshot = await adminDb.collection('notifications').orderBy('createdAt', 'desc').limit(10).get()
+  return snapshot.docs.map((doc) => {
+    const data = doc.data()
+    const readBy = Array.isArray(data.readBy) ? data.readBy : []
+    return {
+      id: doc.id,
+      type: String(data.type || ''),
+      message: String(data.message || ''),
+      userId: String(data.userId || ''),
+      userName: String(data.userName || ''),
+      userEmail: String(data.userEmail || ''),
+      changes: Array.isArray(data.changes) ? data.changes.filter((v): v is string => typeof v === 'string') : [],
+      readBy,
+      isRead: readBy.includes(session.uid),
+      createdAt: toIso(data.createdAt),
+    }
+  })
+}
+
+export async function getDashboardBootstrapData(sessionArg?: Session): Promise<DashboardBootstrapData> {
+  const session = sessionArg ?? (await requireAuth())
+
+  const [events, courses, news, galleryGroups, notifications, members] = await Promise.all([
+    getCachedEventsList(),
+    getCachedCoursesList(),
+    import('./news/actions').then((module) => module.getNewsArticles()),
+    import('./gallery/actions').then((module) => module.getGalleryGroupsForDashboard()),
+    getDashboardNotifications(session),
+    getDashboardMembers(session),
+  ])
+
+  return {
+    events,
+    courses,
+    news,
+    galleryGroups,
+    notifications,
+    members,
   }
 }
 
