@@ -20,15 +20,6 @@ function LoginForm() {
   const [forgotPasswordError, setForgotPasswordError] = useState('')
   const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState(false)
 
-  const handleGoBack = () => {
-    // Go back to previous page, or home if no history
-    if (window.history.length > 1) {
-      router.back()
-    } else {
-      router.push('/')
-    }
-  }
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError('')
@@ -48,8 +39,8 @@ function LoginForm() {
 
       // Assign role via server-side API (sets custom claims)
       let assignedRole: 'superAdmin' | 'admin' = 'admin'
-      let finalToken = token
-      
+      const finalToken = token
+
       try {
         console.log('Calling role assignment API...')
         const roleResponse = await fetch('/api/auth/assign-role', {
@@ -67,21 +58,6 @@ function LoginForm() {
         } else {
           const roleData = await roleResponse.json()
           assignedRole = roleData.role || 'admin'
-          
-          // After setting custom claims, wait a moment for Firebase to propagate
-          // Then try to get a fresh token with the updated claims
-          // Note: We don't revoke tokens during initial login, so this should work
-          await new Promise(resolve => setTimeout(resolve, 1000))
-          
-          try {
-            // Force a token refresh to get the new claims
-            // This should work since we didn't revoke tokens during initial login
-            finalToken = await user.getIdToken(true)
-          } catch (tokenError: any) {
-            // If token refresh fails, use the original token
-            // The role will be available on the next page load after claims propagate
-            finalToken = token
-          }
         }
       } catch (roleError) {
         console.error('Error assigning role:', roleError)
