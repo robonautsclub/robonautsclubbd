@@ -31,6 +31,17 @@ type BkashExecutePaymentResponse = {
   message?: string
 }
 
+type BkashQueryPaymentResponse = {
+  paymentID?: string
+  paymentId?: string
+  trxID?: string
+  amount?: string
+  transactionStatus?: string
+  statusCode?: string
+  statusMessage?: string
+  message?: string
+}
+
 export type BkashCreateCheckoutPayload = {
   amount: number
   payerReference: string
@@ -178,5 +189,36 @@ export async function bkashExecutePayment(paymentId: string): Promise<BkashExecu
     transactionStatus: data.transactionStatus || 'Unknown',
     amount: Number(data.amount || 0),
     raw: data,
+  }
+}
+
+export async function bkashQueryPayment(paymentId: string): Promise<BkashExecuteResult> {
+  const config = getBkashConfig()
+  const token = await bkashGrantToken()
+
+  const response = await fetch(`${config.baseUrl}/tokenized/checkout/payment/status`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      authorization: token,
+      'x-app-key': config.appKey,
+    },
+    body: JSON.stringify({ paymentID: paymentId }),
+    cache: 'no-store',
+  })
+
+  const data = await parseJsonSafe<BkashQueryPaymentResponse>(response)
+  const resolvedPaymentId = data.paymentID || data.paymentId
+  if (!response.ok || (data.statusCode && data.statusCode !== '0000') || !resolvedPaymentId) {
+    throw new Error(getErrorMessage('bKash query payment', data))
+  }
+
+  return {
+    paymentId: resolvedPaymentId,
+    trxId: data.trxID || '',
+    transactionStatus: data.transactionStatus || 'Unknown',
+    amount: Number(data.amount || 0),
+    raw: data as unknown as BkashExecutePaymentResponse,
   }
 }
