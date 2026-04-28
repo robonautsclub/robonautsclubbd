@@ -180,8 +180,8 @@ export async function generateMetadata({
   }
 }
 
-// ISR: 5m default; AutoRefresh + revalidatePath cover fresher registration UX when needed
-export const revalidate = 300
+// ISR: longer window lowers edge recomputation while admin updates still invalidate on-demand
+export const revalidate = 900
 
 export default async function EventDetailPage({
   params,

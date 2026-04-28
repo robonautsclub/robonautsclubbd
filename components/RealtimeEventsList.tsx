@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo, memo, useState } from 'react'
-import { useRealtimeEvents } from '@/hooks/useRealtimeEvents'
 import { parseEventDates, formatEventDates, isEventUpcoming, hasEventPassed, getFirstEventDate } from '@/lib/dateUtils'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -127,7 +126,7 @@ function isEventGoingOn(event: Event): boolean {
       eventEndTime.setHours(eventEndTime.getHours() + 8)
       
       return bstNow >= eventDateTime && bstNow <= eventEndTime
-    } catch (error) {
+    } catch {
       // If time parsing fails, assume event is going on if it's today
       return true
     }
@@ -328,12 +327,7 @@ const SectionHeader = ({
 )
 
 export default function RealtimeEventsList({ initialEvents = [] }: RealtimeEventsListProps) {
-  const { events, loading, error } = useRealtimeEvents(true)
-
-  // Use real-time events if available, otherwise fall back to initial events
-  const displayEvents = useMemo(() => {
-    return events.length > 0 ? events : initialEvents
-  }, [events, initialEvents])
+  const displayEvents = initialEvents
 
   // Sort events: upcoming first, then past events
   // Memoize to prevent unnecessary re-sorting
@@ -367,14 +361,6 @@ export default function RealtimeEventsList({ initialEvents = [] }: RealtimeEvent
     return sortedEvents.filter((event) => hasEventPassed(event.date))
   }, [sortedEvents])
 
-  if (error && displayEvents.length === 0) {
-    return (
-      <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-r-lg">
-        <p className="text-sm font-medium">Error loading events: {error}</p>
-      </div>
-    )
-  }
-
   return (
     <>
       {/* Upcoming Events Section */}
@@ -385,41 +371,9 @@ export default function RealtimeEventsList({ initialEvents = [] }: RealtimeEvent
             subtitle="Browse the full list—tap an event for details and registration"
             count={upcomingEvents.length}
           />
-          {loading && displayEvents.length === 0 ? (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-white rounded-2xl border-2 border-gray-200 p-6 animate-pulse">
-                  <div className="h-48 bg-gray-200 rounded-xl mb-4" />
-                  <div className="h-4 bg-gray-200 rounded mb-2" />
-                  <div className="h-4 bg-gray-200 rounded w-3/4" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {upcomingEvents.map((event) => (
-                <EventCard key={event.id} event={event} />
-              ))}
-            </div>
-          )}
-        </section>
-      ) : loading ? (
-        <section className="mb-12 sm:mb-16 md:mb-20" aria-busy="true" aria-label="Loading events">
-          <div className="rounded-2xl border border-gray-200 bg-gray-100 overflow-hidden animate-pulse mb-10">
-            <div className="h-56 sm:h-72 bg-gray-200" />
-            <div className="p-6 space-y-3">
-              <div className="h-6 bg-gray-200 rounded w-1/2" />
-              <div className="h-4 bg-gray-200 rounded w-full" />
-              <div className="h-4 bg-gray-200 rounded w-4/5" />
-            </div>
-          </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-2xl border-2 border-gray-200 p-6 animate-pulse">
-                <div className="h-48 bg-gray-200 rounded-xl mb-4" />
-                <div className="h-4 bg-gray-200 rounded mb-2" />
-                <div className="h-4 bg-gray-200 rounded w-3/4" />
-              </div>
+            {upcomingEvents.map((event) => (
+              <EventCard key={event.id} event={event} />
             ))}
           </div>
         </section>
