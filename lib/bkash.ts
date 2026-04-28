@@ -23,7 +23,9 @@ type BkashCreatePaymentResponse = {
 
 type BkashExecutePaymentResponse = {
   paymentID?: string
+  paymentId?: string
   trxID?: string
+  trxId?: string
   transactionStatus?: string
   amount?: string
   statusCode?: string
@@ -35,6 +37,7 @@ type BkashQueryPaymentResponse = {
   paymentID?: string
   paymentId?: string
   trxID?: string
+  trxId?: string
   amount?: string
   transactionStatus?: string
   statusCode?: string
@@ -179,13 +182,15 @@ export async function bkashExecutePayment(paymentId: string): Promise<BkashExecu
   })
 
   const data = await parseJsonSafe<BkashExecutePaymentResponse>(response)
-  if (!response.ok || (data.statusCode && data.statusCode !== '0000') || !data.paymentID || !data.trxID) {
+  const resolvedPaymentId = data.paymentID || data.paymentId
+  const resolvedTrxId = data.trxID || data.trxId
+  if (!response.ok || (data.statusCode && data.statusCode !== '0000') || !resolvedPaymentId || !resolvedTrxId) {
     throw new Error(getErrorMessage('bKash execute payment', data))
   }
 
   return {
-    paymentId: data.paymentID,
-    trxId: data.trxID,
+    paymentId: resolvedPaymentId,
+    trxId: resolvedTrxId,
     transactionStatus: data.transactionStatus || 'Unknown',
     amount: Number(data.amount || 0),
     raw: data,
@@ -210,13 +215,14 @@ export async function bkashQueryPayment(paymentId: string): Promise<BkashExecute
 
   const data = await parseJsonSafe<BkashQueryPaymentResponse>(response)
   const resolvedPaymentId = data.paymentID || data.paymentId
+  const resolvedTrxId = data.trxID || data.trxId || ''
   if (!response.ok || (data.statusCode && data.statusCode !== '0000') || !resolvedPaymentId) {
     throw new Error(getErrorMessage('bKash query payment', data))
   }
 
   return {
     paymentId: resolvedPaymentId,
-    trxId: data.trxID || '',
+    trxId: resolvedTrxId,
     transactionStatus: data.transactionStatus || 'Unknown',
     amount: Number(data.amount || 0),
     raw: data as unknown as BkashExecutePaymentResponse,

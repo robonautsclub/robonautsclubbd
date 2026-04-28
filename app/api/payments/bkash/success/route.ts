@@ -14,24 +14,35 @@ async function handleCallback(
   const status = normalizeStatus(payload.status || '')
   const paymentId = payload.paymentID || payload.paymentId || ''
   const baseUrl = request.nextUrl.origin
+  console.info('[bkash-callback] received', {
+    method: request.method,
+    status,
+    paymentId: paymentId || null,
+    host: request.nextUrl.host,
+    pathname: request.nextUrl.pathname,
+  })
 
   if (!paymentId) {
+    console.warn('[bkash-callback] missing payment id', { status })
     return NextResponse.redirect(
       `${baseUrl}/payments/bkash/fail?error=${encodeURIComponent('Missing payment id from bKash callback.')}`
     )
   }
 
   if (status === 'cancel') {
+    console.info('[bkash-callback] canceled', { paymentId })
     return NextResponse.redirect(`${baseUrl}/payments/bkash/cancel`)
   }
 
   if (status === 'failure') {
+    console.info('[bkash-callback] failure from gateway', { paymentId })
     return NextResponse.redirect(
       `${baseUrl}/payments/bkash/fail?error=${encodeURIComponent('bKash reports payment failure.')}`
     )
   }
 
   if (status !== 'success') {
+    console.warn('[bkash-callback] unexpected status', { paymentId, status })
     return NextResponse.redirect(
       `${baseUrl}/payments/bkash/fail?error=${encodeURIComponent(`Unexpected bKash status: ${status || 'unknown'}`)}`
     )
@@ -39,10 +50,19 @@ async function handleCallback(
 
   const result = await finalizePaidEventBooking(paymentId)
   if (!result.success) {
+    console.error('[bkash-callback] finalize failed', {
+      paymentId,
+      error: result.error || 'unknown',
+    })
     return NextResponse.redirect(
       `${baseUrl}/payments/bkash/fail?error=${encodeURIComponent(result.error || 'Unable to finalize registration after payment.')}`
     )
   }
+
+  console.info('[bkash-callback] finalize success', {
+    paymentId,
+    bookingId: result.bookingId || null,
+  })
 
   return NextResponse.redirect(
     `${baseUrl}/payments/bkash/success?bookingId=${encodeURIComponent(result.bookingId || '')}`
