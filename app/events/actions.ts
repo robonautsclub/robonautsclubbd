@@ -493,14 +493,24 @@ export async function finalizePaidEventBooking(paymentId: string): Promise<{
     let execution
     try {
       execution = await bkashExecutePayment(paymentId)
-    } catch (error) {
+    } catch (executeError) {
       // Execute can fail for already-processed payment IDs; query current state before failing.
-      const queried = await bkashQueryPayment(paymentId)
-      const queriedStatus = queried.transactionStatus.toLowerCase()
-      if (queriedStatus !== 'completed' && queriedStatus !== 'success') {
-        throw error
+      try {
+        const queried = await bkashQueryPayment(paymentId)
+        const queriedStatus = queried.transactionStatus.toLowerCase()
+        if (queriedStatus !== 'completed' && queriedStatus !== 'success') {
+          await pendingRef.update({ status: 'failed', updatedAt: new Date() })
+          return { success: false, error: `Payment is not successful (${queried.transactionStatus}).` }
+        }
+        execution = queried
+      } catch (queryError) {
+        console.error('bKash execute+query both failed', {
+          paymentId,
+          executeError: executeError instanceof Error ? executeError.message : String(executeError),
+          queryError: queryError instanceof Error ? queryError.message : String(queryError),
+        })
+        return { success: false, error: 'Failed to verify payment status with bKash. Please contact support.' }
       }
-      execution = queried
     }
 
     const transactionStatus = execution.transactionStatus.toLowerCase()
