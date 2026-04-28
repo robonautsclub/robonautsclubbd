@@ -90,6 +90,7 @@ const getCachedDashboardEventsSummary = unstable_cache(
   [DASHBOARD_EVENTS_SUMMARY_TAG],
   {
     tags: [DASHBOARD_EVENTS_SUMMARY_TAG],
+    revalidate: 300,
   }
 )
 
@@ -127,6 +128,7 @@ const getCachedEventsList = unstable_cache(
   [DASHBOARD_EVENTS_LIST_TAG],
   {
     tags: [DASHBOARD_EVENTS_LIST_TAG],
+    revalidate: 300,
   }
 )
 

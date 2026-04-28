@@ -8,7 +8,7 @@ import { Course } from '@/types/course'
 import { sendBookingConfirmationEmail } from '@/lib/email'
 import { generateRegistrationId } from '@/lib/registrationId'
 import { isRegistrationOpen } from '@/lib/dateUtils'
-import { bkashCreateCheckout, bkashExecutePayment } from '@/lib/bkash'
+import { bkashCreateCheckout, bkashExecutePayment, bkashQueryPayment } from '@/lib/bkash'
 
 /**
  * Get all events from Firestore (public - no auth required)
@@ -490,7 +490,19 @@ export async function finalizePaidEventBooking(paymentId: string): Promise<{
       return { success: true, bookingId: pending.bookingId }
     }
 
-    const execution = await bkashExecutePayment(paymentId)
+    let execution
+    try {
+      execution = await bkashExecutePayment(paymentId)
+    } catch (error) {
+      // Execute can fail for already-processed payment IDs; query current state before failing.
+      const queried = await bkashQueryPayment(paymentId)
+      const queriedStatus = queried.transactionStatus.toLowerCase()
+      if (queriedStatus !== 'completed' && queriedStatus !== 'success') {
+        throw error
+      }
+      execution = queried
+    }
+
     const transactionStatus = execution.transactionStatus.toLowerCase()
     if (transactionStatus !== 'completed' && transactionStatus !== 'success') {
       await pendingRef.update({ status: 'failed', updatedAt: new Date() })
