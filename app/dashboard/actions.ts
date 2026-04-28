@@ -24,6 +24,32 @@ function getEventBookingsTag(eventId: string): string {
   return `${DASHBOARD_EVENT_BOOKINGS_TAG_PREFIX}-${eventId}`
 }
 
+function normalizeEventCategories(
+  categories: Array<{ name: string; amount?: number }> | undefined,
+  isPaid: boolean
+): Array<{ name: string; amount?: number }> {
+  if (!Array.isArray(categories)) return []
+
+  const normalized = categories
+    .map((category) => ({
+      name: category.name?.trim() || '',
+      amount:
+        isPaid && category.amount != null && Number.isFinite(Number(category.amount)) && Number(category.amount) > 0
+          ? Number(category.amount)
+          : undefined,
+    }))
+    .filter((category) => category.name.length > 0)
+
+  const uniqueByName = new Map<string, { name: string; amount?: number }>()
+  for (const category of normalized) {
+    if (!uniqueByName.has(category.name.toLowerCase())) {
+      uniqueByName.set(category.name.toLowerCase(), category)
+    }
+  }
+
+  return Array.from(uniqueByName.values())
+}
+
 const getCachedDashboardEventsSummary = unstable_cache(
   async (): Promise<DashboardEventSummary[]> => {
     if (!adminDb) {
@@ -226,6 +252,7 @@ export async function createEvent(formData: {
   isPaid?: boolean
   amount?: number
   paymentBkashNumber?: string
+  categories?: Array<{ name: string; amount?: number }>
   registrationClosingDate?: string
 }): Promise<{ success: boolean; error?: string; eventId?: string }> {
   const session = await requireAuth()
@@ -279,6 +306,7 @@ export async function createEvent(formData: {
     
     // Use sanitized values for all text fields
     const isPaid = formData.isPaid ?? false
+    const categories = normalizeEventCategories(formData.categories, isPaid)
     const eventRef = await adminDb.collection('events').add({
       title: sanitized.title,
       date: normalizedDate,
@@ -293,6 +321,7 @@ export async function createEvent(formData: {
       tags: sanitized.tags,
       isPaid,
       ...(isPaid && { amount: formData.amount ?? 0 }),
+      ...(categories.length > 0 && { categories }),
       ...(isPaid && formData.paymentBkashNumber?.trim() && { paymentBkashNumber: formData.paymentBkashNumber.trim() }),
       ...(formData.registrationClosingDate?.trim() && { registrationClosingDate: formData.registrationClosingDate.trim() }),
       createdAt: now,
@@ -348,6 +377,7 @@ export async function updateEvent(
     isPaid?: boolean
     amount?: number
     paymentBkashNumber?: string
+    categories?: Array<{ name: string; amount?: number }>
     registrationClosingDate?: string
     registrationDisabled?: boolean
   }
@@ -425,6 +455,7 @@ export async function updateEvent(
     
     // Use sanitized values for all text fields
     const isPaid = formData.isPaid ?? false
+    const categories = normalizeEventCategories(formData.categories, isPaid)
     await adminDb.collection('events').doc(eventId).update({
       title: sanitized.title,
       date: normalizedDate,
@@ -439,6 +470,7 @@ export async function updateEvent(
       tags: sanitized.tags,
       isPaid,
       amount: isPaid ? (formData.amount ?? 0) : 0,
+      categories,
       paymentBkashNumber: isPaid ? (formData.paymentBkashNumber ?? '').toString().trim() : '',
       registrationClosingDate: formData.registrationClosingDate?.trim() ?? '',
       registrationDisabled: formData.registrationDisabled ?? false,

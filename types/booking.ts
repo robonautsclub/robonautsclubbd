@@ -8,6 +8,7 @@ export type Booking = {
   school: string
   email: string
   phone: string
+  category?: string
   bkashNumber?: string
   paymentGateway?: 'bkash'
   paymentStatus?: 'paid'

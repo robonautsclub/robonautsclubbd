@@ -45,6 +45,12 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
     isPaid: event.isPaid ?? false,
     amount: event.amount ?? '' as '' | number,
     paymentBkashNumber: event.paymentBkashNumber ?? '',
+    categories: Array.isArray(event.categories)
+      ? event.categories.map((category) => ({
+          name: category.name || '',
+          amount: category.amount ?? '',
+        }))
+      : [],
     registrationClosingDate: (typeof event.registrationClosingDate === 'string' ? event.registrationClosingDate : '') ?? '',
     registrationDisabled: event.registrationDisabled ?? false,
   })
@@ -110,10 +116,28 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
       setLoading(false)
       return
     }
-    if (formData.isPaid) {
+    const validCategories = formData.categories
+      .map((category) => ({
+        name: category.name.trim(),
+        amount:
+          category.amount === '' || category.amount == null || isNaN(Number(category.amount))
+            ? undefined
+            : Number(category.amount),
+      }))
+      .filter((category) => category.name.length > 0)
+    const hasNamedCategories = validCategories.length > 0
+
+    if (hasNamedCategories && formData.isPaid) {
+      const invalidCategoryAmount = validCategories.some((category) => !category.amount || category.amount <= 0)
+      if (invalidCategoryAmount) {
+        setError('Please provide a valid amount for every category (greater than 0).')
+        setLoading(false)
+        return
+      }
+    } else if (formData.isPaid) {
       const amt = typeof formData.amount === 'number' ? formData.amount : Number(formData.amount)
       if (amt === undefined || amt === null || isNaN(amt) || amt <= 0) {
-        setError('Please enter a valid amount for paid events')
+        setError('Please enter a valid base amount (or add categories and set amount for each).')
         setLoading(false)
         return
       }
@@ -133,6 +157,10 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
         isPaid: formData.isPaid,
         amount: formData.isPaid && formData.amount !== '' ? Number(formData.amount) : undefined,
         paymentBkashNumber: '',
+        categories: validCategories.map((category) => ({
+          name: category.name,
+          amount: formData.isPaid ? category.amount : undefined,
+        })),
         registrationClosingDate: formData.registrationClosingDate?.trim() ?? '',
         registrationDisabled: formData.registrationDisabled,
       })
@@ -178,7 +206,7 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
           {error && (
             <div className="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
               <span className="font-semibold">Error:</span>
-              <span>{error}</span>
+              <span className="leading-relaxed">{error}</span>
             </div>
           )}
 
@@ -342,6 +370,58 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
 
           <div>
             <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+              <Tag className="w-4 h-4 text-indigo-500" />
+              Event Categories (optional)
+            </label>
+            <div className="space-y-2">
+              {formData.categories.map((category, index) => (
+                <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                  <input
+                    type="text"
+                    value={category.name}
+                    onChange={(e) => {
+                      const categories = [...formData.categories]
+                      categories[index] = { ...categories[index], name: e.target.value }
+                      setFormData({ ...formData, categories })
+                    }}
+                    placeholder="Category name (e.g. Junior, Senior)"
+                    disabled={loading}
+                    className="md:col-span-3 w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const categories = formData.categories.filter((_, i) => i !== index)
+                      setFormData({ ...formData, categories })
+                    }}
+                    disabled={loading}
+                    className="md:col-span-1 px-3 py-2.5 border-2 border-red-200 text-red-600 rounded-xl hover:bg-red-50 transition-all"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() =>
+                  setFormData({
+                    ...formData,
+                    categories: [...formData.categories, { name: '', amount: '' }],
+                  })
+                }
+                disabled={loading}
+                className="px-4 py-2.5 border-2 border-indigo-200 text-indigo-700 rounded-xl hover:bg-indigo-50 transition-all text-sm font-medium"
+              >
+                + Add Category
+              </button>
+              <p className="text-xs text-gray-500">
+                Add category names first. If paid is enabled, amount inputs will appear for each category.
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
               <Banknote className="w-4 h-4 text-indigo-500" />
               Paid event
             </label>
@@ -355,6 +435,10 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
                     isPaid: e.target.checked,
                     amount: e.target.checked ? formData.amount : '',
                     paymentBkashNumber: '',
+                    categories: formData.categories.map((category) => ({
+                      ...category,
+                      amount: e.target.checked ? category.amount : '',
+                    })),
                   })
                 }
                 disabled={loading}
@@ -363,27 +447,61 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
               <span className="text-sm text-gray-700">This is a paid event</span>
             </label>
             {formData.isPaid && (
-              <div className="mt-2 space-y-2">
-                <div>
-                  <label htmlFor="edit-amount" className="block text-sm font-medium text-gray-600 mb-1">
-                    Amount (BDT) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="edit-amount"
-                    type="number"
-                    min={1}
-                    value={formData.amount === '' ? '' : formData.amount}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        amount: e.target.value === '' ? '' : Number(e.target.value),
-                      })
-                    }
-                    placeholder="e.g. 500"
-                    disabled={loading}
-                    className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
-                  />
-                </div>
+              <div className="mt-2 space-y-3">
+                {formData.categories.filter((category) => category.name.trim()).length > 0 ? (
+                  <div className="space-y-2">
+                    {formData.categories.map((category, index) => {
+                      if (!category.name.trim()) return null
+                      return (
+                        <div key={`edit-category-amount-${index}`}>
+                          <label className="block text-sm font-medium text-gray-600 mb-1">
+                            {category.name.trim()} Amount (BDT) <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={category.amount === '' ? '' : category.amount}
+                            onChange={(e) => {
+                              const categories = [...formData.categories]
+                              categories[index] = {
+                                ...categories[index],
+                                amount: e.target.value === '' ? '' : Number(e.target.value),
+                              }
+                              setFormData({ ...formData, categories })
+                            }}
+                            placeholder={`Amount for ${category.name.trim()}`}
+                            disabled={loading}
+                            className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div>
+                    <label htmlFor="edit-amount" className="block text-sm font-medium text-gray-600 mb-1">
+                      Base Amount (BDT) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      id="edit-amount"
+                      type="number"
+                      min={1}
+                      value={formData.amount === '' ? '' : formData.amount}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          amount: e.target.value === '' ? '' : Number(e.target.value),
+                        })
+                      }
+                      placeholder="e.g. 500"
+                      disabled={loading}
+                      className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                    />
+                  </div>
+                )}
+                <p className="text-xs text-indigo-600">
+                  Category amount overrides base amount during checkout when categories exist.
+                </p>
               </div>
             )}
           </div>

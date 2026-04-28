@@ -151,6 +151,7 @@ type BookingInput = {
   school: string
   email: string
   phone: string
+  category?: string
   bkashNumber?: string
   information: string
 }
@@ -162,6 +163,7 @@ type PendingPaidRegistration = {
   school: string
   email: string
   phone: string
+  category?: string
   information: string
   amount: number
   status: 'pending' | 'completed' | 'failed'
@@ -230,6 +232,7 @@ async function createBookingRecordAndSendEmail(
     school: formData.school.trim(),
     email: normalizedEmail,
     phone: normalizedPhone,
+    category: formData.category?.trim() || '',
     bkashNumber: normalizedBkash,
     information: formData.information ? formData.information.trim() : '',
     createdAt: now,
@@ -324,6 +327,20 @@ export async function createBooking(
       }
     }
 
+    const categories = Array.isArray(event.categories) ? event.categories : []
+    if (categories.length > 0) {
+      const selectedCategory = formData.category?.trim()
+      if (!selectedCategory) {
+        return { success: false, error: 'Please select a category.' }
+      }
+      const categoryExists = categories.some(
+        (category) => category.name.trim().toLowerCase() === selectedCategory.toLowerCase()
+      )
+      if (!categoryExists) {
+        return { success: false, error: 'Selected category is not valid for this event.' }
+      }
+    }
+
     return await createBookingRecordAndSendEmail(event, formData)
   } catch (error) {
     console.error('Error creating booking:', error)
@@ -355,7 +372,7 @@ export async function initiatePaidEventCheckout(
       updatedAt: eventData.updatedAt?.toDate?.() || eventData.updatedAt,
     } as Event
 
-    if (!event.isPaid || !event.amount || event.amount <= 0) {
+    if (!event.isPaid) {
       return { success: false, error: 'This event does not require payment.' }
     }
     if (!isRegistrationOpen(event)) {
@@ -376,6 +393,28 @@ export async function initiatePaidEventCheckout(
       return { success: false, error: 'Phone number must be 11 digits and start with 01' }
     }
 
+    const categories = Array.isArray(event.categories) ? event.categories : []
+    let amountToPay = Number(event.amount || 0)
+    let selectedCategoryName = formData.category?.trim() || ''
+    if (categories.length > 0) {
+      if (!selectedCategoryName) {
+        return { success: false, error: 'Please select a category.' }
+      }
+      const selectedCategory = categories.find(
+        (category) => category.name.trim().toLowerCase() === selectedCategoryName.toLowerCase()
+      )
+      if (!selectedCategory) {
+        return { success: false, error: 'Selected category is not valid for this event.' }
+      }
+      selectedCategoryName = selectedCategory.name.trim()
+      if (selectedCategory.amount == null || selectedCategory.amount <= 0) {
+        return { success: false, error: 'Selected category does not have a valid fee configured.' }
+      }
+      amountToPay = Number(selectedCategory.amount)
+    } else if (!amountToPay || amountToPay <= 0) {
+      return { success: false, error: 'Paid event amount is not configured properly.' }
+    }
+
     const duplicate = await adminDb
       .collection('bookings')
       .where('eventId', '==', formData.eventId)
@@ -390,7 +429,7 @@ export async function initiatePaidEventCheckout(
 
     const callbackUrl = `${getBaseUrl()}/api/payments/bkash/success`
     const checkout = await bkashCreateCheckout({
-      amount: Number(event.amount),
+      amount: amountToPay,
       payerReference: normalizedPhone,
       callbackUrl,
       merchantInvoiceNumber: `${event.id}-${Date.now()}`.slice(0, 40),
@@ -404,8 +443,9 @@ export async function initiatePaidEventCheckout(
       school: formData.school.trim(),
       email: normalizedEmail,
       phone: normalizedPhone,
+      category: selectedCategoryName || undefined,
       information: formData.information ? formData.information.trim() : '',
-      amount: Number(event.amount),
+      amount: amountToPay,
       status: 'pending',
       createdAt: now,
       updatedAt: now,
@@ -474,6 +514,7 @@ export async function finalizePaidEventBooking(paymentId: string): Promise<{
         school: pending.school,
         email: pending.email,
         phone: pending.phone,
+        category: pending.category,
         information: pending.information,
       },
       {

@@ -200,6 +200,13 @@ export default async function EventDetailPage({
   const registrationOpen = isRegistrationOpen(event)
   const tags = getEventTags(event)
   const isOnline = event.location.toLowerCase().includes('online') || event.venue?.toLowerCase().includes('online')
+  const categoryFees =
+    Array.isArray(event.categories) && event.categories.length > 0
+      ? event.categories
+          .map((category) => category.amount)
+          .filter((amount): amount is number => amount != null && amount > 0)
+      : []
+  const minCategoryFee = categoryFees.length > 0 ? Math.min(...categoryFees) : null
 
   // Generate structured data
   const eventUrl = absoluteSiteUrl(`/events/${id}`)
@@ -364,7 +371,9 @@ export default async function EventDetailPage({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs sm:text-sm font-medium text-gray-500 mb-1">Fee</p>
-                      <p className="text-sm sm:text-base font-semibold text-gray-900">BDT {event.amount}</p>
+                      <p className="text-sm sm:text-base font-semibold text-gray-900">
+                        {minCategoryFee != null ? `Starts from BDT ${minCategoryFee}` : `BDT ${event.amount}`}
+                      </p>
                     </div>
                   </div>
                 )}

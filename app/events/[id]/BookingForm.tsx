@@ -10,6 +10,7 @@ export default function BookingForm({ event }: { event: Event }) {
     school: '',
     email: '',
     phone: '',
+    category: '',
     information: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -31,6 +32,9 @@ export default function BookingForm({ event }: { event: Event }) {
       newErrors.phone = 'Phone number is required'
     } else if (phoneDigits.length !== 11 || !phoneDigits.startsWith('01')) {
       newErrors.phone = 'Phone number must be 11 digits and start with 01'
+    }
+    if (event.categories && event.categories.length > 0 && !formData.category.trim()) {
+      newErrors.category = 'Please select a category'
     }
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -56,11 +60,12 @@ export default function BookingForm({ event }: { event: Event }) {
         school: formData.school.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim(),
+        category: formData.category.trim(),
         information: formData.information.trim(),
       }
 
       const result =
-        event.isPaid && event.amount != null && event.amount > 0
+        event.isPaid
           ? await initiatePaidEventCheckout(payload)
           : await createBooking(payload)
 
@@ -70,7 +75,7 @@ export default function BookingForm({ event }: { event: Event }) {
           return
         }
         setIsSubmitted(true)
-        setFormData({ name: '', school: '', email: '', phone: '', information: '' })
+        setFormData({ name: '', school: '', email: '', phone: '', category: '', information: '' })
         setTimeout(() => {
           setIsSubmitted(false)
         }, 5000)
@@ -111,13 +116,25 @@ export default function BookingForm({ event }: { event: Event }) {
     )
   }
 
+  const selectedCategory = event.categories?.find(
+    (category) => category.name.toLowerCase() === formData.category.trim().toLowerCase()
+  )
+  const hasCategories = Boolean(event.categories && event.categories.length > 0)
+  const hasSelectedCategory = !hasCategories || Boolean(formData.category.trim())
+  const payableAmount =
+    event.isPaid && selectedCategory?.amount != null && selectedCategory.amount > 0
+      ? selectedCategory.amount
+      : hasCategories
+      ? null
+      : event.amount
+
   return (
     <div className="bg-white rounded-xl sm:rounded-2xl p-5 sm:p-7 border-2 border-gray-200 shadow-lg hover:shadow-xl transition-shadow duration-300">
       <div className="mb-4 sm:mb-6">
         <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Registration Form</h3>
         <p className="text-xs sm:text-sm text-gray-500">{event.title}</p>
       </div>
-      {event.isPaid && event.amount != null && event.amount > 0 && (
+      {event.isPaid && (
         <>
           <div className="mb-5 p-4 rounded-xl bg-amber-50 border-2 border-amber-300 shadow-sm">
             <div className="flex items-center gap-2 mb-1">
@@ -125,7 +142,7 @@ export default function BookingForm({ event }: { event: Event }) {
               <span className="text-sm font-semibold text-amber-800 uppercase tracking-wide">Registration Fee</span>
             </div>
             <p className="text-2xl sm:text-3xl font-bold text-amber-700">
-              BDT {event.amount}
+              {payableAmount != null ? `BDT ${payableAmount}` : 'Select a category to see the fee'}
             </p>
             <p className="text-xs text-gray-600 mt-2">
               You will be redirected to bKash secure checkout after submitting this form.
@@ -162,6 +179,30 @@ export default function BookingForm({ event }: { event: Event }) {
             <p className="text-sm text-red-500 mt-1">{errors.name}</p>
           )}
         </div>
+        {hasCategories && (
+          <div>
+            <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+              Category <span className="text-red-500">*</span>
+            </label>
+            <select
+              id="category"
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              disabled={isLoading || isSubmitted}
+              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                errors.category ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <option value="">Select category</option>
+              {event.categories?.map((category) => (
+                <option key={category.name} value={category.name}>
+                  {event.isPaid && category.amount != null ? `${category.name} - BDT ${category.amount}` : category.name}
+                </option>
+              ))}
+            </select>
+            {errors.category && <p className="text-sm text-red-500 mt-1">{errors.category}</p>}
+          </div>
+        )}
         <div>
           <label
             htmlFor="school"
@@ -259,7 +300,7 @@ export default function BookingForm({ event }: { event: Event }) {
         </div>
         <button
           type="submit"
-          disabled={isLoading || isSubmitted}
+          disabled={isLoading || isSubmitted || (event.isPaid && !hasSelectedCategory)}
           className="w-full py-3 sm:py-3.5 px-4 sm:px-6 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm sm:text-base"
         >
           {isLoading ? 'Submitting...' : isSubmitted ? 'Submitted' : event.isPaid ? 'Proceed to bKash' : 'Submit'}
