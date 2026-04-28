@@ -1,5 +1,4 @@
 import React from 'react'
-import Script from 'next/script'
 import { Metadata } from 'next'
 import { SITE_CONFIG } from '@/lib/site-config'
 import { getEventsItemListSchema } from '@/lib/seo'
@@ -66,10 +65,9 @@ export default async function EventsPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {initialUpcoming.length > 0 ? (
-        <Script
+        <template
           id="events-itemlist-schema"
-          type="application/ld+json"
-          strategy="beforeInteractive"
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: itemListJsonLd }}
         />
       ) : null}
