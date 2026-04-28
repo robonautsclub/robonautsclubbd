@@ -643,11 +643,17 @@ export async function getBookings(eventId: string): Promise<Booking[]> {
             : data.createdAt instanceof Date
             ? data.createdAt.toISOString()
             : data.createdAt
+          const paidAt = data.paidAt?.toDate
+            ? data.paidAt.toDate().toISOString()
+            : data.paidAt instanceof Date
+            ? data.paidAt.toISOString()
+            : data.paidAt
           
           bookings.push({
             id: doc.id,
             ...data,
             createdAt,
+            paidAt,
           } as Booking)
         })
 
