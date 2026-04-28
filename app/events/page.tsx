@@ -42,8 +42,8 @@ export const metadata: Metadata = {
   },
 };
 
-// ISR: 5m window reduces edge/ISR churn; admin actions still call revalidatePath
-export const revalidate = 300
+// ISR: longer window minimizes edge recompute churn; admin actions still call revalidatePath
+export const revalidate = 900
 
 // --- Main Page ---
 export default async function EventsPage() {
@@ -133,7 +133,7 @@ export default async function EventsPage() {
       {/* Main Content */}
       <main className="flex-1 py-12 sm:py-16 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
-          {/* Real-time Events List - Automatically updates when database changes */}
+          {/* Server-rendered events list (no client realtime listeners) */}
           <RealtimeEventsList initialEvents={initialEvents} />
 
           {/* Call to action */}
