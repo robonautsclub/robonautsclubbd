@@ -33,6 +33,9 @@ export default function CreateEventForm() {
     paymentBkashNumber: '',
     categories: [] as Array<{ name: string; amount: '' | number }>,
     registrationClosingDate: '',
+    contactPersonName: '',
+    contactPersonDesignation: '',
+    contactPersonMobileOrEmail: '',
   })
   const [tagInput, setTagInput] = useState('')
 
@@ -180,6 +183,9 @@ export default function CreateEventForm() {
           amount: formData.isPaid ? category.amount : undefined,
         })),
         registrationClosingDate: formData.registrationClosingDate?.trim() || undefined,
+        contactPersonName: formData.contactPersonName.trim(),
+        contactPersonDesignation: formData.contactPersonDesignation.trim(),
+        contactPersonMobileOrEmail: formData.contactPersonMobileOrEmail.trim(),
       })
 
       if (result.success) {
@@ -201,6 +207,9 @@ export default function CreateEventForm() {
           paymentBkashNumber: '',
           categories: [],
           registrationClosingDate: '',
+          contactPersonName: '',
+          contactPersonDesignation: '',
+          contactPersonMobileOrEmail: '',
         })
         setTagInput('')
         setImagePreview(null)
@@ -727,6 +736,40 @@ export default function CreateEventForm() {
                   Recommended size: 1200 × 800 pixels (3:2 aspect ratio) for best display quality
                 </p>
               </div>
+            </div>
+
+            {/* Contact person */}
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Users className="w-4 h-4 text-indigo-600" />
+                Contact Person (optional)
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input
+                  type="text"
+                  value={formData.contactPersonName}
+                  onChange={(e) => setFormData({ ...formData, contactPersonName: e.target.value })}
+                  placeholder="Contact person name"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                  disabled={loading}
+                />
+                <input
+                  type="text"
+                  value={formData.contactPersonDesignation}
+                  onChange={(e) => setFormData({ ...formData, contactPersonDesignation: e.target.value })}
+                  placeholder="Designation"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                  disabled={loading}
+                />
+              </div>
+              <input
+                type="text"
+                value={formData.contactPersonMobileOrEmail}
+                onChange={(e) => setFormData({ ...formData, contactPersonMobileOrEmail: e.target.value })}
+                placeholder="Mobile number or email"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                disabled={loading}
+              />
             </div>
 
             {/* Action Buttons */}

@@ -53,6 +53,9 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
       : [],
     registrationClosingDate: (typeof event.registrationClosingDate === 'string' ? event.registrationClosingDate : '') ?? '',
     registrationDisabled: event.registrationDisabled ?? false,
+    contactPersonName: event.contactPersonName ?? '',
+    contactPersonDesignation: event.contactPersonDesignation ?? '',
+    contactPersonMobileOrEmail: event.contactPersonMobileOrEmail ?? '',
   })
   const [tagInput, setTagInput] = useState('')
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -163,6 +166,9 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
         })),
         registrationClosingDate: formData.registrationClosingDate?.trim() ?? '',
         registrationDisabled: formData.registrationDisabled,
+        contactPersonName: formData.contactPersonName.trim(),
+        contactPersonDesignation: formData.contactPersonDesignation.trim(),
+        contactPersonMobileOrEmail: formData.contactPersonMobileOrEmail.trim(),
       })
 
       if (result.success) {
@@ -681,6 +687,39 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
                 </label>
               </div>
             )}
+          </div>
+
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <Users className="w-4 h-4 text-indigo-500" />
+              Contact Person (optional)
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input
+                type="text"
+                value={formData.contactPersonName}
+                onChange={(e) => setFormData({ ...formData, contactPersonName: e.target.value })}
+                placeholder="Contact person name"
+                className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                disabled={loading}
+              />
+              <input
+                type="text"
+                value={formData.contactPersonDesignation}
+                onChange={(e) => setFormData({ ...formData, contactPersonDesignation: e.target.value })}
+                placeholder="Designation"
+                className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                disabled={loading}
+              />
+            </div>
+            <input
+              type="text"
+              value={formData.contactPersonMobileOrEmail}
+              onChange={(e) => setFormData({ ...formData, contactPersonMobileOrEmail: e.target.value })}
+              placeholder="Mobile number or email"
+              className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+              disabled={loading}
+            />
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t-2 border-gray-200 sticky bottom-0 bg-white">

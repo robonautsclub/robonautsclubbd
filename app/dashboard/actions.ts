@@ -254,6 +254,9 @@ export async function createEvent(formData: {
   paymentBkashNumber?: string
   categories?: Array<{ name: string; amount?: number }>
   registrationClosingDate?: string
+  contactPersonName?: string
+  contactPersonDesignation?: string
+  contactPersonMobileOrEmail?: string
 }): Promise<{ success: boolean; error?: string; eventId?: string }> {
   const session = await requireAuth()
 
@@ -324,6 +327,9 @@ export async function createEvent(formData: {
       ...(categories.length > 0 && { categories }),
       ...(isPaid && formData.paymentBkashNumber?.trim() && { paymentBkashNumber: formData.paymentBkashNumber.trim() }),
       ...(formData.registrationClosingDate?.trim() && { registrationClosingDate: formData.registrationClosingDate.trim() }),
+      contactPersonName: formData.contactPersonName?.trim() ?? '',
+      contactPersonDesignation: formData.contactPersonDesignation?.trim() ?? '',
+      contactPersonMobileOrEmail: formData.contactPersonMobileOrEmail?.trim() ?? '',
       createdAt: now,
       updatedAt: now,
       createdBy: session.uid,
@@ -380,6 +386,9 @@ export async function updateEvent(
     categories?: Array<{ name: string; amount?: number }>
     registrationClosingDate?: string
     registrationDisabled?: boolean
+    contactPersonName?: string
+    contactPersonDesignation?: string
+    contactPersonMobileOrEmail?: string
   }
 ): Promise<{ success: boolean; error?: string }> {
   const session = await requireAuth()
@@ -474,6 +483,9 @@ export async function updateEvent(
       paymentBkashNumber: isPaid ? (formData.paymentBkashNumber ?? '').toString().trim() : '',
       registrationClosingDate: formData.registrationClosingDate?.trim() ?? '',
       registrationDisabled: formData.registrationDisabled ?? false,
+      contactPersonName: formData.contactPersonName?.trim() ?? '',
+      contactPersonDesignation: formData.contactPersonDesignation?.trim() ?? '',
+      contactPersonMobileOrEmail: formData.contactPersonMobileOrEmail?.trim() ?? '',
       updatedAt: new Date(),
     })
 
