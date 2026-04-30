@@ -7,6 +7,8 @@ import { createEvent } from '../actions'
 import { Plus, X, Calendar, Clock, MapPin, FileText, Users, Image as ImageIcon, Sparkles, Upload, Trash2, Tag, Banknote } from 'lucide-react'
 import MultiDatePicker from './MultiDatePicker'
 import TimePicker from './TimePicker'
+import CustomFormBuilder from './CustomFormBuilder'
+import type { EventCustomFormField, EventDefaultRegistrationFields } from '@/types/event'
 
 export default function CreateEventForm() {
   const router = useRouter()
@@ -36,6 +38,15 @@ export default function CreateEventForm() {
     contactPersonName: '',
     contactPersonDesignation: '',
     contactPersonMobileOrEmail: '',
+    customFormFields: [] as EventCustomFormField[],
+    defaultRegistrationFields: {
+      name: { enabled: true, required: true },
+      email: { enabled: true, required: true },
+      phone: { enabled: true, required: true },
+      school: { enabled: true, required: true },
+      category: { enabled: true, required: false },
+      information: { enabled: true, required: false },
+    } as EventDefaultRegistrationFields,
   })
   const [tagInput, setTagInput] = useState('')
 
@@ -186,6 +197,8 @@ export default function CreateEventForm() {
         contactPersonName: formData.contactPersonName.trim(),
         contactPersonDesignation: formData.contactPersonDesignation.trim(),
         contactPersonMobileOrEmail: formData.contactPersonMobileOrEmail.trim(),
+        customFormFields: formData.customFormFields,
+        defaultRegistrationFields: formData.defaultRegistrationFields,
       })
 
       if (result.success) {
@@ -210,6 +223,15 @@ export default function CreateEventForm() {
           contactPersonName: '',
           contactPersonDesignation: '',
           contactPersonMobileOrEmail: '',
+          customFormFields: [],
+          defaultRegistrationFields: {
+            name: { enabled: true, required: true },
+            email: { enabled: true, required: true },
+            phone: { enabled: true, required: true },
+            school: { enabled: true, required: true },
+            category: { enabled: true, required: false },
+            information: { enabled: true, required: false },
+          },
         })
         setTagInput('')
         setImagePreview(null)
@@ -769,6 +791,92 @@ export default function CreateEventForm() {
                 placeholder="Mobile number or email"
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
                 disabled={loading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="space-y-3 border-2 border-gray-200 rounded-xl p-4">
+                <h4 className="text-sm font-semibold text-gray-700">Default Registration Fields</h4>
+                <p className="text-xs text-gray-500">Name, email, and phone are always required.</p>
+
+                <div className="grid grid-cols-1 gap-2 text-sm">
+                  <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
+                    <span>Name</span>
+                    <span className="text-xs font-medium text-gray-500">Always required</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
+                    <span>Email</span>
+                    <span className="text-xs font-medium text-gray-500">Always required</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
+                    <span>Phone</span>
+                    <span className="text-xs font-medium text-gray-500">Always required</span>
+                  </div>
+
+                  {(['school', 'category', 'information'] as const).map((fieldKey) => (
+                    <div key={fieldKey} className="rounded-lg border border-gray-200 px-3 py-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="capitalize">{fieldKey === 'information' ? 'Other Information' : fieldKey}</span>
+                        <label className="inline-flex items-center gap-2 text-xs text-gray-600">
+                          <input
+                            type="checkbox"
+                            checked={formData.defaultRegistrationFields[fieldKey].enabled}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                defaultRegistrationFields: {
+                                  ...formData.defaultRegistrationFields,
+                                  [fieldKey]: {
+                                    ...formData.defaultRegistrationFields[fieldKey],
+                                    enabled: e.target.checked,
+                                    required: e.target.checked
+                                      ? formData.defaultRegistrationFields[fieldKey].required
+                                      : false,
+                                  },
+                                },
+                              })
+                            }
+                            disabled={
+                              loading ||
+                              uploading ||
+                              (fieldKey === 'category' && formData.categories.some((category) => category.name.trim().length > 0))
+                            }
+                          />
+                          Enabled
+                        </label>
+                      </div>
+                      {fieldKey === 'category' && formData.categories.some((category) => category.name.trim().length > 0) && (
+                        <p className="mt-1 text-xs text-gray-500">Category stays enabled when event categories are configured.</p>
+                      )}
+                      <label className="mt-2 inline-flex items-center gap-2 text-xs text-gray-600">
+                        <input
+                          type="checkbox"
+                          checked={formData.defaultRegistrationFields[fieldKey].required}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              defaultRegistrationFields: {
+                                ...formData.defaultRegistrationFields,
+                                [fieldKey]: {
+                                  ...formData.defaultRegistrationFields[fieldKey],
+                                  required: e.target.checked,
+                                },
+                              },
+                            })
+                          }
+                          disabled={loading || uploading || !formData.defaultRegistrationFields[fieldKey].enabled}
+                        />
+                        Required
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <CustomFormBuilder
+                fields={formData.customFormFields}
+                onChange={(customFormFields) => setFormData({ ...formData, customFormFields })}
+                disabled={loading || uploading}
               />
             </div>
 
