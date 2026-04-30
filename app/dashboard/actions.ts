@@ -9,6 +9,8 @@ import { Booking } from '@/types/booking'
 import { Course } from '@/types/course'
 import { sanitizeEventForDatabase } from '@/lib/textSanitizer'
 import { createNotification } from '@/lib/notifications'
+import { normalizeCustomFormFields } from '@/lib/eventCustomForm'
+import { normalizeDefaultRegistrationFields } from '@/lib/registrationFields'
 import type { Session } from '@/lib/auth'
 import type {
   DashboardBootstrapData,
@@ -268,6 +270,8 @@ export async function createEvent(formData: {
   contactPersonName?: string
   contactPersonDesignation?: string
   contactPersonMobileOrEmail?: string
+  customFormFields?: Event['customFormFields']
+  defaultRegistrationFields?: Event['defaultRegistrationFields']
 }): Promise<{ success: boolean; error?: string; eventId?: string }> {
   const session = await requireAuth()
 
@@ -321,6 +325,10 @@ export async function createEvent(formData: {
     // Use sanitized values for all text fields
     const isPaid = formData.isPaid ?? false
     const categories = normalizeEventCategories(formData.categories, isPaid)
+    const customFormFields = normalizeCustomFormFields(formData.customFormFields)
+    const defaultRegistrationFields = normalizeDefaultRegistrationFields(formData.defaultRegistrationFields, {
+      hasCategories: categories.length > 0,
+    })
     const eventRef = await adminDb.collection('events').add({
       title: sanitized.title,
       date: normalizedDate,
@@ -341,6 +349,8 @@ export async function createEvent(formData: {
       contactPersonName: formData.contactPersonName?.trim() ?? '',
       contactPersonDesignation: formData.contactPersonDesignation?.trim() ?? '',
       contactPersonMobileOrEmail: formData.contactPersonMobileOrEmail?.trim() ?? '',
+      customFormFields,
+      defaultRegistrationFields,
       createdAt: now,
       updatedAt: now,
       createdBy: session.uid,
@@ -401,6 +411,8 @@ export async function updateEvent(
     contactPersonName?: string
     contactPersonDesignation?: string
     contactPersonMobileOrEmail?: string
+    customFormFields?: Event['customFormFields']
+    defaultRegistrationFields?: Event['defaultRegistrationFields']
   }
 ): Promise<{ success: boolean; error?: string }> {
   const session = await requireAuth()
@@ -477,6 +489,10 @@ export async function updateEvent(
     // Use sanitized values for all text fields
     const isPaid = formData.isPaid ?? false
     const categories = normalizeEventCategories(formData.categories, isPaid)
+    const customFormFields = normalizeCustomFormFields(formData.customFormFields)
+    const defaultRegistrationFields = normalizeDefaultRegistrationFields(formData.defaultRegistrationFields, {
+      hasCategories: categories.length > 0,
+    })
     await adminDb.collection('events').doc(eventId).update({
       title: sanitized.title,
       date: normalizedDate,
@@ -498,6 +514,8 @@ export async function updateEvent(
       contactPersonName: formData.contactPersonName?.trim() ?? '',
       contactPersonDesignation: formData.contactPersonDesignation?.trim() ?? '',
       contactPersonMobileOrEmail: formData.contactPersonMobileOrEmail?.trim() ?? '',
+      customFormFields,
+      defaultRegistrationFields,
       updatedAt: new Date(),
     })
 

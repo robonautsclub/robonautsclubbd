@@ -9,6 +9,8 @@ import { sendBookingConfirmationEmail } from '@/lib/email'
 import { generateRegistrationId } from '@/lib/registrationId'
 import { isRegistrationOpen } from '@/lib/dateUtils'
 import { bkashCreateCheckout, bkashExecutePayment, bkashQueryPayment } from '@/lib/bkash'
+import { normalizeCustomFormAnswers, validateCustomFormAnswers } from '@/lib/eventCustomForm'
+import { getEventRegistrationFields } from '@/lib/registrationFields'
 
 const PUBLIC_EVENTS_TAG = 'public-events'
 const PUBLIC_EVENT_TAG_PREFIX = 'public-event'
@@ -39,28 +41,28 @@ const getCachedPublicEvents = unstable_cache(
       .orderBy('createdAt', 'desc')
       .limit(PUBLIC_EVENTS_MAX)
       .get()
-    
+
     const events: Event[] = []
     eventsSnapshot.forEach((doc) => {
       const data = doc.data()
-      
+
       // Convert Firestore Timestamps to ISO strings for serialization
       const createdAt = data.createdAt?.toDate?.() || data.createdAt
       const updatedAt = data.updatedAt?.toDate?.() || data.updatedAt
-      
+
       // Convert Date objects to ISO strings for Next.js serialization
-      const createdAtStr = createdAt instanceof Date 
-        ? createdAt.toISOString() 
-        : typeof createdAt === 'string' 
-        ? createdAt 
+      const createdAtStr = createdAt instanceof Date
+        ? createdAt.toISOString()
+        : typeof createdAt === 'string'
+        ? createdAt
         : null
-      
-      const updatedAtStr = updatedAt instanceof Date 
-        ? updatedAt.toISOString() 
-        : typeof updatedAt === 'string' 
-        ? updatedAt 
+
+      const updatedAtStr = updatedAt instanceof Date
+        ? updatedAt.toISOString()
+        : typeof updatedAt === 'string'
+        ? updatedAt
         : null
-      
+
       // Handle date field - convert Timestamp to string if needed
       let dateValue = data.date
       if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue) {
@@ -70,7 +72,7 @@ const getCachedPublicEvents = unstable_cache(
         // It's a Firestore Timestamp (alternative format)
         dateValue = new Date(dateValue._seconds * 1000).toISOString().split('T')[0]
       }
-      
+
       events.push({
         id: doc.id,
         ...data,
@@ -85,7 +87,7 @@ const getCachedPublicEvents = unstable_cache(
       if (!a.createdAt && !b.createdAt) return 0
       if (!a.createdAt) return 1
       if (!b.createdAt) return -1
-      
+
       const dateA = new Date(a.createdAt).getTime()
       const dateB = new Date(b.createdAt).getTime()
       return dateB - dateA // Descending order
@@ -122,30 +124,30 @@ const getCachedPublicEvent = (id: string) =>
 
   try {
     const eventDoc = await adminDb.collection('events').doc(id).get()
-    
+
     if (!eventDoc.exists) {
       return null
     }
 
     const data = eventDoc.data()!
-    
+
     // Convert Firestore Timestamps to ISO strings for serialization
     const createdAt = data.createdAt?.toDate?.() || data.createdAt
     const updatedAt = data.updatedAt?.toDate?.() || data.updatedAt
-    
+
     // Convert Date objects to ISO strings for Next.js serialization
-    const createdAtStr = createdAt instanceof Date 
-      ? createdAt.toISOString() 
-      : typeof createdAt === 'string' 
-      ? createdAt 
+    const createdAtStr = createdAt instanceof Date
+      ? createdAt.toISOString()
+      : typeof createdAt === 'string'
+      ? createdAt
       : new Date().toISOString()
-    
-    const updatedAtStr = updatedAt instanceof Date 
-      ? updatedAt.toISOString() 
-      : typeof updatedAt === 'string' 
-      ? updatedAt 
+
+    const updatedAtStr = updatedAt instanceof Date
+      ? updatedAt.toISOString()
+      : typeof updatedAt === 'string'
+      ? updatedAt
       : new Date().toISOString()
-    
+
     // Handle date field - convert Timestamp to string if needed
     let dateValue = data.date
     if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue) {
@@ -155,7 +157,7 @@ const getCachedPublicEvent = (id: string) =>
       // It's a Firestore Timestamp (alternative format)
       dateValue = new Date(dateValue._seconds * 1000).toISOString().split('T')[0]
     }
-    
+
     return {
       id: eventDoc.id,
       ...data,
@@ -180,23 +182,25 @@ export const getPublicEvent = cache(async (id: string): Promise<Event | null> =>
 type BookingInput = {
   eventId: string
   name: string
-  school: string
+  school?: string
   email: string
   phone: string
   category?: string
   bkashNumber?: string
-  information: string
+  information?: string
+  customAnswers?: Record<string, string | string[] | number | null | undefined>
 }
 
 type PendingPaidRegistration = {
   paymentId: string
   eventId: string
   name: string
-  school: string
+  school?: string
   email: string
   phone: string
   category?: string
-  information: string
+  information?: string
+  customAnswers?: Record<string, string | string[] | number>
   amount: number
   status: 'pending' | 'completed' | 'failed'
   bookingId?: string
@@ -253,6 +257,7 @@ async function createBookingRecordAndSendEmail(
   const normalizedPhone = formData.phone.trim().replace(/\s/g, '')
   const normalizedBkash = formData.bkashNumber?.trim().replace(/\s/g, '') ?? ''
   const normalizedEmail = formData.email.trim().toLowerCase()
+  const defaultRegistrationFields = getEventRegistrationFields(event)
 
   const alreadyExists = await hasExistingRegistration(formData.eventId, normalizedEmail)
   if (alreadyExists) {
@@ -271,12 +276,13 @@ async function createBookingRecordAndSendEmail(
     eventId: formData.eventId,
     registrationId,
     name: formData.name.trim(),
-    school: formData.school.trim(),
+    school: defaultRegistrationFields.school.enabled ? formData.school?.trim() || '' : '',
     email: normalizedEmail,
     phone: normalizedPhone,
-    category: formData.category?.trim() || '',
+    category: defaultRegistrationFields.category.enabled ? formData.category?.trim() || '' : '',
     bkashNumber: normalizedBkash,
-    information: formData.information ? formData.information.trim() : '',
+    information: defaultRegistrationFields.information.enabled ? (formData.information ? formData.information.trim() : '') : '',
+    customAnswers: normalizeCustomFormAnswers(event.customFormFields, formData.customAnswers),
     createdAt: now,
   }
 
@@ -351,8 +357,16 @@ export async function createBooking(
       return { success: false, error: 'Registration for this event is closed.' }
     }
 
-    if (!formData.eventId || !formData.name || !formData.school || !formData.email || !formData.phone?.trim()) {
+    const defaultRegistrationFields = getEventRegistrationFields(event)
+
+    if (!formData.eventId || !formData.name || !formData.email || !formData.phone?.trim()) {
       return { success: false, error: 'All required fields must be filled' }
+    }
+    if (defaultRegistrationFields.school.enabled && defaultRegistrationFields.school.required && !formData.school?.trim()) {
+      return { success: false, error: 'School is required.' }
+    }
+    if (defaultRegistrationFields.information.enabled && defaultRegistrationFields.information.required && !formData.information?.trim()) {
+      return { success: false, error: 'Other information is required.' }
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -373,17 +387,24 @@ export async function createBooking(
     }
 
     const categories = Array.isArray(event.categories) ? event.categories : []
-    if (categories.length > 0) {
+    if (defaultRegistrationFields.category.enabled && categories.length > 0) {
       const selectedCategory = formData.category?.trim()
-      if (!selectedCategory) {
+      if (defaultRegistrationFields.category.required && !selectedCategory) {
         return { success: false, error: 'Please select a category.' }
       }
-      const categoryExists = categories.some(
-        (category) => category.name.trim().toLowerCase() === selectedCategory.toLowerCase()
-      )
-      if (!categoryExists) {
-        return { success: false, error: 'Selected category is not valid for this event.' }
+      if (selectedCategory) {
+        const categoryExists = categories.some(
+          (category) => category.name.trim().toLowerCase() === selectedCategory.toLowerCase()
+        )
+        if (!categoryExists) {
+          return { success: false, error: 'Selected category is not valid for this event.' }
+        }
       }
+    }
+
+    const customAnswerError = validateCustomFormAnswers(event.customFormFields, formData.customAnswers)
+    if (customAnswerError) {
+      return { success: false, error: customAnswerError }
     }
 
     return await createBookingRecordAndSendEmail(event, formData)
@@ -427,9 +448,16 @@ export async function initiatePaidEventCheckout(
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     const normalizedPhone = formData.phone.trim().replace(/\s/g, '')
     const normalizedEmail = formData.email.trim().toLowerCase()
+    const defaultRegistrationFields = getEventRegistrationFields(event)
 
-    if (!formData.name.trim() || !formData.school.trim() || !normalizedEmail || !normalizedPhone) {
+    if (!formData.name.trim() || !normalizedEmail || !normalizedPhone) {
       return { success: false, error: 'All required fields must be filled' }
+    }
+    if (defaultRegistrationFields.school.enabled && defaultRegistrationFields.school.required && !formData.school?.trim()) {
+      return { success: false, error: 'School is required.' }
+    }
+    if (defaultRegistrationFields.information.enabled && defaultRegistrationFields.information.required && !formData.information?.trim()) {
+      return { success: false, error: 'Other information is required.' }
     }
     if (!emailRegex.test(normalizedEmail)) {
       return { success: false, error: 'Invalid email format' }
@@ -441,7 +469,7 @@ export async function initiatePaidEventCheckout(
     const categories = Array.isArray(event.categories) ? event.categories : []
     let amountToPay = Number(event.amount || 0)
     let selectedCategoryName = formData.category?.trim() || ''
-    if (categories.length > 0) {
+    if (defaultRegistrationFields.category.enabled && categories.length > 0) {
       if (!selectedCategoryName) {
         return { success: false, error: 'Please select a category.' }
       }
@@ -458,6 +486,11 @@ export async function initiatePaidEventCheckout(
       amountToPay = Number(selectedCategory.amount)
     } else if (!amountToPay || amountToPay <= 0) {
       return { success: false, error: 'Paid event amount is not configured properly.' }
+    }
+
+    const customAnswerError = validateCustomFormAnswers(event.customFormFields, formData.customAnswers)
+    if (customAnswerError) {
+      return { success: false, error: customAnswerError }
     }
 
     const duplicate = await hasExistingRegistration(formData.eventId, normalizedEmail)
@@ -481,11 +514,12 @@ export async function initiatePaidEventCheckout(
       paymentId: checkout.paymentId,
       eventId: formData.eventId,
       name: formData.name.trim(),
-      school: formData.school.trim(),
+      school: defaultRegistrationFields.school.enabled ? formData.school?.trim() || '' : '',
       email: normalizedEmail,
       phone: normalizedPhone,
-      category: selectedCategoryName || undefined,
-      information: formData.information ? formData.information.trim() : '',
+      category: defaultRegistrationFields.category.enabled ? selectedCategoryName || undefined : undefined,
+      information: defaultRegistrationFields.information.enabled ? (formData.information ? formData.information.trim() : '') : '',
+      customAnswers: normalizeCustomFormAnswers(event.customFormFields, formData.customAnswers),
       amount: amountToPay,
       status: 'pending',
       createdAt: now,
@@ -525,29 +559,58 @@ export async function finalizePaidEventBooking(paymentId: string): Promise<{
     try {
       execution = await bkashExecutePayment(paymentId)
     } catch (executeError) {
-      // Execute can fail for already-processed payment IDs; query current state before failing.
+      const isNoResponseFromExecute =
+        executeError instanceof BkashApiError
+          ? executeError.noResponse
+          : false
+
+      if (!isNoResponseFromExecute) {
+        await pendingRef.update({ status: 'failed', updatedAt: new Date() })
+        return {
+          success: false,
+          error:
+            executeError instanceof BkashApiError
+              ? executeError.statusMessage || executeError.message
+              : 'Failed to execute payment with bKash.',
+        }
+      }
+
+      // Query API is only used when execute returned no response (timeout/unknown).
       try {
         const queried = await bkashQueryPayment(paymentId)
         const queriedStatus = queried.transactionStatus.toLowerCase()
-        if (queriedStatus !== 'completed' && queriedStatus !== 'success') {
+        if (queriedStatus !== 'completed') {
           await pendingRef.update({ status: 'failed', updatedAt: new Date() })
-          return { success: false, error: `Payment is not successful (${queried.transactionStatus}).` }
+          return {
+            success: false,
+            error: queried.statusMessage || `Payment is not successful (${queried.transactionStatus}).`,
+          }
         }
         execution = queried
       } catch (queryError) {
-        console.error('bKash execute+query both failed', {
+        console.error('bKash execute timeout and query failed', {
           paymentId,
           executeError: executeError instanceof Error ? executeError.message : String(executeError),
           queryError: queryError instanceof Error ? queryError.message : String(queryError),
         })
-        return { success: false, error: 'Failed to verify payment status with bKash. Please contact support.' }
+        await pendingRef.update({ status: 'failed', updatedAt: new Date() })
+        return {
+          success: false,
+          error:
+            queryError instanceof BkashApiError
+              ? queryError.statusMessage || queryError.message
+              : 'Failed to verify payment status with bKash. Please contact support.',
+        }
       }
     }
 
     const transactionStatus = execution.transactionStatus.toLowerCase()
-    if (transactionStatus !== 'completed' && transactionStatus !== 'success') {
+    if (transactionStatus !== 'completed' ) {
       await pendingRef.update({ status: 'failed', updatedAt: new Date() })
-      return { success: false, error: `Payment is not successful (${execution.transactionStatus}).` }
+      return {
+        success: false,
+        error: execution.statusMessage || `Payment is not successful (${execution.transactionStatus}).`,
+      }
     }
 
     const eventDoc = await adminDb.collection('events').doc(pending.eventId).get()
@@ -579,6 +642,7 @@ export async function finalizePaidEventBooking(paymentId: string): Promise<{
         phone: pending.phone,
         category: pending.category,
         information: pending.information,
+        customAnswers: pending.customAnswers,
       },
       {
         paymentId: execution.paymentId,
@@ -606,6 +670,31 @@ export async function finalizePaidEventBooking(paymentId: string): Promise<{
   }
 }
 
+export async function refundPaidEventPayment(input: {
+  paymentId: string
+  trxId: string
+  amount: number
+  reason: string
+  sku?: string
+}): Promise<{ success: boolean; error?: string; refundTrxId?: string }> {
+  try {
+    const result = await bkashRefundPayment({
+      paymentId: input.paymentId,
+      trxId: input.trxId,
+      amount: input.amount,
+      reason: input.reason,
+      sku: input.sku,
+    })
+
+    return { success: true, refundTrxId: result.refundTrxId }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof BkashApiError ? error.statusMessage || error.message : 'Failed to refund payment.',
+    }
+  }
+}
+
 /**
  * Get all courses from Firestore (public - no auth required)
  * Only returns non-archived courses
@@ -626,28 +715,28 @@ const getCachedPublicCourses = unstable_cache(
       .where('isArchived', '==', false)
       .limit(PUBLIC_COURSES_MAX)
       .get()
-    
+
     const courses: Course[] = []
     coursesSnapshot.forEach((doc) => {
       const data = doc.data()
-      
+
       // Convert Firestore Timestamps to ISO strings for serialization
       const createdAt = data.createdAt?.toDate?.() || data.createdAt
       const updatedAt = data.updatedAt?.toDate?.() || data.updatedAt
-      
+
       // Convert Date objects to ISO strings for Next.js serialization
-      const createdAtStr = createdAt instanceof Date 
-        ? createdAt.toISOString() 
-        : typeof createdAt === 'string' 
-        ? createdAt 
+      const createdAtStr = createdAt instanceof Date
+        ? createdAt.toISOString()
+        : typeof createdAt === 'string'
+        ? createdAt
         : new Date().toISOString()
-      
-      const updatedAtStr = updatedAt instanceof Date 
-        ? updatedAt.toISOString() 
-        : typeof updatedAt === 'string' 
-        ? updatedAt 
+
+      const updatedAtStr = updatedAt instanceof Date
+        ? updatedAt.toISOString()
+        : typeof updatedAt === 'string'
+        ? updatedAt
         : new Date().toISOString()
-      
+
       courses.push({
         id: doc.id,
         ...data,
@@ -661,7 +750,7 @@ const getCachedPublicCourses = unstable_cache(
       if (!a.createdAt && !b.createdAt) return 0
       if (!a.createdAt) return 1
       if (!b.createdAt) return -1
-      
+
       const dateA = new Date(a.createdAt).getTime()
       const dateB = new Date(b.createdAt).getTime()
       return dateB - dateA // Descending order
