@@ -41,28 +41,28 @@ const getCachedPublicEvents = unstable_cache(
       .orderBy('createdAt', 'desc')
       .limit(PUBLIC_EVENTS_MAX)
       .get()
-    
+
     const events: Event[] = []
     eventsSnapshot.forEach((doc) => {
       const data = doc.data()
-      
+
       // Convert Firestore Timestamps to ISO strings for serialization
       const createdAt = data.createdAt?.toDate?.() || data.createdAt
       const updatedAt = data.updatedAt?.toDate?.() || data.updatedAt
-      
+
       // Convert Date objects to ISO strings for Next.js serialization
-      const createdAtStr = createdAt instanceof Date 
-        ? createdAt.toISOString() 
-        : typeof createdAt === 'string' 
-        ? createdAt 
+      const createdAtStr = createdAt instanceof Date
+        ? createdAt.toISOString()
+        : typeof createdAt === 'string'
+        ? createdAt
         : null
-      
-      const updatedAtStr = updatedAt instanceof Date 
-        ? updatedAt.toISOString() 
-        : typeof updatedAt === 'string' 
-        ? updatedAt 
+
+      const updatedAtStr = updatedAt instanceof Date
+        ? updatedAt.toISOString()
+        : typeof updatedAt === 'string'
+        ? updatedAt
         : null
-      
+
       // Handle date field - convert Timestamp to string if needed
       let dateValue = data.date
       if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue) {
@@ -72,7 +72,7 @@ const getCachedPublicEvents = unstable_cache(
         // It's a Firestore Timestamp (alternative format)
         dateValue = new Date(dateValue._seconds * 1000).toISOString().split('T')[0]
       }
-      
+
       events.push({
         id: doc.id,
         ...data,
@@ -87,7 +87,7 @@ const getCachedPublicEvents = unstable_cache(
       if (!a.createdAt && !b.createdAt) return 0
       if (!a.createdAt) return 1
       if (!b.createdAt) return -1
-      
+
       const dateA = new Date(a.createdAt).getTime()
       const dateB = new Date(b.createdAt).getTime()
       return dateB - dateA // Descending order
@@ -124,30 +124,30 @@ const getCachedPublicEvent = (id: string) =>
 
   try {
     const eventDoc = await adminDb.collection('events').doc(id).get()
-    
+
     if (!eventDoc.exists) {
       return null
     }
 
     const data = eventDoc.data()!
-    
+
     // Convert Firestore Timestamps to ISO strings for serialization
     const createdAt = data.createdAt?.toDate?.() || data.createdAt
     const updatedAt = data.updatedAt?.toDate?.() || data.updatedAt
-    
+
     // Convert Date objects to ISO strings for Next.js serialization
-    const createdAtStr = createdAt instanceof Date 
-      ? createdAt.toISOString() 
-      : typeof createdAt === 'string' 
-      ? createdAt 
+    const createdAtStr = createdAt instanceof Date
+      ? createdAt.toISOString()
+      : typeof createdAt === 'string'
+      ? createdAt
       : new Date().toISOString()
-    
-    const updatedAtStr = updatedAt instanceof Date 
-      ? updatedAt.toISOString() 
-      : typeof updatedAt === 'string' 
-      ? updatedAt 
+
+    const updatedAtStr = updatedAt instanceof Date
+      ? updatedAt.toISOString()
+      : typeof updatedAt === 'string'
+      ? updatedAt
       : new Date().toISOString()
-    
+
     // Handle date field - convert Timestamp to string if needed
     let dateValue = data.date
     if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue) {
@@ -157,7 +157,7 @@ const getCachedPublicEvent = (id: string) =>
       // It's a Firestore Timestamp (alternative format)
       dateValue = new Date(dateValue._seconds * 1000).toISOString().split('T')[0]
     }
-    
+
     return {
       id: eventDoc.id,
       ...data,
@@ -579,7 +579,7 @@ export async function finalizePaidEventBooking(paymentId: string): Promise<{
     }
 
     const transactionStatus = execution.transactionStatus.toLowerCase()
-    if (transactionStatus !== 'completed' && transactionStatus !== 'success') {
+    if (transactionStatus !== 'completed' ) {
       await pendingRef.update({ status: 'failed', updatedAt: new Date() })
       return { success: false, error: `Payment is not successful (${execution.transactionStatus}).` }
     }
@@ -661,28 +661,28 @@ const getCachedPublicCourses = unstable_cache(
       .where('isArchived', '==', false)
       .limit(PUBLIC_COURSES_MAX)
       .get()
-    
+
     const courses: Course[] = []
     coursesSnapshot.forEach((doc) => {
       const data = doc.data()
-      
+
       // Convert Firestore Timestamps to ISO strings for serialization
       const createdAt = data.createdAt?.toDate?.() || data.createdAt
       const updatedAt = data.updatedAt?.toDate?.() || data.updatedAt
-      
+
       // Convert Date objects to ISO strings for Next.js serialization
-      const createdAtStr = createdAt instanceof Date 
-        ? createdAt.toISOString() 
-        : typeof createdAt === 'string' 
-        ? createdAt 
+      const createdAtStr = createdAt instanceof Date
+        ? createdAt.toISOString()
+        : typeof createdAt === 'string'
+        ? createdAt
         : new Date().toISOString()
-      
-      const updatedAtStr = updatedAt instanceof Date 
-        ? updatedAt.toISOString() 
-        : typeof updatedAt === 'string' 
-        ? updatedAt 
+
+      const updatedAtStr = updatedAt instanceof Date
+        ? updatedAt.toISOString()
+        : typeof updatedAt === 'string'
+        ? updatedAt
         : new Date().toISOString()
-      
+
       courses.push({
         id: doc.id,
         ...data,
@@ -696,7 +696,7 @@ const getCachedPublicCourses = unstable_cache(
       if (!a.createdAt && !b.createdAt) return 0
       if (!a.createdAt) return 1
       if (!b.createdAt) return -1
-      
+
       const dateA = new Date(a.createdAt).getTime()
       const dateB = new Date(b.createdAt).getTime()
       return dateB - dateA // Descending order
