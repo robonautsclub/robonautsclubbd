@@ -31,7 +31,9 @@ async function handleCallback(
 
   if (status === 'cancel') {
     console.info('[bkash-callback] canceled', { paymentId })
-    return NextResponse.redirect(`${baseUrl}/payments/bkash/cancel`)
+    return NextResponse.redirect(
+      `${baseUrl}/payments/bkash/fail?error=${encodeURIComponent('Payment was canceled in bKash.')}`
+    )
   }
 
   if (status === 'failure') {
