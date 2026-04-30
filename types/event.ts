@@ -3,6 +3,37 @@ export type EventCategory = {
   amount?: number
 }
 
+export const CUSTOM_FORM_FIELD_TYPES = [
+  'shortText',
+  'longText',
+  'number',
+  'email',
+  'phone',
+  'select',
+  'radio',
+  'checkbox',
+] as const
+
+export type CustomFormFieldType = (typeof CUSTOM_FORM_FIELD_TYPES)[number]
+
+export type EventCustomFormField = {
+  id: string
+  label: string
+  type: CustomFormFieldType
+  required: boolean
+  placeholder?: string
+  options?: string[]
+}
+
+export type EventDefaultRegistrationFields = {
+  name: { enabled: true; required: true }
+  email: { enabled: true; required: true }
+  phone: { enabled: true; required: true }
+  school: { enabled: boolean; required: boolean }
+  category: { enabled: boolean; required: boolean }
+  information: { enabled: boolean; required: boolean }
+}
+
 // Event type extending the existing structure from app/events/data.ts
 // with Firestore-specific fields
 export type Event = {
@@ -27,6 +58,8 @@ export type Event = {
   contactPersonMobileOrEmail?: string
   registrationClosingDate?: string // Optional ISO date (YYYY-MM-DD); registration closes at end of this day
   registrationDisabled?: boolean // When true, registration is closed regardless of date (Super Admin or event creator can toggle)
+  customFormFields?: EventCustomFormField[]
+  defaultRegistrationFields?: EventDefaultRegistrationFields
   // Firestore metadata
   createdAt: Date | string
   updatedAt: Date | string

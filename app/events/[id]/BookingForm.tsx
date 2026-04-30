@@ -3,6 +3,7 @@
 import { useState, FormEvent } from 'react'
 import { CheckCircle, Banknote } from 'lucide-react'
 import { Event } from '@/types/event'
+import { getEventRegistrationFields } from '@/lib/registrationFields'
 
 export default function BookingForm({ event }: { event: Event }) {
   const [formData, setFormData] = useState({
@@ -12,15 +13,19 @@ export default function BookingForm({ event }: { event: Event }) {
     phone: '',
     category: '',
     information: '',
+    customAnswers: {} as Record<string, string | string[]>,
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const defaultRegistrationFields = getEventRegistrationFields(event)
 
   const validate = () => {
     const newErrors: Record<string, string> = {}
     if (!formData.name.trim()) newErrors.name = 'Name is required'
-    if (!formData.school.trim()) newErrors.school = 'School is required'
+    if (defaultRegistrationFields.school.enabled && defaultRegistrationFields.school.required && !formData.school.trim()) {
+      newErrors.school = 'School is required'
+    }
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required'
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
@@ -33,8 +38,26 @@ export default function BookingForm({ event }: { event: Event }) {
     } else if (phoneDigits.length !== 11 || !phoneDigits.startsWith('01')) {
       newErrors.phone = 'Phone number must be 11 digits and start with 01'
     }
-    if (event.categories && event.categories.length > 0 && !formData.category.trim()) {
+    if (defaultRegistrationFields.category.enabled && defaultRegistrationFields.category.required && !formData.category.trim()) {
       newErrors.category = 'Please select a category'
+    }
+    if (
+      defaultRegistrationFields.information.enabled &&
+      defaultRegistrationFields.information.required &&
+      !formData.information.trim()
+    ) {
+      newErrors.information = 'Other information is required'
+    }
+    const customFormFields = Array.isArray(event.customFormFields) ? event.customFormFields : []
+    for (const field of customFormFields) {
+      const value = formData.customAnswers[field.id]
+      const missing =
+        value == null ||
+        (typeof value === 'string' && value.trim() === '') ||
+        (Array.isArray(value) && value.length === 0)
+      if (field.required && missing) {
+        newErrors[`custom_${field.id}`] = `${field.label} is required`
+      }
     }
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -62,6 +85,7 @@ export default function BookingForm({ event }: { event: Event }) {
         phone: formData.phone.trim(),
         category: formData.category.trim(),
         information: formData.information.trim(),
+        customAnswers: formData.customAnswers,
       }
 
       if (event.isPaid) {
@@ -78,7 +102,7 @@ export default function BookingForm({ event }: { event: Event }) {
       const result = await createBooking(payload)
       if (result.success) {
         setIsSubmitted(true)
-        setFormData({ name: '', school: '', email: '', phone: '', category: '', information: '' })
+        setFormData({ name: '', school: '', email: '', phone: '', category: '', information: '', customAnswers: {} })
         setTimeout(() => {
           setIsSubmitted(false)
         }, 5000)
@@ -123,7 +147,9 @@ export default function BookingForm({ event }: { event: Event }) {
     (category) => category.name.toLowerCase() === formData.category.trim().toLowerCase()
   )
   const hasCategories = Boolean(event.categories && event.categories.length > 0)
-  const hasSelectedCategory = !hasCategories || Boolean(formData.category.trim())
+  const showCategory = hasCategories && defaultRegistrationFields.category.enabled
+  const hasSelectedCategory = !showCategory || Boolean(formData.category.trim())
+  const customFormFields = Array.isArray(event.customFormFields) ? event.customFormFields : []
   const payableAmount =
     event.isPaid && selectedCategory?.amount != null && selectedCategory.amount > 0
       ? selectedCategory.amount
@@ -182,10 +208,10 @@ export default function BookingForm({ event }: { event: Event }) {
             <p className="text-sm text-red-500 mt-1">{errors.name}</p>
           )}
         </div>
-        {hasCategories && (
+        {showCategory && (
           <div>
             <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
-              Category <span className="text-red-500">*</span>
+              Category {defaultRegistrationFields.category.required && <span className="text-red-500">*</span>}
             </label>
             <select
               id="category"
@@ -206,29 +232,32 @@ export default function BookingForm({ event }: { event: Event }) {
             {errors.category && <p className="text-sm text-red-500 mt-1">{errors.category}</p>}
           </div>
         )}
-        <div>
-          <label
-            htmlFor="school"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            School (If you are private candidate, write private candidate)<span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            id="school"
-            value={formData.school}
-            onChange={(e) =>
-              setFormData({ ...formData, school: e.target.value })
-            }
-            disabled={isLoading || isSubmitted}
-            className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-              errors.school ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:border-gray-300'
-            }`}
-          />
-          {errors.school && (
-            <p className="text-sm text-red-500 mt-1">{errors.school}</p>
-          )}
-        </div>
+        {defaultRegistrationFields.school.enabled && (
+          <div>
+            <label
+              htmlFor="school"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              School (If you are private candidate, write private candidate)
+              {defaultRegistrationFields.school.required && <span className="text-red-500">*</span>}
+            </label>
+            <input
+              type="text"
+              id="school"
+              value={formData.school}
+              onChange={(e) =>
+                setFormData({ ...formData, school: e.target.value })
+              }
+              disabled={isLoading || isSubmitted}
+              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                errors.school ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+              }`}
+            />
+            {errors.school && (
+              <p className="text-sm text-red-500 mt-1">{errors.school}</p>
+            )}
+          </div>
+        )}
         <div>
           <label
             htmlFor="email"
@@ -277,30 +306,161 @@ export default function BookingForm({ event }: { event: Event }) {
             <p className="text-sm text-red-500 mt-1">{errors.phone}</p>
           )}
         </div>
-        <div>
-          <label
-            htmlFor="information"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Other Information
-          </label>
-          <textarea
-            id="information"
-            rows={4}
-            value={formData.information}
-            onChange={(e) =>
-              setFormData({ ...formData, information: e.target.value })
-            }
-            disabled={isLoading || isSubmitted}
-            className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-colors resize-none disabled:opacity-50 disabled:cursor-not-allowed ${
-              errors.information ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:border-gray-300'
-            }`}
-            placeholder="Any additional information you'd like to share (optional)..."
-          />
-          {errors.information && (
-            <p className="text-sm text-red-500 mt-1">{errors.information}</p>
-          )}
-        </div>
+        {defaultRegistrationFields.information.enabled && (
+          <div>
+            <label
+              htmlFor="information"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Other Information
+              {defaultRegistrationFields.information.required && <span className="text-red-500">*</span>}
+            </label>
+            <textarea
+              id="information"
+              rows={4}
+              value={formData.information}
+              onChange={(e) =>
+                setFormData({ ...formData, information: e.target.value })
+              }
+              disabled={isLoading || isSubmitted}
+              className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-colors resize-none disabled:opacity-50 disabled:cursor-not-allowed ${
+                errors.information ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+              }`}
+              placeholder="Any additional information you'd like to share (optional)..."
+            />
+            {errors.information && (
+              <p className="text-sm text-red-500 mt-1">{errors.information}</p>
+            )}
+          </div>
+        )}
+        {customFormFields.length > 0 && (
+          <div className="space-y-4 border-t border-gray-200 pt-4">
+            <p className="text-sm font-semibold text-gray-800">Additional Information</p>
+            {customFormFields.map((field) => {
+              const errorKey = `custom_${field.id}`
+              const error = errors[errorKey]
+              const value = formData.customAnswers[field.id]
+
+              return (
+                <div key={field.id}>
+                  <label htmlFor={`custom-${field.id}`} className="block text-sm font-medium text-gray-700 mb-1">
+                    {field.label} {field.required && <span className="text-red-500">*</span>}
+                  </label>
+                  {field.type === 'longText' ? (
+                    <textarea
+                      id={`custom-${field.id}`}
+                      rows={3}
+                      value={typeof value === 'string' ? value : ''}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          customAnswers: { ...formData.customAnswers, [field.id]: e.target.value },
+                        })
+                      }
+                      placeholder={field.placeholder || 'Enter your answer'}
+                      disabled={isLoading || isSubmitted}
+                      className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-colors resize-none disabled:opacity-50 disabled:cursor-not-allowed ${
+                        error ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    />
+                  ) : field.type === 'select' ? (
+                    <select
+                      id={`custom-${field.id}`}
+                      value={typeof value === 'string' ? value : ''}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          customAnswers: { ...formData.customAnswers, [field.id]: e.target.value },
+                        })
+                      }
+                      disabled={isLoading || isSubmitted}
+                      className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                        error ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <option value="">Select an option</option>
+                      {(field.options ?? []).map((option) => (
+                        <option key={`${field.id}-${option}`} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  ) : field.type === 'radio' ? (
+                    <div className="space-y-2">
+                      {(field.options ?? []).map((option) => (
+                        <label key={`${field.id}-${option}`} className="flex items-center gap-2 text-sm text-gray-700">
+                          <input
+                            type="radio"
+                            name={`custom-${field.id}`}
+                            value={option}
+                            checked={value === option}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                customAnswers: { ...formData.customAnswers, [field.id]: e.target.value },
+                              })
+                            }
+                            disabled={isLoading || isSubmitted}
+                          />
+                          {option}
+                        </label>
+                      ))}
+                    </div>
+                  ) : field.type === 'checkbox' ? (
+                    <div className="space-y-2">
+                      {(field.options ?? []).map((option) => {
+                        const selected = Array.isArray(value) ? value : []
+                        const checked = selected.includes(option)
+                        return (
+                          <label key={`${field.id}-${option}`} className="flex items-center gap-2 text-sm text-gray-700">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => {
+                                const next = Array.isArray(value) ? [...value] : []
+                                const normalized = option.trim()
+                                const exists = next.includes(normalized)
+                                if (e.target.checked && !exists) next.push(normalized)
+                                if (!e.target.checked && exists) {
+                                  const index = next.indexOf(normalized)
+                                  next.splice(index, 1)
+                                }
+                                setFormData({
+                                  ...formData,
+                                  customAnswers: { ...formData.customAnswers, [field.id]: next },
+                                })
+                              }}
+                              disabled={isLoading || isSubmitted}
+                            />
+                            {option}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <input
+                      id={`custom-${field.id}`}
+                      type={field.type === 'email' ? 'email' : field.type === 'number' ? 'number' : field.type === 'phone' ? 'tel' : 'text'}
+                      value={typeof value === 'string' ? value : ''}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          customAnswers: { ...formData.customAnswers, [field.id]: e.target.value },
+                        })
+                      }
+                      placeholder={field.placeholder || 'Enter your answer'}
+                      disabled={isLoading || isSubmitted}
+                      className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                        error ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    />
+                  )}
+                  {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
+                </div>
+              )
+            })}
+          </div>
+        )}
         <button
           type="submit"
           disabled={isLoading || isSubmitted || (event.isPaid && !hasSelectedCategory)}
