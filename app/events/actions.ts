@@ -8,7 +8,13 @@ import { Course } from '@/types/course'
 import { sendBookingConfirmationEmail } from '@/lib/email'
 import { generateRegistrationId } from '@/lib/registrationId'
 import { isRegistrationOpen } from '@/lib/dateUtils'
-import { bkashCreateCheckout, bkashExecutePayment, bkashQueryPayment } from '@/lib/bkash'
+import {
+  BkashApiError,
+  bkashCreateCheckout,
+  bkashExecutePayment,
+  bkashQueryPayment,
+  bkashRefundPayment,
+} from '@/lib/bkash'
 import { normalizeCustomFormAnswers, validateCustomFormAnswers } from '@/lib/eventCustomForm'
 import { getEventRegistrationFields } from '@/lib/registrationFields'
 
@@ -304,7 +310,7 @@ async function createBookingRecordAndSendEmail(
     registrationId,
     bookingId,
     bookingDetails: {
-      school: formData.school.trim(),
+      school: formData.school?.trim() || '',
       phone: normalizedPhone,
       bkashNumber: normalizedBkash,
       information: formData.information ? formData.information.trim() : '',
