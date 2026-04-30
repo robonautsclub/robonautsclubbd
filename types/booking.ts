@@ -17,6 +17,7 @@ export type Booking = {
   amountPaid?: number
   paidAt?: Date | string
   information: string
+  customAnswers?: Record<string, string | string[] | number>
   createdAt: Date | string
 }
 
