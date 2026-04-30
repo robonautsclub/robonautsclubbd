@@ -8,7 +8,13 @@ import { Course } from '@/types/course'
 import { sendBookingConfirmationEmail } from '@/lib/email'
 import { generateRegistrationId } from '@/lib/registrationId'
 import { isRegistrationOpen } from '@/lib/dateUtils'
-import { bkashCreateCheckout, bkashExecutePayment, bkashQueryPayment } from '@/lib/bkash'
+import {
+  BkashApiError,
+  bkashCreateCheckout,
+  bkashExecutePayment,
+  bkashQueryPayment,
+  bkashRefundPayment,
+} from '@/lib/bkash'
 
 const PUBLIC_EVENTS_TAG = 'public-events'
 const PUBLIC_EVENT_TAG_PREFIX = 'public-event'
@@ -525,29 +531,58 @@ export async function finalizePaidEventBooking(paymentId: string): Promise<{
     try {
       execution = await bkashExecutePayment(paymentId)
     } catch (executeError) {
-      // Execute can fail for already-processed payment IDs; query current state before failing.
+      const isNoResponseFromExecute =
+        executeError instanceof BkashApiError
+          ? executeError.noResponse
+          : false
+
+      if (!isNoResponseFromExecute) {
+        await pendingRef.update({ status: 'failed', updatedAt: new Date() })
+        return {
+          success: false,
+          error:
+            executeError instanceof BkashApiError
+              ? executeError.statusMessage || executeError.message
+              : 'Failed to execute payment with bKash.',
+        }
+      }
+
+      // Query API is only used when execute returned no response (timeout/unknown).
       try {
         const queried = await bkashQueryPayment(paymentId)
         const queriedStatus = queried.transactionStatus.toLowerCase()
-        if (queriedStatus !== 'completed' && queriedStatus !== 'success') {
+        if (queriedStatus !== 'completed') {
           await pendingRef.update({ status: 'failed', updatedAt: new Date() })
-          return { success: false, error: `Payment is not successful (${queried.transactionStatus}).` }
+          return {
+            success: false,
+            error: queried.statusMessage || `Payment is not successful (${queried.transactionStatus}).`,
+          }
         }
         execution = queried
       } catch (queryError) {
-        console.error('bKash execute+query both failed', {
+        console.error('bKash execute timeout and query failed', {
           paymentId,
           executeError: executeError instanceof Error ? executeError.message : String(executeError),
           queryError: queryError instanceof Error ? queryError.message : String(queryError),
         })
-        return { success: false, error: 'Failed to verify payment status with bKash. Please contact support.' }
+        await pendingRef.update({ status: 'failed', updatedAt: new Date() })
+        return {
+          success: false,
+          error:
+            queryError instanceof BkashApiError
+              ? queryError.statusMessage || queryError.message
+              : 'Failed to verify payment status with bKash. Please contact support.',
+        }
       }
     }
 
     const transactionStatus = execution.transactionStatus.toLowerCase()
-    if (transactionStatus !== 'completed' && transactionStatus !== 'success') {
+    if (transactionStatus !== 'completed') {
       await pendingRef.update({ status: 'failed', updatedAt: new Date() })
-      return { success: false, error: `Payment is not successful (${execution.transactionStatus}).` }
+      return {
+        success: false,
+        error: execution.statusMessage || `Payment is not successful (${execution.transactionStatus}).`,
+      }
     }
 
     const eventDoc = await adminDb.collection('events').doc(pending.eventId).get()
@@ -603,6 +638,31 @@ export async function finalizePaidEventBooking(paymentId: string): Promise<{
   } catch (error) {
     console.error('Error finalizing paid booking:', error)
     return { success: false, error: 'Failed to finalize payment. Please contact support.' }
+  }
+}
+
+export async function refundPaidEventPayment(input: {
+  paymentId: string
+  trxId: string
+  amount: number
+  reason: string
+  sku?: string
+}): Promise<{ success: boolean; error?: string; refundTrxId?: string }> {
+  try {
+    const result = await bkashRefundPayment({
+      paymentId: input.paymentId,
+      trxId: input.trxId,
+      amount: input.amount,
+      reason: input.reason,
+      sku: input.sku,
+    })
+
+    return { success: true, refundTrxId: result.refundTrxId }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof BkashApiError ? error.statusMessage || error.message : 'Failed to refund payment.',
+    }
   }
 }
 
