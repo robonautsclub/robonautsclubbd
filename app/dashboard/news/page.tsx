@@ -35,6 +35,7 @@ export default async function DashboardNewsPage() {
         </div>
         <Link
           href="/dashboard/news/new"
+          prefetch={false}
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 shadow-sm"
         >
           <Plus className="w-4 h-4" />
@@ -46,7 +47,7 @@ export default async function DashboardNewsPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
           <Newspaper className="w-12 h-12 mx-auto text-gray-300 mb-4" />
           <p className="text-gray-600 mb-6">No articles yet.</p>
-          <Link href="/dashboard/news/new" className="text-indigo-600 font-medium hover:underline">
+          <Link href="/dashboard/news/new" prefetch={false} className="text-indigo-600 font-medium hover:underline">
             Write the first article
           </Link>
         </div>
@@ -87,6 +88,7 @@ export default async function DashboardNewsPage() {
                   {a.published ? (
                     <Link
                       href={`/news/${a.slug}`}
+                      prefetch={false}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200"
@@ -97,6 +99,7 @@ export default async function DashboardNewsPage() {
                   ) : null}
                   <Link
                     href={`/dashboard/news/${a.id}/edit`}
+                    prefetch={false}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200"
                   >
                     Edit

@@ -4,7 +4,7 @@ import { useState, FormEvent, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
-import { SESSION_DURATION_SECONDS } from '@/lib/session'
+import { SESSION_DURATION_SECONDS, ASSIGN_ROLE_LAST_SYNC_STORAGE_KEY } from '@/lib/session'
 import { X, Mail, Sparkles } from 'lucide-react'
 
 function LoginForm() {
@@ -58,6 +58,11 @@ function LoginForm() {
         } else {
           const roleData = await roleResponse.json()
           assignedRole = roleData.role || 'admin'
+          try {
+            sessionStorage.setItem(ASSIGN_ROLE_LAST_SYNC_STORAGE_KEY, String(Date.now()))
+          } catch {
+            /* ignore */
+          }
         }
       } catch (roleError) {
         console.error('Error assigning role:', roleError)

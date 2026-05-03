@@ -127,6 +127,7 @@ export default async function DashboardPage() {
               </h3>
               <Link
                 href="/dashboard/events"
+                prefetch={false}
                 className="text-xs sm:text-sm text-indigo-600 hover:text-indigo-700 font-medium"
               >
                 View all →
@@ -139,6 +140,7 @@ export default async function DashboardPage() {
                 <p className="text-sm text-gray-600">No events yet</p>
                 <Link
                   href="/dashboard/events"
+                  prefetch={false}
                   className="mt-4 inline-block text-sm text-indigo-600 hover:text-indigo-700 font-medium"
                 >
                   Create your first event →
@@ -154,6 +156,7 @@ export default async function DashboardPage() {
                     <Link
                       key={event.id}
                       href={`/dashboard/events/${event.id}`}
+                      prefetch={false}
                       className="block p-4 rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-all group"
                     >
                       <div className="flex items-start justify-between">
