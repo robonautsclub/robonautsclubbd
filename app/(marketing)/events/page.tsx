@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { getPublicEvents } from './actions'
 import RealtimeEventsList from '@/components/RealtimeEventsList'
+import ListingHeroSection from '@/components/ListingHeroSection'
 import { isEventUpcoming } from '@/lib/dateUtils'
 
 export const metadata: Metadata = {
@@ -71,22 +72,13 @@ export default async function EventsPage() {
           dangerouslySetInnerHTML={{ __html: itemListJsonLd }}
         />
       ) : null}
-      {/* Hero Header */}
-      <section
-        className="relative text-white py-16 sm:py-20 md:py-24 px-4 sm:px-6 overflow-hidden"
-        style={{
-          backgroundImage: "url('/robobanner.gif')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
-      >
-        {/* Background decoration */}
-        <div className="absolute inset-0 opacity-20">
+      <ListingHeroSection overlay="none">
+        <div className="absolute inset-0 opacity-20 pointer-events-none">
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-300 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
           <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-300 rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2" />
         </div>
 
-        <div className="max-w-7xl mx-auto relative z-10">
+        <div className="max-w-7xl mx-auto relative">
           <div className="text-center mb-6 sm:mb-8">
             <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/10 backdrop-blur-sm mb-4 sm:mb-6">
               <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -128,7 +120,7 @@ export default async function EventsPage() {
             </div>
           </div>
         </div>
-      </section>
+      </ListingHeroSection>
 
       {/* Main Content */}
       <main className="flex-1 py-12 sm:py-16 px-4 sm:px-6">

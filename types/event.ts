@@ -34,7 +34,7 @@ export type EventDefaultRegistrationFields = {
   information: { enabled: boolean; required: boolean }
 }
 
-// Event type extending the existing structure from app/events/data.ts
+// Event type extending the existing structure from app/(marketing)/events/data.ts
 // with Firestore-specific fields
 export type Event = {
   id: string // Firestore document ID

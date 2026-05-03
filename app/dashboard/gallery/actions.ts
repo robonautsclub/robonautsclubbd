@@ -10,26 +10,23 @@ import { parseDateInputToTimestamp, timestampUtcNoonToday } from '@/lib/dateInpu
 
 const DASHBOARD_GALLERY_LIST_TAG = 'dashboard-gallery-list'
 
-const getCachedDashboardGalleryGroups = unstable_cache(
-  async (): Promise<GalleryGroup[]> => {
-    if (!adminDb) throw new Error('Firebase Admin SDK is not configured.')
+async function fetchDashboardGalleryGroupsFromDb(): Promise<GalleryGroup[]> {
+  const db = adminDb!
+  const snap = await db.collection('galleryGroups').get()
+  const items: GalleryGroup[] = []
+  snap.forEach((doc) => {
+    items.push(mapGalleryDoc(doc.id, doc.data() as Record<string, unknown>))
+  })
+  items.sort((a, b) => {
+    if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  })
+  return items
+}
 
-    const snap = await adminDb.collection('galleryGroups').get()
-    const items: GalleryGroup[] = []
-    snap.forEach((doc) => {
-      items.push(mapGalleryDoc(doc.id, doc.data() as Record<string, unknown>))
-    })
-    items.sort((a, b) => {
-      if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    })
-    return items
-  },
-  [DASHBOARD_GALLERY_LIST_TAG],
-  {
-    tags: [DASHBOARD_GALLERY_LIST_TAG],
-  }
-)
+const getCachedDashboardGalleryGroups = unstable_cache(fetchDashboardGalleryGroupsFromDb, [DASHBOARD_GALLERY_LIST_TAG], {
+  tags: [DASHBOARD_GALLERY_LIST_TAG],
+})
 
 function toIso(v: unknown): string {
   if (v instanceof Date) return v.toISOString()
@@ -76,6 +73,10 @@ function resolveGalleryDisplayDate(ymd: string | undefined) {
 
 export async function getGalleryGroupsForDashboard(): Promise<GalleryGroup[]> {
   await requireAuth()
+  if (!adminDb) {
+    console.warn('Firebase Admin SDK not available. Cannot fetch gallery. Set FIREBASE_ADMIN_* in .env')
+    return []
+  }
   return await getCachedDashboardGalleryGroups()
 }
 

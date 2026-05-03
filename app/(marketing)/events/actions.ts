@@ -29,20 +29,13 @@ function getPublicEventTag(id: string): string {
 }
 
 /**
- * Get all events from Firestore (public - no auth required)
- * Used with ISR (Incremental Static Regeneration) for fast page loads
- * Wrapped with cache() for request deduplication
+ * Firestore fetch for public events. Only call when `adminDb` is initialized.
+ * Cached via unstable_cache — never cache the empty "no admin" path or builds without credentials poison the cache.
  */
-const getCachedPublicEvents = unstable_cache(
-  async (): Promise<Event[]> => {
-  if (!adminDb) {
-    console.warn('Firebase Admin SDK not available. Cannot fetch events.')
-    // Return empty array instead of throwing for public pages
-    return []
-  }
-
+async function fetchPublicEventsFromFirestore(): Promise<Event[]> {
+  const db = adminDb!
   try {
-    const eventsSnapshot = await adminDb
+    const eventsSnapshot = await db
       .collection('events')
       .orderBy('createdAt', 'desc')
       .limit(PUBLIC_EVENTS_MAX)
@@ -105,31 +98,30 @@ const getCachedPublicEvents = unstable_cache(
     // Return empty array instead of throwing for public pages
     return []
   }
-  },
-  [PUBLIC_EVENTS_TAG],
-  {
-    tags: [PUBLIC_EVENTS_TAG],
-    revalidate: 900,
-  }
-)
+}
 
-export const getPublicEvents = cache(async (): Promise<Event[]> => getCachedPublicEvents())
+const getCachedPublicEvents = unstable_cache(fetchPublicEventsFromFirestore, [PUBLIC_EVENTS_TAG], {
+  tags: [PUBLIC_EVENTS_TAG],
+  revalidate: 900,
+})
+
+export const getPublicEvents = cache(async (): Promise<Event[]> => {
+  if (!adminDb) {
+    console.warn('Firebase Admin SDK not available. Cannot fetch events.')
+    return []
+  }
+  return getCachedPublicEvents()
+})
 
 /**
  * Get a single event by ID (public - no auth required)
  * Used with ISR (Incremental Static Regeneration) for fast page loads
  * Wrapped with cache() for request deduplication
  */
-const getCachedPublicEvent = (id: string) =>
-  unstable_cache(
-    async (): Promise<Event | null> => {
-  if (!adminDb) {
-    console.error('Firebase Admin SDK not available. Cannot fetch event.')
-    return null
-  }
-
+async function fetchPublicEventFromFirestore(id: string): Promise<Event | null> {
+  const db = adminDb!
   try {
-    const eventDoc = await adminDb.collection('events').doc(id).get()
+    const eventDoc = await db.collection('events').doc(id).get()
 
     if (!eventDoc.exists) {
       return null
@@ -175,7 +167,11 @@ const getCachedPublicEvent = (id: string) =>
     console.error('Error fetching event:', error)
     return null
   }
-    },
+}
+
+const getCachedPublicEvent = (id: string) =>
+  unstable_cache(
+    async (): Promise<Event | null> => fetchPublicEventFromFirestore(id),
     [PUBLIC_EVENT_TAG_PREFIX, id],
     {
       tags: [getPublicEventTag(id), PUBLIC_EVENTS_TAG],
@@ -183,7 +179,13 @@ const getCachedPublicEvent = (id: string) =>
     }
   )()
 
-export const getPublicEvent = cache(async (id: string): Promise<Event | null> => getCachedPublicEvent(id))
+export const getPublicEvent = cache(async (id: string): Promise<Event | null> => {
+  if (!adminDb) {
+    console.error('Firebase Admin SDK not available. Cannot fetch event.')
+    return null
+  }
+  return getCachedPublicEvent(id)
+})
 
 type BookingInput = {
   eventId: string
@@ -707,16 +709,11 @@ export async function refundPaidEventPayment(input: {
  * Used by Feed component for public display
  * Wrapped with cache() for request deduplication
  */
-const getCachedPublicCourses = unstable_cache(
-  async (): Promise<Course[]> => {
-  if (!adminDb) {
-    console.warn('Firebase Admin SDK not available. Cannot fetch courses.')
-    return []
-  }
-
+async function fetchPublicCoursesFromFirestore(): Promise<Course[]> {
+  const db = adminDb!
   try {
     // Query for non-archived courses only
-    const coursesSnapshot = await adminDb
+    const coursesSnapshot = await db
       .collection('courses')
       .where('isArchived', '==', false)
       .limit(PUBLIC_COURSES_MAX)
@@ -767,12 +764,17 @@ const getCachedPublicCourses = unstable_cache(
     console.error('Error fetching public courses:', error)
     return []
   }
-  },
-  [PUBLIC_COURSES_TAG],
-  {
-    tags: [PUBLIC_COURSES_TAG],
-    revalidate: 1800,
-  }
-)
+}
 
-export const getPublicCourses = cache(async (): Promise<Course[]> => getCachedPublicCourses())
+const getCachedPublicCourses = unstable_cache(fetchPublicCoursesFromFirestore, [PUBLIC_COURSES_TAG], {
+  tags: [PUBLIC_COURSES_TAG],
+  revalidate: 1800,
+})
+
+export const getPublicCourses = cache(async (): Promise<Course[]> => {
+  if (!adminDb) {
+    console.warn('Firebase Admin SDK not available. Cannot fetch courses.')
+    return []
+  }
+  return getCachedPublicCourses()
+})
