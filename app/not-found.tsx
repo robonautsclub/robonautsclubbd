@@ -99,6 +99,7 @@ export default function NotFound() {
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
           <Link
             href="/"
+            prefetch={false}
             className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors no-underline"
           >
             <Home className="w-4 h-4" />
@@ -106,6 +107,7 @@ export default function NotFound() {
           </Link>
           <Link
             href="/events"
+            prefetch={false}
             className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-gray-700 rounded-lg font-medium border border-gray-200 hover:bg-gray-50 transition-colors no-underline"
           >
             Explore Events

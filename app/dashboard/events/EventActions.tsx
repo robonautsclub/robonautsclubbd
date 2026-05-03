@@ -128,6 +128,7 @@ export default function EventActions({ event, currentUserId, userRole }: EventAc
         )}
         <Link
           href={`/dashboard/events/${event.id}`}
+          prefetch={false}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
           title="View details"
         >

@@ -315,6 +315,7 @@ export default function FeedDeferredFromMission({
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               href="/events"
+              prefetch={false}
               className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-all duration-200 shadow-md hover:shadow-lg text-sm sm:text-base"
             >
               Explore Events
