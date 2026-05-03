@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import Feed from "@/components/Feed";
 import { SITE_CONFIG } from "@/lib/site-config";
-import { getPublicCourses, getPublicEvents } from "@/app/events/actions";
+import { getPublicCourses, getPublicEvents } from "./events/actions";
 import { isEventUpcoming } from "@/lib/dateUtils";
 
 export const metadata: Metadata = {

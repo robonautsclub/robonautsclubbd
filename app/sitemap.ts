@@ -1,5 +1,5 @@
 import { MetadataRoute } from 'next'
-import { getPublicEvents } from './events/actions'
+import { getPublicEvents } from './(marketing)/events/actions'
 import { getSiteOrigin } from '@/lib/site-config'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

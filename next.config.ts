@@ -33,7 +33,7 @@ const nextConfig: NextConfig = {
   compress: true,
   experimental: {
     optimizeCss: true,
-    optimizePackageImports: ['lucide-react', 'react-icons'],
+    optimizePackageImports: ['lucide-react', 'react-icons', 'date-fns'],
   },
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? {

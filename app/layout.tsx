@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
-import ConditionalLayout from "./ConditionalLayout";
 import OrganizationSchema from "@/components/OrganizationSchema";
 import { SITE_CONFIG, getSiteOrigin } from "@/lib/site-config";
 
@@ -95,7 +94,7 @@ export default function RootLayout({
   return (
     <html lang="en" dir="ltr">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${geistSans.className} antialiased`}
       >
         {/* Google Analytics */}
         <Script
@@ -111,7 +110,7 @@ export default function RootLayout({
           `}
         </Script>
         <OrganizationSchema />
-        <ConditionalLayout>{children}</ConditionalLayout>
+        {children}
       </body>
     </html>
   );

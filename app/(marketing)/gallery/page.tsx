@@ -4,6 +4,7 @@ import { SITE_CONFIG } from '@/lib/site-config'
 import { effectiveGalleryDisplayRaw } from '@/lib/publicContentDates'
 import { GALLERY_ALBUM_PREVIEW_MAX } from '@/lib/media-gallery'
 import ImageLightboxGallery from '@/components/ImageLightboxGallery'
+import ListingHeroSection from '@/components/ListingHeroSection'
 import { getGalleryGroups } from './actions'
 
 export const metadata: Metadata = {
@@ -40,16 +41,8 @@ export default async function GalleryPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <section
-        className="relative text-white py-16 sm:py-20 md:py-24 px-4 sm:px-6 overflow-hidden"
-        style={{
-          backgroundImage: "url('/robobanner.gif')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
-      >
-        <div className="absolute inset-0 bg-slate-900/55" />
-        <div className="max-w-7xl mx-auto relative z-10 text-center">
+      <ListingHeroSection overlay="dark">
+        <div className="max-w-7xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-sm mb-4">
             <Images className="w-4 h-4" />
             <span className="text-xs sm:text-sm font-medium">Moments</span>
@@ -61,7 +54,7 @@ export default async function GalleryPage() {
             Snapshots from workshops, competitions, and community events.
           </p>
         </div>
-      </section>
+      </ListingHeroSection>
 
       <main className="flex-1 py-12 sm:py-16 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto space-y-16 sm:space-y-20">

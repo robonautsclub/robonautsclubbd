@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { finalizePaidEventBooking } from '@/app/events/actions'
+import { finalizePaidEventBooking } from '@/app/(marketing)/events/actions'
 
 function normalizeStatus(raw: string): string {
   const value = raw.toLowerCase()

@@ -5,14 +5,6 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import React, { useEffect, useRef, useState } from 'react'
 import { SITE_CONFIG } from '@/lib/site-config'
-import { Inter, Poppins } from 'next/font/google'
-
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
-const poppins = Poppins({
-  subsets: ['latin'],
-  weight: ['600', '700'],
-  variable: '--font-poppins'
-})
 
 type SubLink = { title: string; href: string }
 type MenuItem = { title: string; href?: string; subLinks?: SubLink[] }
@@ -127,8 +119,6 @@ export default function Nav() {
   return (
     <header
       className={classNames(
-        inter.variable,
-        poppins.variable,
         'sticky top-0 z-70 bg-blue-100 backdrop-blur border-black/10 border-b',
         'transition-transform duration-300 ease-in-out',
         isVisible ? 'translate-y-0' : '-translate-y-full'
