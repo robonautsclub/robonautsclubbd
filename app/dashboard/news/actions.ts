@@ -14,27 +14,24 @@ import { parseDateInputToTimestamp, timestampUtcNoonToday } from '@/lib/dateInpu
 
 const DASHBOARD_NEWS_LIST_TAG = 'dashboard-news-list'
 
-const getCachedNewsArticles = unstable_cache(
-  async (): Promise<NewsArticle[]> => {
-    if (!adminDb) throw new Error('Firebase Admin SDK is not configured.')
+async function fetchNewsArticlesFromDb(): Promise<NewsArticle[]> {
+  const db = adminDb!
+  const snap = await db.collection('news').get()
+  const items: NewsArticle[] = []
+  snap.forEach((doc) => {
+    items.push(mapNewsDoc(doc.id, doc.data() as Record<string, unknown>))
+  })
+  items.sort((a, b) => {
+    const ca = new Date(a.createdAt).getTime()
+    const cb = new Date(b.createdAt).getTime()
+    return cb - ca
+  })
+  return items
+}
 
-    const snap = await adminDb.collection('news').get()
-    const items: NewsArticle[] = []
-    snap.forEach((doc) => {
-      items.push(mapNewsDoc(doc.id, doc.data() as Record<string, unknown>))
-    })
-    items.sort((a, b) => {
-      const ca = new Date(a.createdAt).getTime()
-      const cb = new Date(b.createdAt).getTime()
-      return cb - ca
-    })
-    return items
-  },
-  [DASHBOARD_NEWS_LIST_TAG],
-  {
-    tags: [DASHBOARD_NEWS_LIST_TAG],
-  }
-)
+const getCachedNewsArticles = unstable_cache(fetchNewsArticlesFromDb, [DASHBOARD_NEWS_LIST_TAG], {
+  tags: [DASHBOARD_NEWS_LIST_TAG],
+})
 
 function toIso(v: unknown): string | null {
   if (v == null) return null
@@ -85,6 +82,10 @@ async function ensureUniqueSlug(baseSlug: string, excludeDocId?: string): Promis
 
 export async function getNewsArticles(): Promise<NewsArticle[]> {
   await requireAuth()
+  if (!adminDb) {
+    console.warn('Firebase Admin SDK not available. Cannot fetch news. Set FIREBASE_ADMIN_* in .env')
+    return []
+  }
   try {
     return await getCachedNewsArticles()
   } catch {
@@ -94,7 +95,10 @@ export async function getNewsArticles(): Promise<NewsArticle[]> {
 
 export async function getNewsArticleForDashboard(id: string): Promise<NewsArticle | null> {
   await requireAuth()
-  if (!adminDb) throw new Error('Firebase Admin SDK is not configured.')
+  if (!adminDb) {
+    console.warn('Firebase Admin SDK not available. Cannot fetch news article.')
+    return null
+  }
 
   const doc = await adminDb.collection('news').doc(id).get()
   if (!doc.exists) return null

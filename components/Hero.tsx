@@ -8,6 +8,12 @@ import { ArrowRight, Volume2, VolumeX } from 'lucide-react'
 import FeaturedUpcomingCarousel from '@/components/FeaturedUpcomingCarousel'
 import type { Event } from '@/types/event'
 
+const HERO_VIDEO =
+  'https://res.cloudinary.com/digkc0xsk/video/upload/v1771270419/ROBOFESTnew_lj6ak1.mp4'
+/** First-frame still from Cloudinary — lighter initial paint than decoding video immediately. */
+const HERO_VIDEO_POSTER =
+  'https://res.cloudinary.com/digkc0xsk/video/upload/f_jpg,q_80,so_0/v1771270419/ROBOFESTnew_lj6ak1.jpg'
+
 export default function Hero({ upcomingEvents = [] }: { upcomingEvents?: Event[] }) {
   const [muted, setMuted] = useState(true)
 
@@ -15,7 +21,9 @@ export default function Hero({ upcomingEvents = [] }: { upcomingEvents?: Event[]
     <section className="relative overflow-hidden w-full min-w-full min-h-screen">
       <video
         className="absolute inset-0 w-full h-full object-cover object-center z-0"
-        src="https://res.cloudinary.com/digkc0xsk/video/upload/v1771270419/ROBOFESTnew_lj6ak1.mp4"
+        src={HERO_VIDEO}
+        poster={HERO_VIDEO_POSTER}
+        preload="metadata"
         autoPlay
         muted={muted}
         loop

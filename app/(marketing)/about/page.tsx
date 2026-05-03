@@ -1,7 +1,5 @@
-"use client";
 import Image from "next/image";
 import { SITE_CONFIG } from "@/lib/site-config";
-import dynamic from "next/dynamic";
 import {
   Trophy,
   Users,
@@ -15,17 +13,10 @@ import {
   Mail,
   MessageCircle,
 } from "lucide-react";
-
-/**
- * Leaflet map must be dynamically loaded on the client
- */
-const MapClient = dynamic(() => import("./MapClient"), {
-  ssr: false,
-});
+import AboutMap from "./AboutMap";
 
 const GOOGLE_MAPS_LINK = "https://maps.app.goo.gl/3kWfm4iG8a3ZdfLF6";
 
-// Constants
 const STATS = [
   { icon: Users, value: "500+", label: "Active Members" },
   { icon: Trophy, value: "50+", label: "Events Hosted" },
@@ -148,36 +139,38 @@ const TEAM_BG_COLORS = [
   "bg-purple-100",
 ];
 
-const SectionHeader = ({
+function SectionHeader({
   title,
   subtitle,
 }: {
   title: string;
   subtitle?: string;
-}) => (
-  <div className="text-center mb-8 sm:mb-10 md:mb-12">
-    <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">
-      {title}
-    </h2>
-    {subtitle && (
-      <p className="text-sm sm:text-base md:text-lg text-gray-600 max-w-2xl mx-auto px-2">{subtitle}</p>
-    )}
-  </div>
-);
+}) {
+  return (
+    <div className="text-center mb-8 sm:mb-10 md:mb-12">
+      <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">
+        {title}
+      </h2>
+      {subtitle ? (
+        <p className="text-sm sm:text-base md:text-lg text-gray-600 max-w-2xl mx-auto px-2">
+          {subtitle}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Hero Header */}
       <section
         className="relative text-white py-16 sm:py-20 md:py-24 px-4 sm:px-6 overflow-hidden"
         style={{
           backgroundImage: "url('/roboclass.jpg')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'top',
+          backgroundSize: "cover",
+          backgroundPosition: "top",
         }}
       >
-        {/* Background decoration */}
         <div className="absolute inset-0 opacity-20">
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-300 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
           <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-300 rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2" />
@@ -193,19 +186,15 @@ export default function AboutPage() {
               Where Innovation Meets Curiosity
             </h1>
             <p className="text-base sm:text-lg md:text-xl text-blue-100 max-w-3xl mx-auto leading-relaxed px-2">
-              Empowering young minds through hands-on STEM education in Dhaka.
-              Join us in exploring the exciting world of robotics, automation,
-              and innovation.
+              Empowering young minds through hands-on STEM education in Dhaka. Join us in exploring
+              the exciting world of robotics, automation, and innovation.
             </p>
           </div>
         </div>
       </section>
 
-      {/* Main Content */}
       <main className="flex-1 py-12 sm:py-16 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
-
-             {/* Who We Are Section */}
           <section className="mb-12 sm:mb-16 md:mb-20">
             <div className="grid md:grid-cols-2 gap-6 sm:gap-8 md:gap-12 items-center">
               <div>
@@ -214,13 +203,13 @@ export default function AboutPage() {
                 </h2>
                 <div className="space-y-3 sm:space-y-4 text-sm sm:text-base text-gray-600 leading-relaxed">
                   <p>
-                    Founded in 2022, <strong className="text-indigo-500">{SITE_CONFIG.name}</strong> delivers engaging
+                    Founded in 2022,{" "}
+                    <strong className="text-indigo-500">{SITE_CONFIG.name}</strong> delivers engaging
                     STEM education through real-world projects.
                   </p>
                   <p>
-                    We help students turn curiosity into confidence, providing
-                    hands-on learning experiences that prepare them for future
-                    challenges in technology and engineering.
+                    We help students turn curiosity into confidence, providing hands-on learning
+                    experiences that prepare them for future challenges in technology and engineering.
                   </p>
                 </div>
               </div>
@@ -229,7 +218,6 @@ export default function AboutPage() {
                 <Image
                   src="/pocketcinema.jpg"
                   alt="Robonauts Workshop"
-
                   priority
                   width={1000}
                   height={1000}
@@ -238,7 +226,7 @@ export default function AboutPage() {
               </div>
             </div>
           </section>
-          {/* Achievements & Impact Section - Moved to Top */}
+
           <section className="mb-12 sm:mb-16 md:mb-20">
             <SectionHeader
               title="Our Achievements & Impact"
@@ -255,38 +243,28 @@ export default function AboutPage() {
                     <Icon
                       className={`w-6 h-6 sm:w-8 sm:h-8 ${STAT_ICON_COLORS[index]} mx-auto mb-2 sm:mb-3`}
                     />
-                    <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
-                      {stat.value}
-                    </div>
+                    <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{stat.value}</div>
                     <div className="text-xs sm:text-sm text-gray-600">{stat.label}</div>
                   </div>
                 );
               })}
             </div>
             <div className="bg-linear-to-br from-indigo-50 to-blue-50 rounded-xl sm:rounded-2xl p-6 sm:p-8 md:p-12 border border-indigo-100">
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">
-                Making a Difference
-              </h3>
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Making a Difference</h3>
               <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-3">
-                    Student Success Stories
-                  </h4>
+                  <h4 className="font-semibold text-gray-900 mb-3">Student Success Stories</h4>
                   <p className="text-gray-700 text-sm leading-relaxed">
-                    Our students have gone on to win national robotics
-                    competitions, secure scholarships, and pursue careers in
-                    engineering and technology. Many have represented Bangladesh in
+                    Our students have gone on to win national robotics competitions, secure scholarships,
+                    and pursue careers in engineering and technology. Many have represented Bangladesh in
                     international robotics olympiads.
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-3">
-                    Community Impact
-                  </h4>
+                  <h4 className="font-semibold text-gray-900 mb-3">Community Impact</h4>
                   <p className="text-gray-700 text-sm leading-relaxed">
-                    We&apos;ve partnered with schools across Dhaka to bring
-                    robotics education to underserved communities, organizing free
-                    workshops and providing resources to students who might not
+                    We&apos;ve partnered with schools across Dhaka to bring robotics education to underserved
+                    communities, organizing free workshops and providing resources to students who might not
                     otherwise have access to STEM education.
                   </p>
                 </div>
@@ -294,15 +272,11 @@ export default function AboutPage() {
             </div>
           </section>
 
-
-
-          {/* Core Values Section */}
           <section className="mb-12 sm:mb-16 md:mb-20">
             <SectionHeader
               title="Our Core Values"
               subtitle="The principles that guide everything we do"
             />
-
             <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
               {CORE_VALUES.map((value, index) => {
                 const Icon = value.icon;
@@ -314,9 +288,7 @@ export default function AboutPage() {
                     <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-indigo-100 flex items-center justify-center mb-3 sm:mb-4">
                       <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-500" />
                     </div>
-                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">
-                      {value.title}
-                    </h3>
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">{value.title}</h3>
                     <p className="text-sm sm:text-base text-gray-600">{value.description}</p>
                   </div>
                 );
@@ -324,7 +296,6 @@ export default function AboutPage() {
             </div>
           </section>
 
-          {/* What We Do Section */}
           <section className="mb-12 sm:mb-16 md:mb-20 bg-white py-12 sm:py-16 md:py-20 rounded-xl sm:rounded-2xl">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <SectionHeader
@@ -337,19 +308,14 @@ export default function AboutPage() {
                     key={index}
                     className="p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-gray-200 bg-gray-50 hover:bg-white hover:shadow-md transition-all"
                   >
-                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2">
-                      {item.title}
-                    </h3>
-                    <p className="text-gray-600 text-xs sm:text-sm leading-relaxed">
-                      {item.description}
-                    </p>
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2">{item.title}</h3>
+                    <p className="text-gray-600 text-xs sm:text-sm leading-relaxed">{item.description}</p>
                   </div>
                 ))}
               </div>
             </div>
           </section>
 
-          {/* Team / Mentors Section */}
           <section className="mb-12 sm:mb-16 md:mb-20 bg-white py-12 sm:py-16 md:py-20 rounded-xl sm:rounded-2xl">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <SectionHeader
@@ -369,25 +335,20 @@ export default function AboutPage() {
                       >
                         <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${TEAM_ICON_COLORS[index]}`} />
                       </div>
-                      <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1">
-                        {member.name}
-                      </h3>
+                      <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1">{member.name}</h3>
                       <p className={`text-xs sm:text-sm font-semibold ${TEAM_ICON_COLORS[index]} mb-2`}>
                         {member.role}
                       </p>
-                      <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                        {member.expertise}
-                      </p>
+                      <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">{member.expertise}</p>
                     </div>
                   );
                 })}
               </div>
             </div>
           </section>
-          {/* Contact Information & Location Section - Moved to Top */}
+
           <section className="mb-12 sm:mb-16 md:mb-20">
             <SectionHeader title="Contact Information" subtitle="Get in touch with us" />
-
             <div className="grid lg:grid-cols-3 gap-6 sm:gap-8 mb-8 sm:mb-12">
               <div>
                 <div className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-gray-200 shadow-sm">
@@ -433,7 +394,10 @@ export default function AboutPage() {
                       <Mail className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
                       <div>
                         <p className="text-sm font-medium text-gray-500 mb-1">Email</p>
-                        <a href={`mailto:${SITE_CONFIG.email}`} className="text-gray-700 hover:text-indigo-600 transition-colors">
+                        <a
+                          href={`mailto:${SITE_CONFIG.email}`}
+                          className="text-gray-700 hover:text-indigo-600 transition-colors"
+                        >
                           {SITE_CONFIG.email}
                         </a>
                       </div>
@@ -444,7 +408,7 @@ export default function AboutPage() {
 
               <div className="lg:col-span-2">
                 <div className="rounded-xl sm:rounded-2xl overflow-hidden border-2 border-gray-200 shadow-sm bg-white h-64 sm:h-80 lg:h-96">
-                  <MapClient />
+                  <AboutMap />
                 </div>
               </div>
             </div>

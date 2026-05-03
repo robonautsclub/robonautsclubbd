@@ -61,130 +61,115 @@ function normalizeEventCategories(
   return Array.from(uniqueByName.values())
 }
 
-const getCachedDashboardEventsSummary = unstable_cache(
-  async (): Promise<DashboardEventSummary[]> => {
-    if (!adminDb) {
-      console.error('Firebase Admin SDK not available. Cannot fetch dashboard events.')
-      throw new Error('Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.')
-    }
+async function fetchDashboardEventsSummaryFromDb(): Promise<DashboardEventSummary[]> {
+  const db = adminDb!
+  const eventsSnapshot = await db
+    .collection('events')
+    .select('date', 'createdAt', 'title', 'description')
+    .get()
 
-    const eventsSnapshot = await adminDb
-      .collection('events')
-      .select('date', 'createdAt', 'title', 'description')
-      .get()
+  const events: DashboardEventSummary[] = []
+  eventsSnapshot.forEach((doc) => {
+    const data = doc.data()
+    events.push({
+      id: doc.id,
+      date: data.date,
+      title: data.title,
+      description: data.description,
+      createdAt: data.createdAt?.toDate?.() || data.createdAt,
+    } as DashboardEventSummary)
+  })
 
-    const events: DashboardEventSummary[] = []
-    eventsSnapshot.forEach((doc) => {
-      const data = doc.data()
-      events.push({
-        id: doc.id,
-        date: data.date,
-        title: data.title,
-        description: data.description,
-        createdAt: data.createdAt?.toDate?.() || data.createdAt,
-      } as DashboardEventSummary)
-    })
+  events.sort((a, b) => {
+    if (!a.createdAt && !b.createdAt) return 0
+    if (!a.createdAt) return 1
+    if (!b.createdAt) return -1
 
-    // Sort by createdAt in descending order (newest first)
-    events.sort((a, b) => {
-      if (!a.createdAt && !b.createdAt) return 0
-      if (!a.createdAt) return 1
-      if (!b.createdAt) return -1
+    const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime()
+    const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime()
+    return dateB - dateA
+  })
 
-      const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime()
-      const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime()
-      return dateB - dateA // Descending order
-    })
+  return events
+}
 
-    return events
-  },
-  [DASHBOARD_EVENTS_SUMMARY_TAG],
-  {
-    tags: [DASHBOARD_EVENTS_SUMMARY_TAG],
-    revalidate: 300,
-  }
-)
+const getCachedDashboardEventsSummary = unstable_cache(fetchDashboardEventsSummaryFromDb, [DASHBOARD_EVENTS_SUMMARY_TAG], {
+  tags: [DASHBOARD_EVENTS_SUMMARY_TAG],
+  revalidate: 300,
+})
 
-const getCachedEventsList = unstable_cache(
-  async (): Promise<Event[]> => {
-    if (!adminDb) {
-      console.error('Firebase Admin SDK not available. Cannot fetch events.')
-      throw new Error('Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.')
-    }
+async function fetchDashboardEventsListFromDb(): Promise<Event[]> {
+  const db = adminDb!
+  const eventsSnapshot = await db.collection('events').get()
+  const events: Event[] = []
+  eventsSnapshot.forEach((doc) => {
+    const data = doc.data()
+    events.push({
+      id: doc.id,
+      ...data,
+      createdAt: data.createdAt?.toDate?.() || data.createdAt,
+      updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+    } as Event)
+  })
 
-    const eventsSnapshot = await adminDb.collection('events').get()
-    const events: Event[] = []
-    eventsSnapshot.forEach((doc) => {
-      const data = doc.data()
-      events.push({
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate?.() || data.createdAt,
-        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
-      } as Event)
-    })
+  events.sort((a, b) => {
+    if (!a.createdAt && !b.createdAt) return 0
+    if (!a.createdAt) return 1
+    if (!b.createdAt) return -1
 
-    events.sort((a, b) => {
-      if (!a.createdAt && !b.createdAt) return 0
-      if (!a.createdAt) return 1
-      if (!b.createdAt) return -1
+    const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime()
+    const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime()
+    return dateB - dateA
+  })
 
-      const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime()
-      const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime()
-      return dateB - dateA
-    })
+  return events
+}
 
-    return events
-  },
-  [DASHBOARD_EVENTS_LIST_TAG],
-  {
-    tags: [DASHBOARD_EVENTS_LIST_TAG],
-    revalidate: 300,
-  }
-)
+const getCachedEventsList = unstable_cache(fetchDashboardEventsListFromDb, [DASHBOARD_EVENTS_LIST_TAG], {
+  tags: [DASHBOARD_EVENTS_LIST_TAG],
+  revalidate: 300,
+})
 
-const getCachedCoursesList = unstable_cache(
-  async (): Promise<Course[]> => {
-    if (!adminDb) {
-      console.error('Firebase Admin SDK not available. Cannot fetch courses.')
-      throw new Error('Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.')
-    }
+async function fetchDashboardCoursesListFromDb(): Promise<Course[]> {
+  const db = adminDb!
+  const coursesSnapshot = await db.collection('courses').get()
+  const courses: Course[] = []
+  coursesSnapshot.forEach((doc) => {
+    const data = doc.data()
+    courses.push({
+      id: doc.id,
+      ...data,
+      createdAt: data.createdAt?.toDate?.() || data.createdAt,
+      updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+    } as Course)
+  })
 
-    const coursesSnapshot = await adminDb.collection('courses').get()
-    const courses: Course[] = []
-    coursesSnapshot.forEach((doc) => {
-      const data = doc.data()
-      courses.push({
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate?.() || data.createdAt,
-        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
-      } as Course)
-    })
+  courses.sort((a, b) => {
+    if (!a.createdAt && !b.createdAt) return 0
+    if (!a.createdAt) return 1
+    if (!b.createdAt) return -1
 
-    courses.sort((a, b) => {
-      if (!a.createdAt && !b.createdAt) return 0
-      if (!a.createdAt) return 1
-      if (!b.createdAt) return -1
+    const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime()
+    const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime()
+    return dateB - dateA
+  })
 
-      const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime()
-      const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime()
-      return dateB - dateA
-    })
+  return courses
+}
 
-    return courses
-  },
-  [DASHBOARD_COURSES_LIST_TAG],
-  {
-    tags: [DASHBOARD_COURSES_LIST_TAG],
-  }
-)
+const getCachedCoursesList = unstable_cache(fetchDashboardCoursesListFromDb, [DASHBOARD_COURSES_LIST_TAG], {
+  tags: [DASHBOARD_COURSES_LIST_TAG],
+})
 
 /**
  * Get all events from Firestore
  */
 export async function getEvents(): Promise<Event[]> {
   await requireAuth() // Ensure user is authenticated
+  if (!adminDb) {
+    console.warn('Firebase Admin SDK not available. Cannot fetch events. Set FIREBASE_ADMIN_* in .env')
+    return []
+  }
   try {
     return await getCachedEventsList()
   } catch (error) {
@@ -200,6 +185,10 @@ export async function getEvents(): Promise<Event[]> {
 export async function getDashboardEventsSummary(): Promise<DashboardEventSummary[]> {
   await requireAuth() // Ensure user is authenticated
 
+  if (!adminDb) {
+    console.warn('Firebase Admin SDK not available. Cannot fetch dashboard events summary.')
+    return []
+  }
   try {
     return await getCachedDashboardEventsSummary()
   } catch (error) {
@@ -211,30 +200,33 @@ export async function getDashboardEventsSummary(): Promise<DashboardEventSummary
 /**
  * Get a single event by ID
  */
+async function fetchDashboardEventByIdFromDb(id: string): Promise<Event | null> {
+  const db = adminDb!
+  const eventDoc = await db.collection('events').doc(id).get()
+  if (!eventDoc.exists) {
+    return null
+  }
+
+  const data = eventDoc.data()!
+  return {
+    id: eventDoc.id,
+    ...data,
+    createdAt: data.createdAt?.toDate?.() || data.createdAt,
+    updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+  } as Event
+}
+
 export async function getEvent(id: string): Promise<Event | null> {
   await requireAuth()
 
+  if (!adminDb) {
+    console.warn('Firebase Admin SDK not available. Cannot fetch event.')
+    return null
+  }
+
   try {
     return await unstable_cache(
-      async (): Promise<Event | null> => {
-        if (!adminDb) {
-          console.error('Firebase Admin SDK not available. Cannot fetch event.')
-          throw new Error('Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.')
-        }
-
-        const eventDoc = await adminDb.collection('events').doc(id).get()
-        if (!eventDoc.exists) {
-          return null
-        }
-
-        const data = eventDoc.data()!
-        return {
-          id: eventDoc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate?.() || data.createdAt,
-          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
-        } as Event
-      },
+      async (): Promise<Event | null> => fetchDashboardEventByIdFromDb(id),
       [DASHBOARD_EVENT_DETAIL_TAG_PREFIX, id],
       {
         tags: [getEventDetailTag(id)],
@@ -634,60 +626,59 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
 /**
  * Get bookings for a specific event
  */
+async function fetchBookingsForEventFromDb(eventId: string): Promise<Booking[]> {
+  const db = adminDb!
+  const bookingsSnapshot = await db
+    .collection('bookings')
+    .where('eventId', '==', eventId)
+    .get()
+
+  const bookings: Booking[] = []
+  bookingsSnapshot.forEach((doc) => {
+    const data = doc.data()
+    const createdAt = data.createdAt?.toDate
+      ? data.createdAt.toDate().toISOString()
+      : data.createdAt instanceof Date
+        ? data.createdAt.toISOString()
+        : data.createdAt
+    const paidAt = data.paidAt?.toDate
+      ? data.paidAt.toDate().toISOString()
+      : data.paidAt instanceof Date
+        ? data.paidAt.toISOString()
+        : data.paidAt
+
+    bookings.push({
+      id: doc.id,
+      ...data,
+      createdAt,
+      paidAt,
+    } as Booking)
+  })
+
+  bookings.sort((a, b) => {
+    if (!a.createdAt && !b.createdAt) return 0
+    if (!a.createdAt) return 1
+    if (!b.createdAt) return -1
+
+    const dateA = new Date(a.createdAt).getTime()
+    const dateB = new Date(b.createdAt).getTime()
+    return dateB - dateA
+  })
+
+  return bookings
+}
+
 export async function getBookings(eventId: string): Promise<Booking[]> {
   await requireAuth()
 
+  if (!adminDb) {
+    console.warn('Firebase Admin SDK not available. Cannot fetch bookings.')
+    return []
+  }
+
   try {
     return await unstable_cache(
-      async (): Promise<Booking[]> => {
-        if (!adminDb) {
-          console.error('Firebase Admin SDK not available. Cannot fetch bookings.')
-          throw new Error('Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.')
-        }
-
-        // Query without orderBy to avoid requiring a composite index
-        // We'll sort in memory instead
-        const bookingsSnapshot = await adminDb
-          .collection('bookings')
-          .where('eventId', '==', eventId)
-          .get()
-
-        const bookings: Booking[] = []
-        bookingsSnapshot.forEach((doc) => {
-          const data = doc.data()
-          // Convert Firestore Timestamp to ISO string for consistent serialization
-          const createdAt = data.createdAt?.toDate 
-            ? data.createdAt.toDate().toISOString()
-            : data.createdAt instanceof Date
-            ? data.createdAt.toISOString()
-            : data.createdAt
-          const paidAt = data.paidAt?.toDate
-            ? data.paidAt.toDate().toISOString()
-            : data.paidAt instanceof Date
-            ? data.paidAt.toISOString()
-            : data.paidAt
-          
-          bookings.push({
-            id: doc.id,
-            ...data,
-            createdAt,
-            paidAt,
-          } as Booking)
-        })
-
-        // Sort by createdAt in descending order (newest first)
-        bookings.sort((a, b) => {
-          if (!a.createdAt && !b.createdAt) return 0
-          if (!a.createdAt) return 1
-          if (!b.createdAt) return -1
-          
-          const dateA = new Date(a.createdAt).getTime()
-          const dateB = new Date(b.createdAt).getTime()
-          return dateB - dateA // Descending order
-        })
-
-        return bookings
-      },
+      async (): Promise<Booking[]> => fetchBookingsForEventFromDb(eventId),
       [DASHBOARD_EVENT_BOOKINGS_TAG_PREFIX, eventId],
       {
         tags: [getEventBookingsTag(eventId)],
@@ -790,6 +781,10 @@ export async function cancelBooking(bookingId: string): Promise<{ success: boole
  */
 export async function getCourses(): Promise<Course[]> {
   await requireAuth() // Ensure user is authenticated
+  if (!adminDb) {
+    console.warn('Firebase Admin SDK not available. Cannot fetch courses. Set FIREBASE_ADMIN_* in .env')
+    return []
+  }
   try {
     return await getCachedCoursesList()
   } catch (error) {
@@ -805,8 +800,8 @@ export async function getCourse(id: string): Promise<Course | null> {
   await requireAuth()
 
   if (!adminDb) {
-    console.error('Firebase Admin SDK not available. Cannot fetch course.')
-    throw new Error('Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.')
+    console.warn('Firebase Admin SDK not available. Cannot fetch course.')
+    return null
   }
 
   try {
@@ -1201,6 +1196,22 @@ async function getDashboardNotifications(session: Session): Promise<DashboardNot
 
 export async function getDashboardBootstrapData(sessionArg?: Session): Promise<DashboardBootstrapData> {
   const session = sessionArg ?? (await requireAuth())
+
+  if (!adminDb) {
+    console.warn('Firebase Admin SDK not available. Dashboard lists will be empty until FIREBASE_ADMIN_* is configured.')
+    const [notifications, members] = await Promise.all([
+      getDashboardNotifications(session),
+      getDashboardMembers(session),
+    ])
+    return {
+      events: [],
+      courses: [],
+      news: [],
+      galleryGroups: [],
+      notifications,
+      members,
+    }
+  }
 
   const [events, courses, news, galleryGroups, notifications, members] = await Promise.all([
     getCachedEventsList(),
