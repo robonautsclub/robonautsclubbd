@@ -22,27 +22,45 @@ export const getServerSession = cache(async () => {
     if (adminAuth) {
       try {
         const decodedToken = await adminAuth.verifyIdToken(token)
-        const user = await adminAuth.getUser(decodedToken.uid)
-        
-        // Extract role from custom claims (set via /api/auth/assign-role)
-        // Custom claims are available in decodedToken after verification
-        // Also check user's custom claims as fallback
-        let role = (decodedToken.role as 'superAdmin' | 'admin' | undefined)
-        
-        // If role not in token, check user's custom claims directly
-        if (!role) {
-          role = (user.customClaims?.role as 'superAdmin' | 'admin' | undefined)
+        const uid = decodedToken.uid
+
+        const normalizeRole = (value: unknown): 'superAdmin' | 'admin' | undefined => {
+          if (value === 'superAdmin' || value === 'admin') return value
+          return undefined
         }
-        
-        // Default to admin if still no role found
-        role = role || 'admin'
-        
+
+        let role = normalizeRole(decodedToken.role)
+        let email = (decodedToken.email as string | undefined) ?? ''
+        let name = (decodedToken.name as string | undefined) ?? ''
+        let emailVerified = Boolean(decodedToken.email_verified)
+
+        // One Firebase Auth round-trip only when the ID token lacks role or email
+        // (e.g. stale token before custom-claim refresh, or missing standard claims).
+        if (!role || !email) {
+          const user = await adminAuth.getUser(uid)
+          if (!role) {
+            role = normalizeRole(user.customClaims?.role) ?? 'admin'
+          }
+          if (!email) {
+            email = user.email ?? ''
+          }
+          if (!name) {
+            name = user.displayName ?? email ?? 'Admin'
+          }
+          emailVerified = user.emailVerified
+        } else {
+          role = role ?? 'admin'
+          if (!name) {
+            name = email || 'Admin'
+          }
+        }
+
         return {
-          uid: user.uid,
-          email: user.email || '',
-          name: user.displayName || user.email || 'Admin',
-          emailVerified: user.emailVerified,
-          role,
+          uid,
+          email,
+          name,
+          emailVerified,
+          role: role ?? 'admin',
         }
       } catch (error: unknown) {
         const errorObj = error as { code?: string; message?: string }

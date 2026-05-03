@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { SITE_CONFIG } from '@/lib/site-config'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -16,20 +16,49 @@ const HERO_VIDEO_POSTER =
 
 export default function Hero({ upcomingEvents = [] }: { upcomingEvents?: Event[] }) {
   const [muted, setMuted] = useState(true)
+  /** Avoid Cloudinary video bytes on small viewports / reduced motion — fewer network requests. */
+  const [useVideoBg, setUseVideoBg] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)')
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const sync = () => setUseVideoBg(mq.matches && !motion.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    motion.addEventListener('change', sync)
+    return () => {
+      mq.removeEventListener('change', sync)
+      motion.removeEventListener('change', sync)
+    }
+  }, [])
 
   return (
     <section className="relative overflow-hidden w-full min-w-full min-h-screen">
-      <video
-        className="absolute inset-0 w-full h-full object-cover object-center z-0"
-        src={HERO_VIDEO}
-        poster={HERO_VIDEO_POSTER}
-        preload="metadata"
-        autoPlay
-        muted={muted}
-        loop
-        playsInline
-        aria-hidden="true"
-      />
+      {useVideoBg ? (
+        <video
+          className="absolute inset-0 w-full h-full object-cover object-center z-0"
+          src={HERO_VIDEO}
+          poster={HERO_VIDEO_POSTER}
+          preload="metadata"
+          autoPlay
+          muted={muted}
+          loop
+          playsInline
+          aria-hidden="true"
+        />
+      ) : (
+        <div className="absolute inset-0 z-0" aria-hidden="true">
+          <Image
+            src={HERO_VIDEO_POSTER}
+            alt=""
+            fill
+            priority
+            className="object-cover object-center"
+            sizes="100vw"
+            quality={80}
+          />
+        </div>
+      )}
       {/* Dark overlay for text readability */}
       <div className="absolute inset-0 z-1 bg-black/55" aria-hidden="true" />
       {/* Background decoration */}
@@ -110,15 +139,16 @@ export default function Hero({ upcomingEvents = [] }: { upcomingEvents?: Event[]
         )}
       </div>
 
-      {/* Sound toggle - video starts muted (required for autoplay); click to hear sound */}
-      <button
-        type="button"
-        onClick={() => setMuted((m) => !m)}
-        className="absolute bottom-6 right-6 z-20 p-2.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors border border-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
-        aria-label={muted ? 'Unmute video' : 'Mute video'}
-      >
-        {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-      </button>
+      {useVideoBg ? (
+        <button
+          type="button"
+          onClick={() => setMuted((m) => !m)}
+          className="absolute bottom-6 right-6 z-20 p-2.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors border border-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
+          aria-label={muted ? 'Unmute video' : 'Mute video'}
+        >
+          {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+        </button>
+      ) : null}
 
       {/* Bottom wave decoration */}
       <div className="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-white to-transparent z-1" />

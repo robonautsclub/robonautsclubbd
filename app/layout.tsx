@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 import OrganizationSchema from "@/components/OrganizationSchema";
+import ConditionalAnalytics from "@/components/ConditionalAnalytics";
 import { SITE_CONFIG, getSiteOrigin } from "@/lib/site-config";
 
 
@@ -96,19 +96,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${geistSans.className} antialiased`}
       >
-        {/* Google Analytics */}
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-X87SJ4G3R7"
-          strategy="afterInteractive"
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-X87SJ4G3R7');
-          `}
-        </Script>
+        <ConditionalAnalytics />
         <OrganizationSchema />
         {children}
       </body>
