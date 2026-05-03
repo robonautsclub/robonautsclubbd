@@ -4,7 +4,11 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { onAuthStateChanged } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
-import { SESSION_DURATION_MS } from '@/lib/session'
+import {
+  SESSION_DURATION_MS,
+  ASSIGN_ROLE_LAST_SYNC_STORAGE_KEY,
+  ASSIGN_ROLE_MIN_SYNC_INTERVAL_MS,
+} from '@/lib/session'
 
 function getSessionStart(): number | null {
   if (typeof window === 'undefined') return null
@@ -21,6 +25,32 @@ function clearSessionCookies() {
   document.cookie = 'auth-token=; path=/; max-age=0'
   document.cookie = 'user-info=; path=/; max-age=0'
   document.cookie = 'session-start=; path=/; max-age=0'
+  try {
+    sessionStorage.removeItem(ASSIGN_ROLE_LAST_SYNC_STORAGE_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+function shouldSyncAssignRole(): boolean {
+  if (typeof window === 'undefined') return true
+  try {
+    const raw = sessionStorage.getItem(ASSIGN_ROLE_LAST_SYNC_STORAGE_KEY)
+    if (!raw) return true
+    const t = parseInt(raw, 10)
+    if (!Number.isFinite(t)) return true
+    return Date.now() - t > ASSIGN_ROLE_MIN_SYNC_INTERVAL_MS
+  } catch {
+    return true
+  }
+}
+
+function markAssignRoleSynced(): void {
+  try {
+    sessionStorage.setItem(ASSIGN_ROLE_LAST_SYNC_STORAGE_KEY, String(Date.now()))
+  } catch {
+    /* ignore */
+  }
 }
 
 function getRemainingSessionSeconds(): number {
@@ -53,10 +83,9 @@ export default function TokenExpirationChecker() {
           return
         }
 
-        // Check if token is still valid by trying to get a fresh token
         try {
-          const token = await user.getIdToken(true) // Force refresh if needed
-          
+          let token = await user.getIdToken(false)
+
           if (!token) {
             clearSessionCookies()
             router.push('/login')
@@ -70,27 +99,28 @@ export default function TokenExpirationChecker() {
             return
           }
 
-          // Assign/refresh role via server-side API (ensures custom claims are up-to-date)
-          try {
-            const roleResponse = await fetch('/api/auth/assign-role', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-              },
-              credentials: 'include',
-            })
+          // Throttle assign-role: most navigations only refresh the cookie (fewer edge hits).
+          if (shouldSyncAssignRole()) {
+            try {
+              const roleResponse = await fetch('/api/auth/assign-role', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+                credentials: 'include',
+              })
 
-            if (roleResponse.ok) {
-              const freshToken = await user.getIdToken(true)
-              document.cookie = `auth-token=${freshToken}; path=/; max-age=${remainingSeconds}; SameSite=Lax`
-            } else {
-              document.cookie = `auth-token=${token}; path=/; max-age=${remainingSeconds}; SameSite=Lax`
+              if (roleResponse.ok) {
+                token = await user.getIdToken(true)
+                markAssignRoleSynced()
+              }
+            } catch (roleError) {
+              console.error('Error assigning role during token refresh:', roleError)
             }
-          } catch (roleError) {
-            console.error('Error assigning role during token refresh:', roleError)
-            document.cookie = `auth-token=${token}; path=/; max-age=${remainingSeconds}; SameSite=Lax`
           }
+
+          document.cookie = `auth-token=${token}; path=/; max-age=${remainingSeconds}; SameSite=Lax`
         } catch (error: unknown) {
           console.error('Token refresh error:', error)
           clearSessionCookies()

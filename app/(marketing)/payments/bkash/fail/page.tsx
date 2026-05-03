@@ -20,6 +20,7 @@ export default async function BkashFailPage({ searchParams }: FailPageProps) {
         <p className="text-sm text-gray-500 mb-6">{error}</p>
         <Link
           href="/events"
+          prefetch={false}
           className="inline-flex items-center rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-700"
         >
           Retry from Events

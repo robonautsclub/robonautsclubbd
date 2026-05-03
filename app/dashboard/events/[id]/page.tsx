@@ -34,6 +34,7 @@ export default async function EventDetailsPage({
           <EventHeaderActions event={event} currentUserId={session.uid} />
           <Link
             href="/dashboard/events"
+            prefetch={false}
             className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-center"
           >
             ← Back to Events

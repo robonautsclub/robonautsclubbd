@@ -5,6 +5,7 @@ import { signOut } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 import { LogOut } from 'lucide-react'
 import { useState } from 'react'
+import { ASSIGN_ROLE_LAST_SYNC_STORAGE_KEY } from '@/lib/session'
 
 export default function LogoutButton() {
   const router = useRouter()
@@ -22,7 +23,12 @@ export default function LogoutButton() {
       document.cookie = 'auth-token=; path=/; max-age=0'
       document.cookie = 'user-info=; path=/; max-age=0'
       document.cookie = 'session-start=; path=/; max-age=0'
-      
+      try {
+        sessionStorage.removeItem(ASSIGN_ROLE_LAST_SYNC_STORAGE_KEY)
+      } catch {
+        /* ignore */
+      }
+
       // Redirect to login
       router.push('/login')
       router.refresh()
@@ -32,6 +38,11 @@ export default function LogoutButton() {
       document.cookie = 'auth-token=; path=/; max-age=0'
       document.cookie = 'user-info=; path=/; max-age=0'
       document.cookie = 'session-start=; path=/; max-age=0'
+      try {
+        sessionStorage.removeItem(ASSIGN_ROLE_LAST_SYNC_STORAGE_KEY)
+      } catch {
+        /* ignore */
+      }
       router.push('/login')
       router.refresh()
     } finally {

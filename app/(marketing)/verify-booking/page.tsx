@@ -153,6 +153,7 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
           </div>
           <Link
             href="/events"
+            prefetch={false}
             className="inline-block mt-6 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors shadow-md hover:shadow-lg"
           >
             View All Events
@@ -231,6 +232,7 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               href="/events"
+              prefetch={false}
               className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors shadow-md hover:shadow-lg"
             >
               View Events
@@ -479,12 +481,14 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
                 <div className="flex gap-3">
                   <Link
                     href="/events"
+                    prefetch={false}
                     className="px-5 py-2.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-xl transition-colors"
                   >
                     View Events
                   </Link>
                   <Link
                     href="/"
+                    prefetch={false}
                     className="px-5 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
                   >
                     Back to Home

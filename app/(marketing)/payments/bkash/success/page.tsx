@@ -25,6 +25,7 @@ export default async function BkashSuccessPage({ searchParams }: SuccessPageProp
         ) : null}
         <Link
           href="/events"
+          prefetch={false}
           className="inline-flex items-center rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-700"
         >
           Back to Events

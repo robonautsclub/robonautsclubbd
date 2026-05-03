@@ -138,6 +138,7 @@ export default function GalleryGroupForm({ group }: Props) {
     <form onSubmit={onSubmit} className="space-y-6 max-w-3xl">
       <Link
         href="/dashboard/gallery"
+        prefetch={false}
         className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-800"
       >
         <ArrowLeft className="w-4 h-4" />
@@ -253,6 +254,7 @@ export default function GalleryGroupForm({ group }: Props) {
         </button>
         <Link
           href="/dashboard/gallery"
+          prefetch={false}
           className="inline-flex items-center justify-center px-6 py-2.5 rounded-lg border border-gray-300 text-gray-800 font-medium hover:bg-gray-50"
         >
           Cancel

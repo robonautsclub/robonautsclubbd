@@ -127,6 +127,7 @@ export default async function EventsPage() {
                           <td className="px-3 sm:px-6 py-4">
                             <Link
                               href={`/dashboard/events/${event.id}`}
+                              prefetch={false}
                               className="text-sm font-semibold text-gray-900 mb-1 hover:text-indigo-600 transition-colors"
                             >
                               {event.title}
@@ -240,6 +241,7 @@ export default async function EventsPage() {
                           <td className="px-3 sm:px-6 py-4">
                             <Link
                               href={`/dashboard/events/${event.id}`}
+                              prefetch={false}
                               className="text-sm font-semibold text-gray-700 mb-1 hover:text-indigo-600 transition-colors"
                             >
                               {event.title}
