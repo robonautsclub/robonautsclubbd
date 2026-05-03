@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Bell, X, CheckCircle2, User, Clock } from 'lucide-react'
 
 type Notification = {
@@ -17,34 +17,32 @@ type Notification = {
 export default function Notifications() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
 
-  const fetchNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
+    setLoading(true)
     try {
       const response = await fetch('/api/notifications?unreadOnly=false&limit=10')
       const data = await response.json()
-      
+
       if (data.success) {
         setNotifications(data.notifications || [])
         setUnreadCount(data.unreadCount || 0)
       }
-    } catch (error) {
-      // Silently handle errors
+    } catch {
+      /* ignore */
     } finally {
       setLoading(false)
     }
-  }
-
-  useEffect(() => {
-    fetchNotifications()
-    
-    // Refresh every 2 minutes (enough for ops; fewer API edge hits)
-    const interval = setInterval(fetchNotifications, 120000)
-    return () => clearInterval(interval)
   }, [])
 
-  // Mark all as read when dropdown opens
+  // Fetch only when the panel opens — no mount/interval polling (fewer edge/API hits).
+  useEffect(() => {
+    if (!isOpen) return
+    void loadNotifications()
+  }, [isOpen, loadNotifications])
+
   useEffect(() => {
     if (isOpen && unreadCount > 0) {
       const markAllAsRead = async () => {
@@ -53,17 +51,14 @@ export default function Notifications() {
             method: 'POST',
             credentials: 'include',
           })
-          
-          // Update local state - mark all as read
-          setNotifications((prev) =>
-            prev.map((n) => ({ ...n, isRead: true }))
-          )
+
+          setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
           setUnreadCount(0)
-        } catch (error) {
-          // Silently fail - notifications will still show
+        } catch {
+          /* ignore */
         }
       }
-      
+
       markAllAsRead()
     }
   }, [isOpen, unreadCount])
@@ -74,16 +69,13 @@ export default function Notifications() {
         method: 'PUT',
         credentials: 'include',
       })
-      
-      // Update local state
+
       setNotifications((prev) =>
-        prev.map((n) =>
-          n.id === notificationId ? { ...n, isRead: true } : n
-        )
+        prev.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n)),
       )
       setUnreadCount((prev) => Math.max(0, prev - 1))
-    } catch (error) {
-      // Silently handle errors
+    } catch {
+      /* ignore */
     }
   }
 
@@ -102,12 +94,10 @@ export default function Notifications() {
     return date.toLocaleDateString()
   }
 
-  const unreadNotifications = notifications.filter((n) => !n.isRead)
-
   return (
     <div className="relative">
-      {/* Bell Icon Button */}
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
         title="Notifications"
@@ -120,18 +110,11 @@ export default function Notifications() {
         )}
       </button>
 
-      {/* Notifications Dropdown */}
       {isOpen && (
         <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setIsOpen(false)}
-          />
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
 
-          {/* Dropdown Panel */}
           <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 max-h-[600px] flex flex-col">
-            {/* Header */}
             <div className="px-4 py-3 border-b border-gray-200 bg-linear-to-r from-indigo-50 to-blue-50 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Bell className="w-5 h-5 text-indigo-600" />
@@ -143,6 +126,7 @@ export default function Notifications() {
                 )}
               </div>
               <button
+                type="button"
                 onClick={() => setIsOpen(false)}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
               >
@@ -150,7 +134,6 @@ export default function Notifications() {
               </button>
             </div>
 
-            {/* Notifications List */}
             <div className="flex-1 overflow-y-auto">
               {loading ? (
                 <div className="p-8 text-center text-gray-500">
@@ -172,17 +155,19 @@ export default function Notifications() {
                       }`}
                     >
                       <div className="flex items-start gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                          notification.type === 'profile_update'
-                            ? 'bg-indigo-100 text-indigo-600'
-                            : notification.type.startsWith('event_')
-                            ? 'bg-green-100 text-green-600'
-                            : notification.type.startsWith('course_')
-                            ? 'bg-blue-100 text-blue-600'
-                            : notification.type.startsWith('user_')
-                            ? 'bg-purple-100 text-purple-600'
-                            : 'bg-gray-100 text-gray-600'
-                        }`}>
+                        <div
+                          className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                            notification.type === 'profile_update'
+                              ? 'bg-indigo-100 text-indigo-600'
+                              : notification.type.startsWith('event_')
+                                ? 'bg-green-100 text-green-600'
+                                : notification.type.startsWith('course_')
+                                  ? 'bg-blue-100 text-blue-600'
+                                  : notification.type.startsWith('user_')
+                                    ? 'bg-purple-100 text-purple-600'
+                                    : 'bg-gray-100 text-gray-600'
+                          }`}
+                        >
                           {notification.type === 'profile_update' ? (
                             <User className="w-5 h-5" />
                           ) : (
@@ -190,9 +175,7 @@ export default function Notifications() {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 mb-1">
-                            {notification.message}
-                          </p>
+                          <p className="text-sm font-medium text-gray-900 mb-1">{notification.message}</p>
                           {notification.changes.length > 0 && (
                             <div className="flex flex-wrap gap-1 mb-2">
                               {notification.changes.map((change, idx) => (
@@ -212,6 +195,7 @@ export default function Notifications() {
                         </div>
                         {!notification.isRead && (
                           <button
+                            type="button"
                             onClick={() => markAsRead(notification.id)}
                             className="p-1 text-gray-400 hover:text-green-600 transition-colors"
                             title="Mark as read"
@@ -226,11 +210,11 @@ export default function Notifications() {
               )}
             </div>
 
-            {/* Footer */}
             {notifications.length > 0 && (
               <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
                 <button
-                  onClick={fetchNotifications}
+                  type="button"
+                  onClick={() => void loadNotifications()}
                   className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
                 >
                   Refresh

@@ -181,7 +181,7 @@ export async function generateMetadata({
 }
 
 // ISR: longer window lowers edge recomputation while admin updates still invalidate on-demand
-export const revalidate = 900
+export const revalidate = 1800
 
 export default async function EventDetailPage({
   params,

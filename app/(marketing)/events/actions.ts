@@ -102,7 +102,7 @@ async function fetchPublicEventsFromFirestore(): Promise<Event[]> {
 
 const getCachedPublicEvents = unstable_cache(fetchPublicEventsFromFirestore, [PUBLIC_EVENTS_TAG], {
   tags: [PUBLIC_EVENTS_TAG],
-  revalidate: 900,
+  revalidate: 3600,
 })
 
 export const getPublicEvents = cache(async (): Promise<Event[]> => {
@@ -175,7 +175,7 @@ const getCachedPublicEvent = (id: string) =>
     [PUBLIC_EVENT_TAG_PREFIX, id],
     {
       tags: [getPublicEventTag(id), PUBLIC_EVENTS_TAG],
-      revalidate: 900,
+      revalidate: 3600,
     }
   )()
 
@@ -768,7 +768,7 @@ async function fetchPublicCoursesFromFirestore(): Promise<Course[]> {
 
 const getCachedPublicCourses = unstable_cache(fetchPublicCoursesFromFirestore, [PUBLIC_COURSES_TAG], {
   tags: [PUBLIC_COURSES_TAG],
-  revalidate: 1800,
+  revalidate: 3600,
 })
 
 export const getPublicCourses = cache(async (): Promise<Course[]> => {
