@@ -44,7 +44,7 @@ export const metadata: Metadata = {
 };
 
 // ISR: longer window minimizes edge recompute churn; admin actions still call revalidatePath
-export const revalidate = 900
+export const revalidate = 1800
 
 // --- Main Page ---
 export default async function EventsPage() {

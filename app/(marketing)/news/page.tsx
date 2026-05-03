@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   },
 }
 
-export const revalidate = 900
+export const revalidate = 1800
 
 function formatDate(iso: string | Date | null) {
   if (iso == null) return ''

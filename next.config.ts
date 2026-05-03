@@ -86,16 +86,6 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-      {
-        // Cache API responses with shorter TTL
-        source: '/api/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, s-maxage=60, stale-while-revalidate=120',
-          },
-        ],
-      },
     ]
   },
 };

@@ -22,6 +22,50 @@ export type DashboardEventSummary = Pick<Event, 'id' | 'date' | 'createdAt' | 't
 const DASHBOARD_EVENTS_SUMMARY_TAG = 'dashboard-events-summary'
 const DASHBOARD_EVENTS_LIST_TAG = 'dashboard-events-list'
 const DASHBOARD_COURSES_LIST_TAG = 'dashboard-courses-list'
+
+const DASHBOARD_EVENT_LIST_FIELDS = [
+  'title',
+  'date',
+  'time',
+  'location',
+  'description',
+  'fullDescription',
+  'image',
+  'eligibility',
+  'venue',
+  'agenda',
+  'tags',
+  'categories',
+  'isPaid',
+  'amount',
+  'paymentBkashNumber',
+  'contactPersonName',
+  'contactPersonDesignation',
+  'contactPersonMobileOrEmail',
+  'registrationClosingDate',
+  'registrationDisabled',
+  'customFormFields',
+  'defaultRegistrationFields',
+  'createdAt',
+  'updatedAt',
+  'createdBy',
+  'createdByName',
+  'createdByEmail',
+] as const
+
+const DASHBOARD_COURSE_LIST_FIELDS = [
+  'title',
+  'level',
+  'blurb',
+  'href',
+  'image',
+  'isArchived',
+  'createdAt',
+  'updatedAt',
+  'createdBy',
+  'createdByName',
+  'createdByEmail',
+] as const
 const PUBLIC_EVENTS_TAG = 'public-events'
 const PUBLIC_COURSES_TAG = 'public-courses'
 const DASHBOARD_EVENT_DETAIL_TAG_PREFIX = 'dashboard-event'
@@ -95,12 +139,16 @@ async function fetchDashboardEventsSummaryFromDb(): Promise<DashboardEventSummar
 
 const getCachedDashboardEventsSummary = unstable_cache(fetchDashboardEventsSummaryFromDb, [DASHBOARD_EVENTS_SUMMARY_TAG], {
   tags: [DASHBOARD_EVENTS_SUMMARY_TAG],
-  revalidate: 300,
+  revalidate: 600,
 })
 
 async function fetchDashboardEventsListFromDb(): Promise<Event[]> {
   const db = adminDb!
-  const eventsSnapshot = await db.collection('events').get()
+  const eventsSnapshot = await db
+    .collection('events')
+    .select(...(DASHBOARD_EVENT_LIST_FIELDS as unknown as string[]))
+    .get()
+
   const events: Event[] = []
   eventsSnapshot.forEach((doc) => {
     const data = doc.data()
@@ -127,12 +175,16 @@ async function fetchDashboardEventsListFromDb(): Promise<Event[]> {
 
 const getCachedEventsList = unstable_cache(fetchDashboardEventsListFromDb, [DASHBOARD_EVENTS_LIST_TAG], {
   tags: [DASHBOARD_EVENTS_LIST_TAG],
-  revalidate: 300,
+  revalidate: 900,
 })
 
 async function fetchDashboardCoursesListFromDb(): Promise<Course[]> {
   const db = adminDb!
-  const coursesSnapshot = await db.collection('courses').get()
+  const coursesSnapshot = await db
+    .collection('courses')
+    .select(...(DASHBOARD_COURSE_LIST_FIELDS as unknown as string[]))
+    .get()
+
   const courses: Course[] = []
   coursesSnapshot.forEach((doc) => {
     const data = doc.data()
@@ -159,6 +211,7 @@ async function fetchDashboardCoursesListFromDb(): Promise<Course[]> {
 
 const getCachedCoursesList = unstable_cache(fetchDashboardCoursesListFromDb, [DASHBOARD_COURSES_LIST_TAG], {
   tags: [DASHBOARD_COURSES_LIST_TAG],
+  revalidate: 900,
 })
 
 /**

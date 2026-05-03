@@ -9,7 +9,7 @@ import ArticleCoverLightbox from '@/components/ArticleCoverLightbox'
 import ImageLightboxGallery from '@/components/ImageLightboxGallery'
 import { getNewsArticleBySlug } from '../actions'
 
-export const revalidate = 300
+export const revalidate = 600
 
 type Props = { params: Promise<{ slug: string }> }
 
