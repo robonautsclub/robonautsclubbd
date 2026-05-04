@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Metadata } from 'next'
 import Script from 'next/script'
 import { Calendar, Clock, MapPin, ArrowLeft, Users, Monitor, Building2, Banknote } from 'lucide-react'
-import { getPublicEvent } from '../actions'
+import { getPublicEnglishMediumSchools, getPublicEvent } from '../actions'
 import { Event } from '@/types/event'
 import { notFound } from 'next/navigation'
 import BookingForm from './BookingForm'
@@ -190,6 +190,7 @@ export default async function EventDetailPage({
 }) {
   const { id } = await params
   const event = await getPublicEvent(id)
+  const schools = await getPublicEnglishMediumSchools()
 
   if (!event) {
     notFound()
@@ -453,7 +454,7 @@ export default async function EventDetailPage({
               ) : !registrationOpen ? (
                 <RegistrationClosedMessage />
               ) : (
-                <BookingForm event={event} />
+                <BookingForm event={event} schools={schools} />
               )}
             </div>
           </div>

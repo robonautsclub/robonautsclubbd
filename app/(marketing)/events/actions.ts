@@ -17,10 +17,12 @@ import {
 } from '@/lib/bkash'
 import { normalizeCustomFormAnswers, validateCustomFormAnswers } from '@/lib/eventCustomForm'
 import { getEventRegistrationFields } from '@/lib/registrationFields'
+import { SCHOOL_DIRECTORY_COLLECTION } from '@/lib/schoolDirectory'
 
 const PUBLIC_EVENTS_TAG = 'public-events'
 const PUBLIC_EVENT_TAG_PREFIX = 'public-event'
 const PUBLIC_COURSES_TAG = 'public-courses'
+const PUBLIC_SCHOOLS_TAG = 'public-schools'
 const PUBLIC_EVENTS_MAX = 200
 const PUBLIC_COURSES_MAX = 100
 
@@ -187,6 +189,35 @@ export const getPublicEvent = cache(async (id: string): Promise<Event | null> =>
   return getCachedPublicEvent(id)
 })
 
+export const getPublicEnglishMediumSchools = cache(async (): Promise<string[]> => {
+  const db = adminDb
+  if (!db) return []
+  try {
+    return unstable_cache(
+      async (): Promise<string[]> => {
+        const snapshot = await db
+          .collection(SCHOOL_DIRECTORY_COLLECTION)
+          .get()
+        return snapshot.docs
+          .map((doc) => {
+            const data = doc.data()
+            const name = typeof data.name === 'string' ? data.name.trim() : ''
+            const isActive = typeof data.isActive === 'boolean' ? data.isActive : true
+            if (!name || !isActive) return ''
+            return name
+          })
+          .filter((name): name is string => Boolean(name))
+          .sort((a, b) => a.localeCompare(b))
+      },
+      [PUBLIC_SCHOOLS_TAG],
+      { tags: [PUBLIC_SCHOOLS_TAG], revalidate: 3600 }
+    )()
+  } catch (error) {
+    console.error('Error fetching schools:', error)
+    return []
+  }
+})
+
 type BookingInput = {
   eventId: string
   name: string
@@ -214,6 +245,11 @@ type PendingPaidRegistration = {
   bookingId?: string
   createdAt: Date
   updatedAt: Date
+}
+
+function normalizeSchoolValue(value: string | undefined): string {
+  if (!value) return ''
+  return value.trim().replace(/\s+/g, ' ')
 }
 
 async function hasExistingRegistration(
@@ -265,6 +301,7 @@ async function createBookingRecordAndSendEmail(
   const normalizedPhone = formData.phone.trim().replace(/\s/g, '')
   const normalizedBkash = formData.bkashNumber?.trim().replace(/\s/g, '') ?? ''
   const normalizedEmail = formData.email.trim().toLowerCase()
+  const normalizedSchool = normalizeSchoolValue(formData.school)
   const defaultRegistrationFields = getEventRegistrationFields(event)
 
   const alreadyExists = await hasExistingRegistration(formData.eventId, normalizedEmail)
@@ -284,7 +321,7 @@ async function createBookingRecordAndSendEmail(
     eventId: formData.eventId,
     registrationId,
     name: formData.name.trim(),
-    school: defaultRegistrationFields.school.enabled ? formData.school?.trim() || '' : '',
+    school: defaultRegistrationFields.school.enabled ? normalizedSchool : '',
     email: normalizedEmail,
     phone: normalizedPhone,
     category: defaultRegistrationFields.category.enabled ? formData.category?.trim() || '' : '',
@@ -312,7 +349,7 @@ async function createBookingRecordAndSendEmail(
     registrationId,
     bookingId,
     bookingDetails: {
-      school: formData.school?.trim() || '',
+      school: normalizedSchool,
       phone: normalizedPhone,
       bkashNumber: normalizedBkash,
       information: formData.information ? formData.information.trim() : '',
@@ -370,7 +407,8 @@ export async function createBooking(
     if (!formData.eventId || !formData.name || !formData.email || !formData.phone?.trim()) {
       return { success: false, error: 'All required fields must be filled' }
     }
-    if (defaultRegistrationFields.school.enabled && defaultRegistrationFields.school.required && !formData.school?.trim()) {
+    const normalizedSchool = normalizeSchoolValue(formData.school)
+    if (defaultRegistrationFields.school.enabled && defaultRegistrationFields.school.required && !normalizedSchool) {
       return { success: false, error: 'School is required.' }
     }
     if (defaultRegistrationFields.information.enabled && defaultRegistrationFields.information.required && !formData.information?.trim()) {
@@ -456,12 +494,13 @@ export async function initiatePaidEventCheckout(
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     const normalizedPhone = formData.phone.trim().replace(/\s/g, '')
     const normalizedEmail = formData.email.trim().toLowerCase()
+    const normalizedSchool = normalizeSchoolValue(formData.school)
     const defaultRegistrationFields = getEventRegistrationFields(event)
 
     if (!formData.name.trim() || !normalizedEmail || !normalizedPhone) {
       return { success: false, error: 'All required fields must be filled' }
     }
-    if (defaultRegistrationFields.school.enabled && defaultRegistrationFields.school.required && !formData.school?.trim()) {
+    if (defaultRegistrationFields.school.enabled && defaultRegistrationFields.school.required && !normalizedSchool) {
       return { success: false, error: 'School is required.' }
     }
     if (defaultRegistrationFields.information.enabled && defaultRegistrationFields.information.required && !formData.information?.trim()) {
@@ -522,7 +561,7 @@ export async function initiatePaidEventCheckout(
       paymentId: checkout.paymentId,
       eventId: formData.eventId,
       name: formData.name.trim(),
-      school: defaultRegistrationFields.school.enabled ? formData.school?.trim() || '' : '',
+      school: defaultRegistrationFields.school.enabled ? normalizedSchool : '',
       email: normalizedEmail,
       phone: normalizedPhone,
       category: defaultRegistrationFields.category.enabled ? selectedCategoryName || undefined : undefined,
