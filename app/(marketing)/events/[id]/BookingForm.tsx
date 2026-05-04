@@ -4,8 +4,9 @@ import { useState, FormEvent } from 'react'
 import { CheckCircle, Banknote } from 'lucide-react'
 import { Event } from '@/types/event'
 import { getEventRegistrationFields } from '@/lib/registrationFields'
+import { PRIVATE_CANDIDATE_OPTION, SCHOOL_NOT_FOUND_OPTION } from '@/lib/schoolDirectory'
 
-export default function BookingForm({ event }: { event: Event }) {
+export default function BookingForm({ event, schools }: { event: Event; schools: string[] }) {
   const [formData, setFormData] = useState({
     name: '',
     school: '',
@@ -18,12 +19,15 @@ export default function BookingForm({ event }: { event: Event }) {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [schoolSelection, setSchoolSelection] = useState('')
+  const [customSchool, setCustomSchool] = useState('')
   const defaultRegistrationFields = getEventRegistrationFields(event)
+  const normalizedSchool = schoolSelection === SCHOOL_NOT_FOUND_OPTION ? customSchool.trim() : schoolSelection.trim()
 
   const validate = () => {
     const newErrors: Record<string, string> = {}
     if (!formData.name.trim()) newErrors.name = 'Name is required'
-    if (defaultRegistrationFields.school.enabled && defaultRegistrationFields.school.required && !formData.school.trim()) {
+    if (defaultRegistrationFields.school.enabled && defaultRegistrationFields.school.required && !normalizedSchool) {
       newErrors.school = 'School is required'
     }
     if (!formData.email.trim()) {
@@ -80,7 +84,7 @@ export default function BookingForm({ event }: { event: Event }) {
       const payload = {
         eventId,
         name: formData.name.trim(),
-        school: formData.school.trim(),
+        school: normalizedSchool,
         email: formData.email.trim(),
         phone: formData.phone.trim(),
         category: formData.category.trim(),
@@ -103,6 +107,8 @@ export default function BookingForm({ event }: { event: Event }) {
       if (result.success) {
         setIsSubmitted(true)
         setFormData({ name: '', school: '', email: '', phone: '', category: '', information: '', customAnswers: {} })
+        setSchoolSelection('')
+        setCustomSchool('')
         setTimeout(() => {
           setIsSubmitted(false)
         }, 5000)
@@ -241,18 +247,36 @@ export default function BookingForm({ event }: { event: Event }) {
               School (If you are private candidate, write private candidate)
               {defaultRegistrationFields.school.required && <span className="text-red-500">*</span>}
             </label>
-            <input
-              type="text"
+            <select
               id="school"
-              value={formData.school}
-              onChange={(e) =>
-                setFormData({ ...formData, school: e.target.value })
-              }
+              value={schoolSelection}
+              onChange={(e) => setSchoolSelection(e.target.value)}
               disabled={isLoading || isSubmitted}
               className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                 errors.school ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:border-gray-300'
               }`}
-            />
+            >
+              <option value="">Select school</option>
+              <option value={PRIVATE_CANDIDATE_OPTION}>{PRIVATE_CANDIDATE_OPTION}</option>
+              {schools.map((school) => (
+                <option key={school} value={school}>
+                  {school}
+                </option>
+              ))}
+              <option value={SCHOOL_NOT_FOUND_OPTION}>School not found (type manually)</option>
+            </select>
+            {schoolSelection === SCHOOL_NOT_FOUND_OPTION && (
+              <input
+                type="text"
+                value={customSchool}
+                onChange={(e) => setCustomSchool(e.target.value)}
+                placeholder="Type your school name"
+                disabled={isLoading || isSubmitted}
+                className={`mt-2 w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  errors.school ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+                }`}
+              />
+            )}
             {errors.school && (
               <p className="text-sm text-red-500 mt-1">{errors.school}</p>
             )}

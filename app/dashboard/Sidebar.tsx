@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Calendar, BookOpen, Users, User, Newspaper, Images } from 'lucide-react'
+import { LayoutDashboard, Calendar, BookOpen, Users, User, Newspaper, Images, School } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface SidebarProps {
@@ -37,6 +37,11 @@ export default function Sidebar({ role }: SidebarProps) {
       href: '/dashboard/gallery',
       icon: Images,
       label: 'Gallery',
+    },
+    {
+      href: '/dashboard/schools',
+      icon: School,
+      label: 'Schools',
     },
     // Only show Members link for Super Admin
     ...(role === 'superAdmin'
