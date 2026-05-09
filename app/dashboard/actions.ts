@@ -85,14 +85,17 @@ function normalizeEventCategories(
 ): Array<{ name: string; amount?: number }> {
   if (!Array.isArray(categories)) return []
 
+  // Omit `amount` entirely when not a valid positive paid amount.
+  // Firestore (admin SDK) rejects `undefined` values without `ignoreUndefinedProperties`.
   const normalized = categories
-    .map((category) => ({
-      name: category.name?.trim() || '',
-      amount:
-        isPaid && category.amount != null && Number.isFinite(Number(category.amount)) && Number(category.amount) > 0
-          ? Number(category.amount)
-          : undefined,
-    }))
+    .map((category) => {
+      const name = category.name?.trim() || ''
+      const numeric = Number(category.amount)
+      const includeAmount =
+        isPaid && category.amount != null && Number.isFinite(numeric) && numeric > 0
+
+      return includeAmount ? { name, amount: numeric } : { name }
+    })
     .filter((category) => category.name.length > 0)
 
   const uniqueByName = new Map<string, { name: string; amount?: number }>()

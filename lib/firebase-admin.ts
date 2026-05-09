@@ -151,6 +151,12 @@ if (serviceAccount) {
           privateKey: serviceAccount.privateKey,
         }),
       })
+      // Drop `undefined` fields silently instead of throwing on writes.
+      // settings() can only be called once per Firestore instance and only before any
+      // read/write, so it must run here — right after initializeApp on the very first
+      // module load. On HMR re-imports the else-branch reuses the already-configured
+      // instance and skips settings() to avoid "Firestore has already been initialized".
+      getFirestore(adminApp).settings({ ignoreUndefinedProperties: true })
       console.log('Firebase Admin SDK initialized successfully')
     } else {
       adminApp = getApps()[0]

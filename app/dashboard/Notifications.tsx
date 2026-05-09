@@ -1,7 +1,15 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Bell, X, CheckCircle2, User, Clock } from 'lucide-react'
+import { Bell, CheckCircle2, User, Clock, RefreshCw } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 type Notification = {
   id: string
@@ -94,136 +102,163 @@ export default function Notifications() {
     return date.toLocaleDateString()
   }
 
+  const typeBadge = (type: string) => {
+    if (type === 'profile_update') return 'bg-indigo-100 text-indigo-600'
+    if (type.startsWith('event_')) return 'bg-green-100 text-green-600'
+    if (type.startsWith('course_')) return 'bg-blue-100 text-blue-600'
+    if (type.startsWith('user_')) return 'bg-purple-100 text-purple-600'
+    return 'bg-gray-100 text-gray-600'
+  }
+
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-        title="Notifications"
-      >
-        <Bell className="w-5 h-5" />
-        {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
-        )}
-      </button>
-
-      {isOpen && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-
-          <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 max-h-[600px] flex flex-col">
-            <div className="px-4 py-3 border-b border-gray-200 bg-linear-to-r from-indigo-50 to-blue-50 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Bell className="w-5 h-5 text-indigo-600" />
-                <h3 className="font-semibold text-gray-900">Notifications</h3>
-                {unreadCount > 0 && (
-                  <span className="px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
-                    {unreadCount} new
-                  </span>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto">
-              {loading ? (
-                <div className="p-8 text-center text-gray-500">
-                  <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                  <p className="text-sm">Loading notifications...</p>
-                </div>
-              ) : notifications.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">
-                  <Bell className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p className="text-sm">No notifications yet</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-gray-100">
-                  {notifications.map((notification) => (
-                    <div
-                      key={notification.id}
-                      className={`p-4 hover:bg-gray-50 transition-colors ${
-                        !notification.isRead ? 'bg-blue-50/50' : ''
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div
-                          className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                            notification.type === 'profile_update'
-                              ? 'bg-indigo-100 text-indigo-600'
-                              : notification.type.startsWith('event_')
-                                ? 'bg-green-100 text-green-600'
-                                : notification.type.startsWith('course_')
-                                  ? 'bg-blue-100 text-blue-600'
-                                  : notification.type.startsWith('user_')
-                                    ? 'bg-purple-100 text-purple-600'
-                                    : 'bg-gray-100 text-gray-600'
-                          }`}
-                        >
-                          {notification.type === 'profile_update' ? (
-                            <User className="w-5 h-5" />
-                          ) : (
-                            <Bell className="w-5 h-5" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 mb-1">{notification.message}</p>
-                          {notification.changes.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mb-2">
-                              {notification.changes.map((change, idx) => (
-                                <span
-                                  key={idx}
-                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-700"
-                                >
-                                  {change}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2 text-xs text-gray-500">
-                            <Clock className="w-3 h-3" />
-                            <span>{formatTime(notification.createdAt)}</span>
-                          </div>
-                        </div>
-                        {!notification.isRead && (
-                          <button
-                            type="button"
-                            onClick={() => markAsRead(notification.id)}
-                            className="p-1 text-gray-400 hover:text-green-600 transition-colors"
-                            title="Mark as read"
-                          >
-                            <CheckCircle2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {notifications.length > 0 && (
-              <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
-                <button
-                  type="button"
-                  onClick={() => void loadNotifications()}
-                  className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="relative size-10 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              aria-label="Notifications"
+            >
+              <Bell className="size-5" />
+              {unreadCount > 0 && (
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full text-[10px] leading-none flex items-center justify-center"
                 >
-                  Refresh
-                </button>
-              </div>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Badge>
+              )}
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Notifications</TooltipContent>
+      </Tooltip>
+
+      <PopoverContent
+        align="end"
+        sideOffset={8}
+        className="w-80 sm:w-96 p-0 rounded-xl shadow-2xl border-gray-200 max-h-[600px] flex flex-col overflow-hidden"
+      >
+        <div className="px-4 py-3 border-b border-gray-200 bg-linear-to-r from-indigo-50 to-blue-50 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Bell className="size-5 text-indigo-600" />
+            <h3 className="font-semibold text-gray-900">Notifications</h3>
+            {unreadCount > 0 && (
+              <Badge variant="destructive" className="rounded-full px-2 py-0.5 text-xs">
+                {unreadCount} new
+              </Badge>
             )}
           </div>
-        </>
-      )}
-    </div>
+        </div>
+
+        <ScrollArea className="flex-1 max-h-[440px]">
+          {loading ? (
+            <div className="p-4 space-y-3">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <Skeleton className="size-10 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/3" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              <Bell className="size-12 mx-auto mb-3 text-gray-300" />
+              <p className="text-sm">No notifications yet</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {notifications.map((notification) => (
+                <li
+                  key={notification.id}
+                  className={cn(
+                    'p-4 hover:bg-gray-50 transition-colors',
+                    !notification.isRead && 'bg-blue-50/50'
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={cn(
+                        'size-10 rounded-full flex items-center justify-center shrink-0',
+                        typeBadge(notification.type)
+                      )}
+                    >
+                      {notification.type === 'profile_update' ? (
+                        <User className="size-5" />
+                      ) : (
+                        <Bell className="size-5" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 mb-1">
+                        {notification.message}
+                      </p>
+                      {notification.changes.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {notification.changes.map((change, idx) => (
+                            <Badge
+                              key={idx}
+                              variant="secondary"
+                              className="bg-indigo-100 text-indigo-700 hover:bg-indigo-100"
+                            >
+                              {change}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <Clock className="size-3" />
+                        <span>{formatTime(notification.createdAt)}</span>
+                      </div>
+                    </div>
+                    {!notification.isRead && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => markAsRead(notification.id)}
+                            className="size-7 text-gray-400 hover:text-green-600"
+                            aria-label="Mark as read"
+                          >
+                            <CheckCircle2 className="size-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="left">Mark as read</TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </ScrollArea>
+
+        {notifications.length > 0 && (
+          <>
+            <Separator />
+            <div className="px-4 py-2 bg-gray-50">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => void loadNotifications()}
+                className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+              >
+                <RefreshCw className="size-3.5" />
+                Refresh
+              </Button>
+            </div>
+          </>
+        )}
+      </PopoverContent>
+    </Popover>
   )
 }
