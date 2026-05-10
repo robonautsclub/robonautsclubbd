@@ -97,7 +97,7 @@ export async function sendBookingConfirmationEmail({
     const verificationUrl = `${baseUrl}/verify-booking?registrationId=${encodeURIComponent(registrationId)}`
     
     let pdfBuffer: Buffer | null = null
-    
+
     try {
       pdfBuffer = await generateBookingConfirmationPDF({
         registrationId,
@@ -110,9 +110,15 @@ export async function sendBookingConfirmationEmail({
         },
         verificationUrl,
       })
+      console.log(
+        `[email] PDF generated for registration ${registrationId}: ${pdfBuffer?.length ?? 0} bytes`
+      )
     } catch (pdfError) {
-      console.error('Error generating PDF:', pdfError)
-      // Continue without PDF attachment if generation fails
+      console.error(
+        `[email] Error generating PDF for registration ${registrationId}:`,
+        pdfError instanceof Error ? pdfError.stack || pdfError.message : pdfError
+      )
+      // Continue without PDF attachment if generation fails — email is more important than the attachment.
     }
 
     // Create email HTML content (after PDF is generated)
@@ -436,113 +442,75 @@ export async function sendBookingConfirmationEmail({
       console.log('Confirmation email sending to:', masked)
     }
 
-    // Attach PDF if generated successfully
+    // Attach PDF if generated successfully. Brevo's SendSmtpEmail.attachment is
+    // Array<{ url? | content?, name? }> where `content` must be base64-encoded.
     if (pdfBuffer && pdfBuffer.length > 0) {
       try {
         const base64Content = pdfBuffer.toString('base64')
-        
-        // Brevo expects attachments with name and content (base64 encoded)
-        const attachment: { name: string; content: string } = {
-          name: `Registration-Confirmation-${registrationId}.pdf`,
-          content: base64Content,
-        }
-        
-        // Set attachments - Brevo SDK uses 'attachment' property
-        const emailWithAttachment = sendSmtpEmail as typeof sendSmtpEmail & { attachment?: Array<{ name: string; content: string }> }
-        emailWithAttachment.attachment = [attachment]
+        sendSmtpEmail.attachment = [
+          {
+            name: `Registration-Confirmation-${registrationId}.pdf`,
+            content: base64Content,
+          },
+        ]
+        console.log(
+          `[email] PDF attached to email for registration ${registrationId}: ${pdfBuffer.length} bytes (${base64Content.length} base64 chars)`
+        )
       } catch (attachmentError) {
-        console.error('Error preparing PDF attachment:', attachmentError)
+        console.error(
+          `[email] Error preparing PDF attachment for registration ${registrationId}:`,
+          attachmentError instanceof Error ? attachmentError.message : attachmentError
+        )
       }
+    } else {
+      console.warn(
+        `[email] No PDF attachment for registration ${registrationId} (buffer is ${pdfBuffer === null ? 'null' : 'empty'}). Email will be sent without attachment.`
+      )
     }
 
     try {
       const data = await apiInstance.sendTransacEmail(sendSmtpEmail)
-      
-      // Log the response for debugging (only in development)
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Brevo API response:', JSON.stringify(data, null, 2))
-      }
-      
-      // Check if Brevo returned a valid response
-      // Brevo can return different response formats:
-      // 1. Object with messageId (most common)
-      // 2. Object with messageId as a property
-      // 3. String messageId
-      // 4. Empty object or null (still considered success if no error)
-      
-      if (data === null || data === undefined) {
-        // Null/undefined response - likely an error
-        return {
-          success: false,
-          error: 'Email service returned no response. Please check your Brevo API configuration.',
-        }
-      }
-      
-      // Handle string responses (messageId as string) - check this first
-      if (typeof data === 'string') {
+
+      // Brevo SDK signature: Promise<{ response: http.IncomingMessage; body: CreateSmtpEmail }>
+      // body.messageId is the canonical success indicator.
+      const body = (data as { body?: unknown } | undefined)?.body as
+        | { messageId?: string; code?: string | number; message?: string }
+        | undefined
+      const httpStatus = (data as { response?: { statusCode?: number } } | undefined)?.response?.statusCode
+
+      if (body && typeof body === 'object' && typeof body.messageId === 'string' && body.messageId.length > 0) {
+        console.log(
+          `[email] Brevo accepted registration ${registrationId} (status ${httpStatus ?? 'unknown'}, messageId ${body.messageId})`
+        )
         return { success: true }
       }
-      
-      // Check for error indicators first
-      if (typeof data === 'object' && data !== null) {
-        const responseData = data as Record<string, unknown>
-        
-        // Check for explicit error fields
-        if ('error' in responseData || 'code' in responseData) {
-          const errorCode = responseData.code
-          const errorMsg = 
-            (responseData.error as string) || 
-            (responseData.message as string) ||
-            (errorCode ? String(errorCode) : null) ||
-            'Email service returned an error response'
-          
-          // Check if it's actually an error code (4xx, 5xx) or just a status code
-          if (errorCode && typeof errorCode === 'number' && errorCode >= 400) {
-            return {
-              success: false,
-              error: String(errorMsg),
-            }
-          }
-          
-          // If error field exists but code is not an error code, might be a status field
-          // Check the actual error message content
-          const errorString = String(errorMsg).toLowerCase()
-          if (errorString.includes('error') || errorString.includes('invalid') || errorString.includes('failed')) {
-            return {
-              success: false,
-              error: String(errorMsg),
-            }
-          }
-        }
-        
-        // Check for success indicators
-        if ('messageId' in responseData) {
-          // Email was accepted by Brevo - return success
-          return { success: true }
-        }
-        
-        // If response is an object but has no error or messageId, check if it's empty
-        // Empty object from Brevo usually means success (email was queued)
-        if (Object.keys(responseData).length === 0) {
-          return { success: true }
-        }
-        
-        // If we have an object response with no error indicators, consider it success
-        // Brevo might return success responses in different formats
-        // Only fail if we explicitly see error indicators
+
+      // Some Brevo error responses come back without throwing (e.g. 2xx with code field).
+      if (body && typeof body === 'object' && (body.code || body.message)) {
+        const errMsg = body.message || String(body.code) || 'Email service returned an error response'
+        console.error(
+          `[email] Brevo returned non-success body for registration ${registrationId} (status ${httpStatus ?? 'unknown'}):`,
+          body
+        )
+        return { success: false, error: errMsg }
+      }
+
+      // Defensive fallback: any 2xx HTTP with no error fields means Brevo queued the email.
+      if (typeof httpStatus === 'number' && httpStatus >= 200 && httpStatus < 300) {
+        console.warn(
+          `[email] Brevo returned ${httpStatus} but no messageId for registration ${registrationId}. Treating as success but please verify in Brevo dashboard.`
+        )
         return { success: true }
       }
-      
-      // If we got an unexpected response format, log it and return a more helpful error
-      // Always log unexpected responses for debugging
-      console.error('Unexpected Brevo response format:', {
-        type: typeof data,
-        data: JSON.stringify(data, null, 2),
-        hasMessageId: typeof data === 'object' && data !== null ? 'messageId' in (data as Record<string, unknown>) : false,
+
+      console.error('[email] Unexpected Brevo response shape:', {
+        httpStatus,
+        bodyType: typeof body,
+        body,
       })
       return {
         success: false,
-        error: `Email service returned an unexpected response format. Response type: ${typeof data}. Please check your Brevo API configuration. If the problem persists, check server logs for the actual response.`,
+        error: `Email service returned an unexpected response (status ${httpStatus ?? 'unknown'}). Check server logs for details.`,
       }
     } catch (error: unknown) {
       console.error('Brevo email error:', error)

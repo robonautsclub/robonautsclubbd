@@ -18,6 +18,7 @@ export default function BookingForm({ event, schools }: { event: Event; schools:
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [submissionWarning, setSubmissionWarning] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [schoolSelection, setSchoolSelection] = useState('')
   const [customSchool, setCustomSchool] = useState('')
@@ -106,12 +107,15 @@ export default function BookingForm({ event, schools }: { event: Event; schools:
       const result = await createBooking(payload)
       if (result.success) {
         setIsSubmitted(true)
+        setSubmissionWarning(result.warning ?? null)
         setFormData({ name: '', school: '', email: '', phone: '', category: '', information: '', customAnswers: {} })
         setSchoolSelection('')
         setCustomSchool('')
+        // Keep the success view longer when there's a warning so the user has time to read it.
         setTimeout(() => {
           setIsSubmitted(false)
-        }, 5000)
+          setSubmissionWarning(null)
+        }, result.warning ? 15000 : 5000)
       } else {
         const errorMessage = result.error || 'Failed to submit registration. Please try again.'
         setErrors({ submit: errorMessage })
@@ -138,12 +142,25 @@ export default function BookingForm({ event, schools }: { event: Event; schools:
             Your registration for <strong className="text-indigo-600">{event.title}</strong> has been
             confirmed!
           </p>
-          <p className="text-xs sm:text-sm text-gray-500">
-            A confirmation email with event details has been sent to your email address. Please check your inbox (and spam folder).
-          </p>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">
-            If you don&apos;t see it in a few minutes, check your spam or junk folder.
-          </p>
+          {submissionWarning ? (
+            <div className="mt-4 rounded-lg border-2 border-amber-200 bg-amber-50 p-4 text-left">
+              <p className="text-sm font-semibold text-amber-900 mb-1">
+                Heads up — confirmation email not delivered
+              </p>
+              <p className="text-xs sm:text-sm text-amber-800 leading-relaxed">
+                {submissionWarning}
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="text-xs sm:text-sm text-gray-500">
+                A confirmation email with event details has been sent to your email address. Please check your inbox (and spam folder).
+              </p>
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                If you don&apos;t see it in a few minutes, check your spam or junk folder.
+              </p>
+            </>
+          )}
         </div>
       </div>
     )
