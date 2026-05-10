@@ -12,6 +12,8 @@ import { getPublicEvents } from './actions'
 import RealtimeEventsList from '@/components/RealtimeEventsList'
 import ListingHeroSection from '@/components/ListingHeroSection'
 import { isEventUpcoming } from '@/lib/dateUtils'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 export const metadata: Metadata = {
   title: "Events",
@@ -97,27 +99,33 @@ export default async function EventsPage() {
 
           {/* Quick Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mt-8 sm:mt-12 max-w-4xl mx-auto">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-white/20">
-              <div className="flex items-center gap-2 sm:gap-3 mb-2">
-                <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-blue-200" />
-                <span className="text-2xl sm:text-3xl font-bold">{initialUpcoming.length}</span>
-              </div>
-              <p className="text-blue-100 text-xs sm:text-sm">Upcoming Events</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-white/20">
-              <div className="flex items-center gap-2 sm:gap-3 mb-2">
-                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-200" />
-                <span className="text-2xl sm:text-3xl font-bold">{initialEvents.length}</span>
-              </div>
-              <p className="text-blue-100 text-xs sm:text-sm">Total Events</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-white/20">
-              <div className="flex items-center gap-2 sm:gap-3 mb-2">
-                <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-blue-200" />
-                <span className="text-2xl sm:text-3xl font-bold">{initialEvents.length - initialUpcoming.length}</span>
-              </div>
-              <p className="text-blue-100 text-xs sm:text-sm">Past Events</p>
-            </div>
+            <Card className="bg-white/10 backdrop-blur-sm border border-white/20 text-white">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center gap-2 sm:gap-3 mb-2">
+                  <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-blue-200" />
+                  <span className="text-2xl sm:text-3xl font-bold">{initialUpcoming.length}</span>
+                </div>
+                <p className="text-blue-100 text-xs sm:text-sm">Upcoming Events</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-white/10 backdrop-blur-sm border border-white/20 text-white">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center gap-2 sm:gap-3 mb-2">
+                  <Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-200" />
+                  <span className="text-2xl sm:text-3xl font-bold">{initialEvents.length}</span>
+                </div>
+                <p className="text-blue-100 text-xs sm:text-sm">Total Events</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-white/10 backdrop-blur-sm border border-white/20 text-white">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center gap-2 sm:gap-3 mb-2">
+                  <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-blue-200" />
+                  <span className="text-2xl sm:text-3xl font-bold">{initialEvents.length - initialUpcoming.length}</span>
+                </div>
+                <p className="text-blue-100 text-xs sm:text-sm">Past Events</p>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </ListingHeroSection>
@@ -138,13 +146,16 @@ export default async function EventsPage() {
               We&apos;re always open to collaborating with schools and
               communities to bring robotics education to more students.
             </p>
-            <a
-              href={`mailto:${SITE_CONFIG.email}`}
-              className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white text-indigo-500 rounded-lg font-semibold hover:bg-gray-100 transition-colors shadow-lg text-sm sm:text-base"
+            <Button
+              asChild
+              size="lg"
+              className="bg-white text-indigo-500 hover:bg-gray-100 shadow-lg text-sm sm:text-base"
             >
-              Contact Us
-              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
-            </a>
+              <a href={`mailto:${SITE_CONFIG.email}`}>
+                Contact Us
+                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+              </a>
+            </Button>
           </div>
         </div>
       </main>

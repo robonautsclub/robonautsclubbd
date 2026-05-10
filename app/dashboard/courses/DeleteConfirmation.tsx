@@ -1,7 +1,18 @@
 'use client'
 
 import { useState } from 'react'
-import { AlertTriangle, X, Loader2 } from 'lucide-react'
+import { AlertTriangle, Loader2 } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 interface DeleteConfirmationProps {
   title: string
@@ -21,7 +32,8 @@ export default function DeleteConfirmation({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const handleConfirm = async () => {
+  const handleConfirm = async (event: React.MouseEvent) => {
+    event.preventDefault()
     setError('')
     setLoading(true)
     try {
@@ -35,33 +47,25 @@ export default function DeleteConfirmation({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full animate-in zoom-in-95 duration-200">
+    <AlertDialog open onOpenChange={(open) => { if (!open && !loading) onCancel() }}>
+      <AlertDialogContent className="p-0 overflow-hidden">
         {/* Header */}
-        <div className="bg-linear-to-r from-red-500 to-red-600 px-6 py-5 flex justify-between items-center rounded-t-2xl">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-white">{title}</h3>
-            </div>
+        <div className="bg-linear-to-r from-red-500 to-red-600 px-6 py-5 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center">
+            <AlertTriangle className="w-5 h-5 text-white" />
           </div>
-          <button
-            onClick={onCancel}
-            className="text-white/80 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
-            disabled={loading}
-          >
-            <X className="w-6 h-6" />
-          </button>
+          <AlertDialogHeader className="contents">
+            <AlertDialogTitle className="text-xl font-bold text-white">{title}</AlertDialogTitle>
+            <AlertDialogDescription className="sr-only">{message}</AlertDialogDescription>
+          </AlertDialogHeader>
         </div>
 
         {/* Content */}
         <div className="p-6">
           {error && (
-            <div className="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
-              {error}
-            </div>
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
 
           <div className="mb-6">
@@ -76,21 +80,12 @@ export default function DeleteConfirmation({
             </p>
           </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={loading}
-              className="px-6 py-2.5 border-2 border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
               onClick={handleConfirm}
               disabled={loading}
-              className="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="bg-red-500 hover:bg-red-600 text-white"
             >
               {loading ? (
                 <>
@@ -100,11 +95,10 @@ export default function DeleteConfirmation({
               ) : (
                 'Delete'
               )}
-            </button>
-          </div>
+            </AlertDialogAction>
+          </AlertDialogFooter>
         </div>
-      </div>
-    </div>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
-

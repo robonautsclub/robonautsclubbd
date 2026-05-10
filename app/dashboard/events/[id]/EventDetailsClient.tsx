@@ -8,6 +8,11 @@ import type { Event } from '@/types/event'
 import BookingActions from './BookingActions'
 import ExportBookingsButton from './ExportBookingsButton'
 import { formatEventDates, parseEventDates, isEventUpcoming } from '@/lib/dateUtils'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Button } from '@/components/ui/button'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 type Props = {
   event: Event
@@ -61,130 +66,152 @@ export default function EventDetailsClient({ event, bookings }: Props) {
 
   return (
     <>
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6">
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <h3 className="text-xl sm:text-2xl font-bold text-gray-900">{event.title}</h3>
-          {eventDates.length > 0 && (
-            <span
-              className={`inline-flex items-center px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium ${
-                isEventUpcoming(event.date) ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-              }`}
-            >
-              {isEventUpcoming(event.date) ? 'Upcoming' : 'Past'}
-            </span>
-          )}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setShowDetails((v) => !v)}
-          className="mb-3 px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors"
-        >
-          {showDetails ? 'Hide details' : 'View details'}
-        </button>
-
-        {showDetails && (
-          <div className="space-y-3 sm:space-y-4">
-            <div className="flex items-start gap-3 p-4 rounded-lg bg-indigo-50 border border-indigo-100">
-              <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
-                <Calendar className="w-5 h-5 text-indigo-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500 mb-1">Date{eventDates.length > 1 ? 's' : ''}</p>
-                <p className="font-semibold text-gray-900">{formatEventDates(eventDates, 'long')}</p>
-              </div>
-            </div>
-
-            {event.time && (
-              <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-50 border border-blue-100">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-                  <Clock className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">Time</p>
-                  <p className="font-semibold text-gray-900">{event.time}</p>
-                </div>
-              </div>
+      <Card className="shadow-sm">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <h3 className="text-xl sm:text-2xl font-bold text-gray-900">{event.title}</h3>
+            {eventDates.length > 0 && (
+              <Badge
+                variant="secondary"
+                className={
+                  isEventUpcoming(event.date)
+                    ? 'bg-green-100 text-green-800 hover:bg-green-100'
+                    : 'bg-gray-100 text-gray-800 hover:bg-gray-100'
+                }
+              >
+                {isEventUpcoming(event.date) ? 'Upcoming' : 'Past'}
+              </Badge>
             )}
-
-            {(event.venue || event.location) && (
-              <div className="flex items-start gap-3 p-4 rounded-lg bg-purple-50 border border-purple-100">
-                <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center shrink-0">
-                  <MapPin className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">Venue</p>
-                  <p className="font-semibold text-gray-900">{event.venue || event.location}</p>
-                </div>
-              </div>
-            )}
-
-            {event.eligibility && (
-              <div className="flex items-start gap-3 p-4 rounded-lg bg-green-50 border border-green-100">
-                <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
-                  <Users className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">Eligibility</p>
-                  <p className="font-semibold text-gray-900">{event.eligibility}</p>
-                </div>
-              </div>
-            )}
-
-            {event.createdByName && (
-              <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-50 border border-amber-100">
-                <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
-                  <User className="w-5 h-5 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500 mb-1">Created By</p>
-                  <p className="font-semibold text-gray-900">{event.createdByName}</p>
-                  {event.createdByEmail && <p className="text-xs text-gray-500 mt-1">{event.createdByEmail}</p>}
-                </div>
-              </div>
-            )}
-
-            <div>
-              <p className="text-sm font-medium text-gray-500 mb-2">Description</p>
-              <p className="text-gray-700 leading-relaxed">{event.fullDescription || event.description}</p>
-            </div>
           </div>
-        )}
-      </div>
+
+          <Collapsible open={showDetails} onOpenChange={setShowDetails}>
+            <CollapsibleTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                className="mb-3 text-indigo-700 bg-indigo-50 border-indigo-200 hover:bg-indigo-100 hover:text-indigo-700"
+              >
+                {showDetails ? 'Hide details' : 'View details'}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="space-y-3 sm:space-y-4">
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-indigo-50 border border-indigo-100">
+                  <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
+                    <Calendar className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 mb-1">Date{eventDates.length > 1 ? 's' : ''}</p>
+                    <p className="font-semibold text-gray-900">{formatEventDates(eventDates, 'long')}</p>
+                  </div>
+                </div>
+
+                {event.time && (
+                  <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-50 border border-blue-100">
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                      <Clock className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 mb-1">Time</p>
+                      <p className="font-semibold text-gray-900">{event.time}</p>
+                    </div>
+                  </div>
+                )}
+
+                {(event.venue || event.location) && (
+                  <div className="flex items-start gap-3 p-4 rounded-lg bg-purple-50 border border-purple-100">
+                    <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center shrink-0">
+                      <MapPin className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 mb-1">Venue</p>
+                      <p className="font-semibold text-gray-900">{event.venue || event.location}</p>
+                    </div>
+                  </div>
+                )}
+
+                {event.eligibility && (
+                  <div className="flex items-start gap-3 p-4 rounded-lg bg-green-50 border border-green-100">
+                    <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
+                      <Users className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 mb-1">Eligibility</p>
+                      <p className="font-semibold text-gray-900">{event.eligibility}</p>
+                    </div>
+                  </div>
+                )}
+
+                {event.createdByName && (
+                  <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-50 border border-amber-100">
+                    <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                      <User className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500 mb-1">Created By</p>
+                      <p className="font-semibold text-gray-900">{event.createdByName}</p>
+                      {event.createdByEmail && <p className="text-xs text-gray-500 mt-1">{event.createdByEmail}</p>}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-2">Description</p>
+                  <p className="text-gray-700 leading-relaxed">{event.fullDescription || event.description}</p>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-500">Total Registrations</p>
-          <p className="text-2xl font-bold text-gray-900">{bookings.length}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-500">Filtered Registrations</p>
-          <p className="text-2xl font-bold text-gray-900">{filteredBookings.length}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-500">Paid Registrations</p>
-          <p className="text-2xl font-bold text-gray-900">{paidCount}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-500">Money Collected</p>
-          <p className="text-2xl font-bold text-green-700">BDT {totalCollected}</p>
-        </div>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-gray-500">Total Registrations</p>
+            <p className="text-2xl font-bold text-gray-900">{bookings.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-gray-500">Filtered Registrations</p>
+            <p className="text-2xl font-bold text-gray-900">{filteredBookings.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-gray-500">Paid Registrations</p>
+            <p className="text-2xl font-bold text-gray-900">{paidCount}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-gray-500">Money Collected</p>
+            <p className="text-2xl font-bold text-green-700">BDT {totalCollected}</p>
+          </CardContent>
+        </Card>
       </div>
 
       {registrationsByCategory.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-sm font-semibold text-gray-900 mb-3">Registrations by Category</p>
-          <div className="flex flex-wrap gap-2">
-            {registrationsByCategory.map(([category, count]) => (
-              <span key={category} className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-full text-xs font-medium border border-indigo-200">
-                {category}: {count}
-              </span>
-            ))}
-          </div>
-        </div>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm font-semibold text-gray-900 mb-3">Registrations by Category</p>
+            <div className="flex flex-wrap gap-2">
+              {registrationsByCategory.map(([category, count]) => (
+                <Badge
+                  key={category}
+                  variant="secondary"
+                  className="bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-50"
+                >
+                  {category}: {count}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <Card className="shadow-sm overflow-hidden p-0">
         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center gap-2">
@@ -228,77 +255,75 @@ export default function EventDetailsClient({ event, bookings }: Props) {
             <p className="text-sm sm:text-base text-gray-600">Try changing filters or wait for new registrations.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px]">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Registration ID</th>
-                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Name</th>
-                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Category</th>
-                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">School</th>
-                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Email</th>
-                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden lg:table-cell">Phone</th>
-                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Paid</th>
-                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Booked At</th>
-                  <th className="px-3 sm:px-6 py-2 sm:py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredBookings.map((booking) => {
-                  let formattedDate = 'N/A'
-                  if (booking.createdAt) {
-                    try {
-                      const bookedDate = booking.createdAt instanceof Date ? booking.createdAt : new Date(booking.createdAt)
-                      if (!isNaN(bookedDate.getTime())) {
-                        formattedDate = format(bookedDate, 'MMM d, yyyy HH:mm')
-                      }
-                    } catch {
-                      formattedDate = 'N/A'
+          <Table className="min-w-[640px]">
+            <TableHeader className="bg-gray-50">
+              <TableRow>
+                <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Registration ID</TableHead>
+                <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Name</TableHead>
+                <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Category</TableHead>
+                <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">School</TableHead>
+                <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Email</TableHead>
+                <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider hidden lg:table-cell">Phone</TableHead>
+                <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Paid</TableHead>
+                <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Booked At</TableHead>
+                <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="bg-white">
+              {filteredBookings.map((booking) => {
+                let formattedDate = 'N/A'
+                if (booking.createdAt) {
+                  try {
+                    const bookedDate = booking.createdAt instanceof Date ? booking.createdAt : new Date(booking.createdAt)
+                    if (!isNaN(bookedDate.getTime())) {
+                      formattedDate = format(bookedDate, 'MMM d, yyyy HH:mm')
                     }
+                  } catch {
+                    formattedDate = 'N/A'
                   }
-                  return (
-                    <tr key={booking.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                        <div className="text-xs sm:text-sm font-mono font-semibold text-indigo-600">{booking.registrationId || 'N/A'}</div>
-                      </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                        <div className="text-xs sm:text-sm font-medium text-gray-900">{booking.name}</div>
-                      </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                        <div className="text-xs sm:text-sm text-gray-900">{booking.category || 'Unspecified'}</div>
-                      </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                        <div className="text-xs sm:text-sm text-gray-900">{booking.school}</div>
-                      </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                        <div className="text-xs sm:text-sm text-gray-900 flex items-center gap-1">
-                          <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
-                          {booking.email}
-                        </div>
-                      </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap hidden lg:table-cell">
-                        <div className="text-xs sm:text-sm text-gray-900">{booking.phone || 'N/A'}</div>
-                      </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                        <div className="text-xs sm:text-sm text-gray-900 flex items-center gap-1">
-                          <Banknote className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
-                          {booking.amountPaid ? `BDT ${booking.amountPaid}` : '—'}
-                        </div>
-                      </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                        <div className="text-xs sm:text-sm text-gray-500">{formattedDate}</div>
-                      </td>
-                      <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-right">
-                        <BookingActions booking={booking} />
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                }
+                return (
+                  <TableRow key={booking.id} className="hover:bg-gray-50">
+                    <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
+                      <div className="text-xs sm:text-sm font-mono font-semibold text-indigo-600">{booking.registrationId || 'N/A'}</div>
+                    </TableCell>
+                    <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
+                      <div className="text-xs sm:text-sm font-medium text-gray-900">{booking.name}</div>
+                    </TableCell>
+                    <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
+                      <div className="text-xs sm:text-sm text-gray-900">{booking.category || 'Unspecified'}</div>
+                    </TableCell>
+                    <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
+                      <div className="text-xs sm:text-sm text-gray-900">{booking.school}</div>
+                    </TableCell>
+                    <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
+                      <div className="text-xs sm:text-sm text-gray-900 flex items-center gap-1">
+                        <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
+                        {booking.email}
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-3 sm:px-6 py-3 sm:py-4 hidden lg:table-cell">
+                      <div className="text-xs sm:text-sm text-gray-900">{booking.phone || 'N/A'}</div>
+                    </TableCell>
+                    <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
+                      <div className="text-xs sm:text-sm text-gray-900 flex items-center gap-1">
+                        <Banknote className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
+                        {booking.amountPaid ? `BDT ${booking.amountPaid}` : '—'}
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
+                      <div className="text-xs sm:text-sm text-gray-500">{formattedDate}</div>
+                    </TableCell>
+                    <TableCell className="px-3 sm:px-6 py-3 sm:py-4 text-right">
+                      <BookingActions booking={booking} />
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
         )}
-      </div>
+      </Card>
     </>
   )
 }

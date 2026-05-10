@@ -5,6 +5,9 @@ import { CheckCircle, Banknote } from 'lucide-react'
 import { Event } from '@/types/event'
 import { getEventRegistrationFields } from '@/lib/registrationFields'
 import { PRIVATE_CANDIDATE_OPTION, SCHOOL_NOT_FOUND_OPTION } from '@/lib/schoolDirectory'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 
 export default function BookingForm({ event, schools }: { event: Event; schools: string[] }) {
   const [formData, setFormData] = useState({
@@ -130,8 +133,8 @@ export default function BookingForm({ event, schools }: { event: Event; schools:
 
   if (isSubmitted) {
     return (
-      <div className="bg-white rounded-xl sm:rounded-2xl p-6 sm:p-8 border-2 border-green-200 shadow-lg">
-        <div className="text-center">
+      <Card className="border-2 border-green-200 shadow-lg">
+        <CardContent className="p-6 sm:p-8 text-center">
           <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3 sm:mb-4">
             <CheckCircle className="w-10 h-10 sm:w-12 sm:h-12 text-green-500" />
           </div>
@@ -143,14 +146,14 @@ export default function BookingForm({ event, schools }: { event: Event; schools:
             confirmed!
           </p>
           {submissionWarning ? (
-            <div className="mt-4 rounded-lg border-2 border-amber-200 bg-amber-50 p-4 text-left">
-              <p className="text-sm font-semibold text-amber-900 mb-1">
+            <Alert className="mt-4 border-amber-200 bg-amber-50 text-left">
+              <AlertTitle className="text-amber-900">
                 Heads up — confirmation email not delivered
-              </p>
-              <p className="text-xs sm:text-sm text-amber-800 leading-relaxed">
+              </AlertTitle>
+              <AlertDescription className="text-amber-800">
                 {submissionWarning}
-              </p>
-            </div>
+              </AlertDescription>
+            </Alert>
           ) : (
             <>
               <p className="text-xs sm:text-sm text-gray-500">
@@ -161,8 +164,8 @@ export default function BookingForm({ event, schools }: { event: Event; schools:
               </p>
             </>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     )
   }
 
@@ -181,32 +184,31 @@ export default function BookingForm({ event, schools }: { event: Event; schools:
       : event.amount
 
   return (
-    <div className="bg-white rounded-xl sm:rounded-2xl p-5 sm:p-7 border-2 border-gray-200 shadow-lg hover:shadow-xl transition-shadow duration-300">
-      <div className="mb-4 sm:mb-6">
+    <Card className="border-2 border-gray-200 shadow-lg hover:shadow-xl transition-shadow duration-300">
+      <CardHeader className="p-5 sm:p-7 pb-0">
         <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Registration Form</h3>
         <p className="text-xs sm:text-sm text-gray-500">{event.title}</p>
-      </div>
+      </CardHeader>
+      <CardContent className="p-5 sm:p-7 pt-4 sm:pt-6">
       {event.isPaid && (
-        <>
-          <div className="mb-5 p-4 rounded-xl bg-amber-50 border-2 border-amber-300 shadow-sm">
-            <div className="flex items-center gap-2 mb-1">
-              <Banknote className="w-5 h-5 text-amber-600 shrink-0" />
-              <span className="text-sm font-semibold text-amber-800 uppercase tracking-wide">Registration Fee</span>
-            </div>
+        <Alert className="mb-5 border-2 border-amber-300 bg-amber-50 shadow-sm">
+          <Banknote className="h-5 w-5 text-amber-600" />
+          <AlertTitle className="text-amber-800 uppercase tracking-wide">Registration Fee</AlertTitle>
+          <AlertDescription>
             <p className="text-2xl sm:text-3xl font-bold text-amber-700">
               {payableAmount != null ? `BDT ${payableAmount}` : 'Select a category to see the fee'}
             </p>
             <p className="text-xs text-gray-600 mt-2">
               You will be redirected to bKash secure checkout after submitting this form.
             </p>
-          </div>
-        </>
+          </AlertDescription>
+        </Alert>
       )}
       <form onSubmit={handleSubmit} className="space-y-5">
         {errors.submit && (
-          <div className="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-            {errors.submit}
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>{errors.submit}</AlertDescription>
+          </Alert>
         )}
         <div>
           <label
@@ -502,14 +504,15 @@ export default function BookingForm({ event, schools }: { event: Event; schools:
             })}
           </div>
         )}
-        <button
+        <Button
           type="submit"
           disabled={isLoading || isSubmitted || (event.isPaid && !hasSelectedCategory)}
-          className="w-full py-3 sm:py-3.5 px-4 sm:px-6 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-sm sm:text-base"
+          className="w-full bg-indigo-500 hover:bg-indigo-600 text-white shadow-md hover:shadow-lg py-6 text-sm sm:text-base"
         >
           {isLoading ? 'Submitting...' : isSubmitted ? 'Submitted' : event.isPaid ? 'Proceed to bKash' : 'Submit'}
-        </button>
+        </Button>
       </form>
-    </div>
+      </CardContent>
+    </Card>
   )
 }

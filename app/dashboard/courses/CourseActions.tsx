@@ -7,6 +7,7 @@ import { Edit, Trash2, Archive, ArchiveRestore } from 'lucide-react'
 import EditCourseForm from './EditCourseForm'
 import DeleteConfirmation from './DeleteConfirmation'
 import type { Course } from '@/types/course'
+import { Button } from '@/components/ui/button'
 
 interface CourseActionsProps {
   course: Course
@@ -66,19 +67,25 @@ export default function CourseActions({ course, currentUserId, userRole }: Cours
     <>
       <div className="flex items-center gap-2">
         {canEdit && (
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => setShowEditForm(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors"
+            className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
             title="Edit course"
           >
             <Edit className="w-4 h-4" />
             Edit
-          </button>
+          </Button>
         )}
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
           onClick={handleArchive}
           disabled={archiving}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-orange-600 hover:text-orange-700 hover:bg-orange-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
           title={course.isArchived ? 'Unarchive course' : 'Archive course'}
         >
           {course.isArchived ? (
@@ -92,16 +99,19 @@ export default function CourseActions({ course, currentUserId, userRole }: Cours
               Archive
             </>
           )}
-        </button>
+        </Button>
         {canDelete && (
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => setShowDeleteConfirm(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
             title="Delete course"
           >
             <Trash2 className="w-4 h-4" />
             Delete
-          </button>
+          </Button>
         )}
       </div>
 

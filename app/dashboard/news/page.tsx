@@ -5,6 +5,9 @@ import { Newspaper, Plus, ExternalLink, Calendar } from 'lucide-react'
 import { effectiveNewsDisplayRaw } from '@/lib/publicContentDates'
 import { getNewsArticles } from './actions'
 import DeleteNewsButton from './DeleteNewsButton'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,26 +36,28 @@ export default async function DashboardNewsPage() {
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">News</h2>
           <p className="text-sm sm:text-base text-gray-600 mt-1">Create and publish club news articles</p>
         </div>
-        <Link
-          href="/dashboard/news/new"
-          prefetch={false}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          New article
-        </Link>
+        <Button asChild className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
+          <Link href="/dashboard/news/new" prefetch={false}>
+            <Plus className="w-4 h-4" />
+            New article
+          </Link>
+        </Button>
       </div>
 
       {articles.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-          <Newspaper className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-          <p className="text-gray-600 mb-6">No articles yet.</p>
-          <Link href="/dashboard/news/new" prefetch={false} className="text-indigo-600 font-medium hover:underline">
-            Write the first article
-          </Link>
-        </div>
+        <Card>
+          <CardContent className="p-12 text-center">
+            <Newspaper className="w-12 h-12 mx-auto text-gray-300 mb-4" />
+            <p className="text-gray-600 mb-6">No articles yet.</p>
+            <Button asChild variant="link" className="text-indigo-600 hover:text-indigo-700 h-auto p-0">
+              <Link href="/dashboard/news/new" prefetch={false}>
+                Write the first article
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+        <Card className="overflow-hidden shadow-sm p-0">
           <ul className="divide-y divide-gray-100">
             {articles.map((a) => {
               const listDate = formatListDate(effectiveNewsDisplayRaw(a))
@@ -71,9 +76,9 @@ export default async function DashboardNewsPage() {
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <h3 className="font-semibold text-gray-900 truncate">{a.title}</h3>
                     {a.published ? (
-                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-800">Published</span>
+                      <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-100">Published</Badge>
                     ) : (
-                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">Draft</span>
+                      <Badge variant="secondary" className="bg-amber-100 text-amber-800 hover:bg-amber-100">Draft</Badge>
                     )}
                   </div>
                   <p className="text-xs text-gray-500 font-mono truncate">/news/{a.slug}</p>
@@ -86,30 +91,29 @@ export default async function DashboardNewsPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2 shrink-0">
                   {a.published ? (
-                    <Link
-                      href={`/news/${a.slug}`}
-                      prefetch={false}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      View
-                    </Link>
+                    <Button asChild variant="outline" size="sm" className="text-gray-700 bg-gray-50 hover:bg-gray-100 hover:text-gray-700">
+                      <Link
+                        href={`/news/${a.slug}`}
+                        prefetch={false}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        View
+                      </Link>
+                    </Button>
                   ) : null}
-                  <Link
-                    href={`/dashboard/news/${a.id}/edit`}
-                    prefetch={false}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200"
-                  >
-                    Edit
-                  </Link>
+                  <Button asChild variant="outline" size="sm" className="text-indigo-700 bg-indigo-50 border-indigo-200 hover:bg-indigo-100 hover:text-indigo-700">
+                    <Link href={`/dashboard/news/${a.id}/edit`} prefetch={false}>
+                      Edit
+                    </Link>
+                  </Button>
                   <DeleteNewsButton id={a.id} title={a.title} />
                 </div>
               </li>
             )})}
           </ul>
-        </div>
+        </Card>
       )}
     </div>
   )

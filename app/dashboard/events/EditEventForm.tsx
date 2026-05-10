@@ -10,6 +10,9 @@ import TimePicker from './TimePicker'
 import CustomFormBuilder from './CustomFormBuilder'
 import type { Event, EventCustomFormField, EventDefaultRegistrationFields } from '@/types/event'
 import { normalizeDefaultRegistrationFields } from '@/lib/registrationFields'
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
+import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 interface EditEventFormProps {
   event: Event
@@ -194,8 +197,12 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[95vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+    <Sheet open onOpenChange={(open) => { if (!open && !loading && !uploading) onClose() }}>
+      <SheetContent
+        side="right"
+        showCloseButton={false}
+        className="w-full sm:max-w-3xl! p-0 gap-0 flex flex-col"
+      >
         {/* Header */}
         <div className="bg-linear-to-r from-indigo-500 to-blue-600 px-4 sm:px-6 py-4 sm:py-5 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -203,25 +210,27 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
               <Edit className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="text-lg sm:text-xl font-bold text-white">Edit Event</h3>
-              <p className="text-xs sm:text-sm text-indigo-100">Update the event details below</p>
+              <SheetTitle className="text-lg sm:text-xl font-bold text-white">Edit Event</SheetTitle>
+              <SheetDescription className="text-xs sm:text-sm text-indigo-100">Update the event details below</SheetDescription>
             </div>
           </div>
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
             onClick={onClose}
-            className="text-white/80 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
             disabled={loading || uploading}
+            className="text-white/80 hover:text-white hover:bg-white/10"
           >
             <X className="w-6 h-6" />
-          </button>
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
           {error && (
-            <div className="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
-              <span className="font-semibold">Error:</span>
-              <span className="leading-relaxed">{error}</span>
-            </div>
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
 
           <div>
@@ -817,18 +826,18 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t-2 border-gray-200 sticky bottom-0 bg-white">
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={onClose}
               disabled={loading || uploading}
-              className="px-6 py-2.5 border-2 border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={loading || uploading}
-              className="px-6 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="bg-indigo-500 hover:bg-indigo-600 text-white"
             >
               {loading ? (
                 <>
@@ -841,11 +850,11 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
                   Update Event
                 </>
               )}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   )
 }
 

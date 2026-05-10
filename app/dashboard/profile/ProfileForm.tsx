@@ -4,6 +4,10 @@ import { useState, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { User, Mail, Save, Loader2, CheckCircle2, Lock } from 'lucide-react'
 import type { Session } from '@/lib/auth'
+import { Card } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 
 interface ProfileFormProps {
   session: Session
@@ -72,7 +76,7 @@ export default function ProfileForm({ session }: ProfileFormProps) {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <Card className="shadow-sm overflow-hidden p-0">
       <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-200 bg-linear-to-r from-indigo-50 to-blue-50">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-indigo-500 flex items-center justify-center">
@@ -87,23 +91,16 @@ export default function ProfileForm({ session }: ProfileFormProps) {
 
       <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-6">
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-r-lg">
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center">
-                <span className="text-white text-xs">!</span>
-              </div>
-              <p className="text-sm font-medium">{error}</p>
-            </div>
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         {success && (
-          <div className="bg-green-50 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded-r-lg">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-green-500" />
-              <p className="text-sm font-medium">Profile updated successfully! Refreshing...</p>
-            </div>
-          </div>
+          <Alert className="border-green-200 bg-green-50 text-green-800">
+            <CheckCircle2 className="h-5 w-5 text-green-500" />
+            <AlertDescription className="text-green-800">Profile updated successfully! Refreshing...</AlertDescription>
+          </Alert>
         )}
 
         {/* Display Name */}
@@ -161,25 +158,28 @@ export default function ProfileForm({ session }: ProfileFormProps) {
 
         {/* Role Info (read-only) */}
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <p className="text-sm text-gray-700 mb-2">
+          <p className="text-sm text-gray-700 mb-2 flex items-center gap-2">
             <strong>Role:</strong>{' '}
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              session.role === 'superAdmin'
-                ? 'bg-purple-100 text-purple-800'
-                : 'bg-blue-100 text-blue-800'
-            }`}>
+            <Badge
+              variant="secondary"
+              className={
+                session.role === 'superAdmin'
+                  ? 'bg-purple-100 text-purple-800 hover:bg-purple-100'
+                  : 'bg-blue-100 text-blue-800 hover:bg-blue-100'
+              }
+            >
               {session.role === 'superAdmin' ? 'Super Admin' : 'Admin'}
-            </span>
+            </Badge>
           </p>
           <p className="text-xs text-gray-500">Your role is managed by the system and cannot be changed here.</p>
         </div>
 
         {/* Action Buttons */}
         <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-          <button
+          <Button
             type="submit"
             disabled={loading}
-            className="px-6 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="bg-indigo-500 hover:bg-indigo-600 text-white shadow-md hover:shadow-lg"
           >
             {loading ? (
               <>
@@ -192,9 +192,9 @@ export default function ProfileForm({ session }: ProfileFormProps) {
                 Update Profile
               </>
             )}
-          </button>
+          </Button>
         </div>
       </form>
-    </div>
+    </Card>
   )
 }

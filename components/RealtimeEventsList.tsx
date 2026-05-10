@@ -8,6 +8,9 @@ import { Calendar, Clock, MapPin, ArrowRight } from 'lucide-react'
 import { Event } from '@/types/event'
 import { SITE_CONFIG } from '@/lib/site-config'
 import { differenceInDays, differenceInHours } from 'date-fns'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 
 /**
  * Get current time in Bangladesh Standard Time (BST = UTC+6)
@@ -195,19 +198,19 @@ const EventCard = memo(({ event }: { event: Event }) => {
   }
 
   return (
-    <Link href={`/events/${event.id}`} prefetch={false}>
-      <div className="group relative bg-white rounded-2xl border-2 border-gray-200 hover:border-indigo-300 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 h-full flex flex-col">
+    <Link href={`/events/${event.id}`} prefetch={false} className="h-full">
+      <Card className="group relative border-2 hover:border-indigo-300 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 h-full flex flex-col p-0">
         {/* Status Badge */}
         <div className="absolute top-4 right-4 z-10">
-          <span
-            className={`px-3 py-1.5 rounded-full text-xs font-bold shadow-sm ${
+          <Badge
+            className={`shadow-sm border-0 text-xs font-bold ${
               isUpcoming
-                ? 'bg-green-500 text-white'
-                : 'bg-gray-400 text-white'
+                ? 'bg-green-500 hover:bg-green-500 text-white'
+                : 'bg-gray-400 hover:bg-gray-400 text-white'
             }`}
           >
             {status}
-          </span>
+          </Badge>
         </div>
 
         {/* Image/Visual Section */}
@@ -222,16 +225,14 @@ const EventCard = memo(({ event }: { event: Event }) => {
           />
           <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors" />
           {isUpcoming && timeDisplay && (
-            <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-lg z-10">
-              <span className="text-sm font-bold text-indigo-700">
-                {timeDisplay}
-              </span>
-            </div>
+            <Badge className="absolute bottom-4 left-4 bg-white/90 hover:bg-white/90 backdrop-blur-sm text-indigo-700 z-10 border-0 text-sm font-bold">
+              {timeDisplay}
+            </Badge>
           )}
         </div>
 
         {/* Content Section */}
-        <div className="p-4 sm:p-6 flex flex-col flex-1">
+        <CardContent className="p-4 sm:p-6 flex flex-col flex-1">
           <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3 group-hover:text-indigo-500 transition-colors line-clamp-2">
             {event.title}
           </h3>
@@ -267,17 +268,18 @@ const EventCard = memo(({ event }: { event: Event }) => {
           {event.tags && event.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-3 sm:mb-4">
               {event.tags.slice(0, 3).map((tag, index) => (
-                <span
+                <Badge
                   key={index}
-                  className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-md text-xs font-medium"
+                  variant="secondary"
+                  className="bg-indigo-100 hover:bg-indigo-100 text-indigo-700 text-xs font-medium"
                 >
                   {tag}
-                </span>
+                </Badge>
               ))}
               {event.tags.length > 3 && (
-                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-md text-xs font-medium">
+                <Badge variant="secondary" className="bg-gray-100 hover:bg-gray-100 text-gray-600 text-xs font-medium">
                   +{event.tags.length - 3}
-                </span>
+                </Badge>
               )}
             </div>
           )}
@@ -289,8 +291,8 @@ const EventCard = memo(({ event }: { event: Event }) => {
               <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </Link>
   )
 })
@@ -317,10 +319,10 @@ const SectionHeader = ({
         )}
       </div>
       {count !== undefined && (
-        <div className="flex sm:hidden md:flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-indigo-100 rounded-full self-start sm:self-auto">
+        <Badge variant="secondary" className="flex sm:hidden md:flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-indigo-100 hover:bg-indigo-100 self-start sm:self-auto">
           <span className="text-base sm:text-lg font-bold text-indigo-700">{count}</span>
           <span className="text-xs sm:text-sm text-indigo-700">Events</span>
-        </div>
+        </Badge>
       )}
     </div>
   </div>
@@ -379,21 +381,22 @@ export default function RealtimeEventsList({ initialEvents = [] }: RealtimeEvent
         </section>
       ) : (
         <section className="mb-12 sm:mb-16 md:mb-20">
-          <div className="bg-white rounded-2xl p-8 sm:p-12 border-2 border-dashed border-gray-300 text-center">
-            <Calendar className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
-              No Upcoming Events
-            </h3>
-            <p className="text-sm sm:text-base text-gray-600 mb-6">
-              Check back soon for new events and workshops!
-            </p>
-            <a
-              href={`mailto:${SITE_CONFIG.email}`}
-              className="inline-block py-2 px-6 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-lg transition-colors text-sm sm:text-base"
-            >
-              Contact Us
-            </a>
-          </div>
+          <Card className="border-2 border-dashed border-gray-300">
+            <CardContent className="p-8 sm:p-12 text-center">
+              <Calendar className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+                No Upcoming Events
+              </h3>
+              <p className="text-sm sm:text-base text-gray-600 mb-6">
+                Check back soon for new events and workshops!
+              </p>
+              <Button asChild className="bg-indigo-500 hover:bg-indigo-600 text-white text-sm sm:text-base">
+                <a href={`mailto:${SITE_CONFIG.email}`}>
+                  Contact Us
+                </a>
+              </Button>
+            </CardContent>
+          </Card>
         </section>
       )}
 
