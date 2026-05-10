@@ -293,7 +293,7 @@ async function createBookingRecordAndSendEmail(
     trxId: string
     amountPaid: number
   }
-): Promise<{ success: boolean; error?: string; bookingId?: string }> {
+): Promise<{ success: boolean; error?: string; warning?: string; bookingId?: string }> {
   if (!adminDb) {
     return { success: false, error: 'Service temporarily unavailable. Please try again later.' }
   }
@@ -356,16 +356,41 @@ async function createBookingRecordAndSendEmail(
     },
   })
 
-  if (!emailResult.success) {
-    await bookingRef.delete()
-    return {
-      success: false,
-      error: emailResult.error || 'Failed to send confirmation email. Please try again.',
+  // Persist email delivery state on the booking so the registration is preserved even if email fails.
+  // Admins can later resend the confirmation; users don't lose their spot due to a transient Brevo issue.
+  try {
+    if (emailResult.success) {
+      await bookingRef.update({
+        emailSent: true,
+        emailSentAt: new Date(),
+      })
+    } else {
+      console.error(
+        `[booking] Booking ${bookingId} (${registrationId}) saved but confirmation email FAILED:`,
+        emailResult.error
+      )
+      await bookingRef.update({
+        emailSent: false,
+        emailError: emailResult.error || 'Unknown email service error',
+        emailFailedAt: new Date(),
+      })
     }
+  } catch (updateError) {
+    console.error(`[booking] Failed to update email status for booking ${bookingId}:`, updateError)
   }
 
   revalidatePath(`/dashboard/events/${formData.eventId}`)
   revalidateTag(`dashboard-event-bookings-${formData.eventId}`, 'max')
+
+  if (!emailResult.success) {
+    // Booking is kept; return a soft warning so the UI can tell the user their spot is reserved
+    // but the email didn't go out. (Frontend shows a notice; admin can resend later.)
+    return {
+      success: true,
+      bookingId,
+      warning: `Your registration was saved (ID: ${registrationId}), but we couldn't send the confirmation email. Please contact support — our team has been notified. Details: ${emailResult.error || 'Unknown error'}`,
+    }
+  }
 
   return { success: true, bookingId }
 }
@@ -377,7 +402,7 @@ async function createBookingRecordAndSendEmail(
  */
 export async function createBooking(
   formData: BookingInput
-): Promise<{ success: boolean; error?: string; bookingId?: string }> {
+): Promise<{ success: boolean; error?: string; warning?: string; bookingId?: string }> {
   try {
     if (!adminDb) {
       return {
@@ -584,6 +609,7 @@ export async function initiatePaidEventCheckout(
 export async function finalizePaidEventBooking(paymentId: string): Promise<{
   success: boolean
   error?: string
+  warning?: string
   bookingId?: string
 }> {
   try {
