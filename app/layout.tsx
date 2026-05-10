@@ -4,6 +4,8 @@ import "./globals.css";
 import OrganizationSchema from "@/components/OrganizationSchema";
 import ConditionalAnalytics from "@/components/ConditionalAnalytics";
 import { SITE_CONFIG, getSiteOrigin } from "@/lib/site-config";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 
 
 
@@ -98,7 +100,10 @@ export default function RootLayout({
       >
         <ConditionalAnalytics />
         <OrganizationSchema />
-        {children}
+        <TooltipProvider delayDuration={200}>
+          {children}
+        </TooltipProvider>
+        <Toaster richColors closeButton position="top-right" />
       </body>
     </html>
   );
