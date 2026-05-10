@@ -302,11 +302,16 @@ export async function generateBookingConfirmationPDF({
       // Setup fonts before creating PDFDocument
       fontPatch = setupPDFKitFonts()
       
-      // Create PDFDocument - font reads should now be intercepted
-      // Single page mode - we'll manually manage all content placement
+      // Create PDFDocument - font reads should now be intercepted.
+      // We set all PDFKit margins to 0 because the layout in generatePDFContent
+      // positions every element with explicit (x, y) coordinates and manages
+      // its own padding via the `theme.metric` design tokens. Leaving PDFKit's
+      // own margins non-zero would cause it to auto-paginate when our content
+      // (legitimately positioned via absolute coords) crosses its internal
+      // bottom-margin threshold.
       const doc = new PDFDocument({
         size: 'LETTER',
-        margins: { top: 40, bottom: 40, left: 50, right: 50 },
+        margins: { top: 0, bottom: 0, left: 0, right: 0 },
         autoFirstPage: true,
       })
       
@@ -320,14 +325,16 @@ export async function generateBookingConfirmationPDF({
         }
       })
 
-      // Force font loading by writing a small invisible text first
-      // This ensures fonts are loaded and initialized before any visible content
-      // Position it off-page so it's not visible
-      // Use Times-Roman as the standard font
-      doc.font('Times-Roman').fontSize(1).fillColor('white').text(' ', -1000, -1000, { width: 1 })
-      
-      // Reset to proper settings for actual content
-      doc.font('Times-Roman').fontSize(12).fillColor('#000000')
+      // Force font loading by writing invisible text off-page first.
+      // PDFKit lazy-loads font files only on first text() call, so we prime each
+      // typeface used in the document up-front. This ensures the readFileSync
+      // patch (setupPDFKitFonts) catches every .afm load before any visible
+      // content is rendered. We rely exclusively on PDFKit's built-in fonts so
+      // the document renders identically in dev and serverless environments.
+      doc.font('Helvetica').fontSize(1).fillColor('white').text(' ', -1000, -1000, { width: 1 })
+      doc.font('Helvetica-Bold').fontSize(1).fillColor('white').text(' ', -1000, -1000, { width: 1 })
+
+      doc.font('Helvetica').fontSize(11).fillColor('#0f172a')
 
       const buffers: Buffer[] = []
       doc.on('data', buffers.push.bind(buffers))
@@ -377,8 +384,18 @@ export async function generateBookingConfirmationPDF({
 }
 
 /**
- * Generate PDF content with single-page layout
- * Automatically adjusts spacing to ensure everything fits on one page
+ * Render the registration confirmation PDF.
+ *
+ * Design system (single page, Letter portrait):
+ *   - Typography: Helvetica family (built-in PDFKit font, ships in any
+ *     environment). Hierarchy is established with weight + size + color, not
+ *     decorative fills.
+ *   - Color palette: deep navy accent (#0f4c81) + slate neutrals. One accent
+ *     color, no rainbow of blues/greys.
+ *   - Layout: strict left-aligned baseline grid with thin horizontal rules
+ *     between sections instead of filled boxes around every row. The QR block
+ *     and footer are pinned to the bottom; optional content (additional info,
+ *     event description) flexes into the remaining space.
  */
 async function generatePDFContent(
   doc: any, // eslint-disable-line @typescript-eslint/no-explicit-any -- PDFDocument instance from dynamically imported pdfkit
@@ -390,341 +407,300 @@ async function generatePDFContent(
   generateQRCodeBuffer: (text: string, size?: number) => Promise<Buffer>,
   logoBuffer: Buffer | null = null
 ): Promise<void> {
-  try {
-    // Sanitize all event and booking data before rendering
-    const sanitizedEvent = sanitizeEventForPDF(event)
-    const sanitizedBooking = sanitizeBookingDetailsForPDF(bookingDetails)
-    const sanitizedRegistrationId = sanitizeTextForPDF(registrationId)
+  // bookingId is reserved for future use (e.g. internal references); the user-facing
+  // identifier is registrationId.
+  void bookingId
 
-    // Calculate available page dimensions for single-page layout
-    const pageWidth = doc.page.width
-    const pageHeight = doc.page.height
-    const margin = 50
-    const marginTop = 40
-    const marginBottom = 40
-    const contentWidth = pageWidth - (margin * 2)
-    const footerHeight = 45
-    const headerHeight = 88
-    const availableHeight = pageHeight - marginTop - marginBottom - footerHeight - headerHeight
-    const logoSize = 44
-    const logoMargin = 14
+  const sanitizedEvent = sanitizeEventForPDF(event)
+  const sanitizedBooking = sanitizeBookingDetailsForPDF(bookingDetails)
+  const sanitizedRegistrationId = sanitizeTextForPDF(registrationId)
 
-    // Define font sizes for single-page layout (increased for better readability)
-    const fontSizes = {
-      header: 28,
-      subheader: 12,
-      sectionTitle: 16,
-      body: 11,
-      small: 9,
-      registrationId: 20,
-    }
-
-    // Calculate spacing (adjusted for larger fonts and colored sections)
-    const spacing = {
-      section: 14,
-      field: 10,
-      subsection: 10,
-    }
-
-    // Track Y position for layout management
-    let yPos = marginTop
-
-    // Helper to add a field with proper wrapping and elegant styling
-    const addField = (label: string, value: string | undefined, required = false, currentY: number): number => {
-      if (!value && !required) return currentY
-      
-      const displayValue = value || 'N/A'
-      // Truncate very long values to prevent layout issues
-      const maxFieldLength = 150
-      const truncatedValue = displayValue.length > maxFieldLength 
-        ? displayValue.substring(0, maxFieldLength - 3) + '...' 
-        : displayValue
-      
-      const labelWidth = 100
-      const valueWidth = contentWidth - labelWidth
-      
-      // Add subtle background for each field
-      doc.rect(margin - 3, currentY - 2, contentWidth + 6, 18).fill('#ffffff').stroke('#e5e7eb').lineWidth(0.5)
-      
-      // Use indigo color for labels with bold styling
-      doc.font('Times-Roman').fontSize(fontSizes.body).fillColor('#6366f1')
-      doc.text(`${label}`, margin + 3, currentY + 2)
-      
-      // Use dark color for values
-      doc.fillColor('#1f2937').text(truncatedValue, margin + labelWidth, currentY + 2, {
-        width: valueWidth - 6,
-      })
-      
-      // Calculate if value wrapped (estimate line height - adjusted for larger font)
-      const charsPerLine = Math.floor(valueWidth / 6)
-      const lines = Math.max(1, Math.ceil(truncatedValue.length / charsPerLine))
-      const lineHeight = 16
-      
-      return currentY + Math.max(spacing.field + 2, lines * lineHeight)
-    }
-
-    // ==================== HEADER ====================
-    // Elegant header with gradient effect using indigo background
-    doc.rect(0, 0, pageWidth, headerHeight).fill('#6366f1')
-    
-    // Add decorative line at bottom of header
-    doc.rect(0, headerHeight - 3, pageWidth, 3).fill('#4f46e5')
-    
-    // Logo top-left (optional)
-    const headerContentLeft = margin
-    let titleLeft = margin
-    if (logoBuffer && logoBuffer.length > 0) {
-      try {
-        doc.image(logoBuffer, margin, logoMargin, { width: logoSize, height: logoSize })
-        titleLeft = margin + logoSize + 12
-      } catch {
-        titleLeft = margin
-      }
-    }
-    const titleWidth = contentWidth - (titleLeft - margin)
-    
-    doc.font('Times-Roman').fontSize(fontSizes.header).fillColor('#ffffff').text('Registration Confirmed', titleLeft, 22, {
-      width: titleWidth,
-    })
-    
-    doc.font('Times-Roman').fontSize(fontSizes.subheader).fillColor('#e0e7ff').text('Event Registration Confirmation', titleLeft, 54, {
-      width: titleWidth,
-    })
-
-    yPos = headerHeight + 24
-
-    // ==================== REGISTRATION ID SECTION ====================
-    // Prominent Registration ID display with elegant styling
-    const regIdBoxHeight = 70
-    doc.rect(margin - 8, yPos - 8, contentWidth + 16, regIdBoxHeight).fill('#eff6ff').stroke('#3b82f6').lineWidth(2)
-    
-    doc.font('Times-Roman').fontSize(12).fillColor('#6366f1').text('Registration ID', margin, yPos)
-    yPos += 16
-    doc.font('Times-Roman').fontSize(fontSizes.registrationId).fillColor('#1e3a8a').text(sanitizedRegistrationId || 'N/A', margin, yPos, {
-      width: contentWidth,
-    })
-    
-    yPos += 50
-
-    // ==================== EVENT DETAILS SECTION ====================
-    // Elegant section header with icon-like styling
-    doc.rect(margin - 8, yPos - 8, contentWidth + 16, 28).fill('#f8fafc').stroke('#cbd5e1').lineWidth(1.5)
-    doc.font('Times-Roman').fontSize(fontSizes.sectionTitle).fillColor('#1e40af').text('Event Details', margin, yPos + 2)
-    yPos += 32
-
-    const firstDate = getFirstEventDate(event.date)
-    const formattedDate = firstDate ? formatEventDates(parseEventDates(event.date), 'long') : 'TBA'
-    const sanitizedDate = sanitizeTextForPDF(formattedDate)
-
-    // Event Name (required)
-    yPos = addField('Event Name', sanitizedEvent.title || 'Event', true, yPos)
-
-    // Date (required)
-    yPos = addField('Date', sanitizedDate || 'TBA', true, yPos)
-
-    // Time (if available)
-    if (sanitizedEvent.time) {
-      yPos = addField('Time', sanitizedEvent.time, false, yPos)
-    }
-
-    // Venue (if available)
-    const venue = sanitizedEvent.venue || sanitizedEvent.location
-    if (venue) {
-      yPos = addField('Venue', venue, false, yPos)
-    }
-
-    // Eligibility (if available)
-    if (sanitizedEvent.eligibility) {
-      yPos = addField('Eligibility', sanitizedEvent.eligibility, false, yPos)
-    }
-
-    yPos += spacing.subsection
-
-    yPos += spacing.subsection
-
-    // ==================== REGISTRATION INFORMATION SECTION ====================
-    // Elegant section header with icon-like styling
-    doc.rect(margin - 8, yPos - 8, contentWidth + 16, 28).fill('#f8fafc').stroke('#cbd5e1').lineWidth(1.5)
-    doc.font('Times-Roman').fontSize(fontSizes.sectionTitle).fillColor('#1e40af').text('Registration Information', margin, yPos + 2)
-    yPos += 32
-
-    // Name (required)
-    yPos = addField('Name', sanitizedBooking.name, true, yPos)
-
-    // School (required)
-    yPos = addField('School', sanitizedBooking.school, true, yPos)
-
-    // Email (required)
-    yPos = addField('Email', sanitizedBooking.email, true, yPos)
-
-    // Phone (required)
-    yPos = addField('Phone', sanitizedBooking.phone, true, yPos)
-
-    // bKash Number (when present, for paid events)
-    if (sanitizedBooking.bkashNumber) {
-      yPos = addField('bKash Number', sanitizedBooking.bkashNumber, false, yPos)
-    }
-
-    // Additional Information (optional, truncate if too long for single page)
-    if (sanitizedBooking.information) {
-      // Reserve space for description, QR code, and footer
-      const remainingForDescQRAndFooter = 180
-      const usedHeight = yPos - marginTop - headerHeight
-      const maxInfoHeight = availableHeight - usedHeight - remainingForDescQRAndFooter
-      
-      if (maxInfoHeight > 25) {
-        yPos += 8
-        doc.font('Times-Roman').fontSize(fontSizes.body).fillColor('#6366f1')
-        doc.text('Additional Information: ', margin, yPos)
-        yPos += 14
-        
-        // Truncate information intelligently to fit on page
-        const infoText = truncateTextToFit(sanitizedBooking.information, contentWidth, maxInfoHeight, fontSizes.body)
-        
-        // Add elegant background box for additional info
-        const infoLines = infoText.split('\n').length || 1
-        const infoBoxHeight = Math.min((infoLines * 14) + 12, maxInfoHeight + 12)
-        doc.rect(margin - 5, yPos - 5, contentWidth + 10, infoBoxHeight).fill('#f9fafb').stroke('#d1d5db').lineWidth(1)
-        
-        doc.font('Times-Roman').fontSize(fontSizes.body).fillColor('#374151').text(infoText, margin, yPos, {
-          width: contentWidth,
-          align: 'left',
-        })
-        
-        // Update Y position based on actual content height
-        const charsPerLine = Math.floor(contentWidth / 6)
-        const lines = Math.ceil(infoText.length / charsPerLine) || 1
-        yPos += Math.min(lines * 14, maxInfoHeight) + 8
-      }
-    }
-
-    yPos += spacing.subsection
-
-    // ==================== EVENT DESCRIPTION (if space available) ====================
-    const eventDescription = sanitizedEvent.fullDescription || sanitizedEvent.description
-    // Reserve space for QR code section (210px: 100px QR + 110px spacing/text) and footer (35px)
-    const minQRAndFooterSpace = 245
-    const remainingHeight = pageHeight - yPos - marginBottom - minQRAndFooterSpace
-    
-    if (eventDescription && remainingHeight > 50) {
-      yPos += 10
-      // Elegant section header
-      doc.rect(margin - 8, yPos - 8, contentWidth + 16, 25).fill('#f8fafc').stroke('#cbd5e1').lineWidth(1.5)
-      doc.font('Times-Roman').fontSize(fontSizes.sectionTitle).fillColor('#1e40af').text('About the Event', margin, yPos)
-      yPos += 28
-
-      // Calculate max height for description
-      const maxDescHeight = remainingHeight - 30
-      
-      // Truncate description intelligently
-      const descText = truncateTextToFit(eventDescription, contentWidth, maxDescHeight, fontSizes.body)
-
-      // Add elegant background box
-      const estimatedLines = Math.ceil(descText.length / (contentWidth / 6))
-      const descBoxHeight = Math.min(estimatedLines * 14 + 14, maxDescHeight + 14)
-      doc.rect(margin - 5, yPos - 5, contentWidth + 10, descBoxHeight).fill('#f9fafb').stroke('#d1d5db').lineWidth(1)
-      
-      doc.font('Times-Roman').fontSize(fontSizes.body).fillColor('#475569').text(descText, margin, yPos, {
-        width: contentWidth,
-        align: 'left',
-      })
-      
-      yPos += descBoxHeight + 10
-    }
-
-    // ==================== QR CODE SECTION (at bottom) ====================
-    yPos += 40 // Increased spacing before QR section
-    const qrSize = 100
-    // Increased section height to accommodate more spacing and full URL display
-    const qrSectionHeight = qrSize + 110 // Increased from 60 to 110 for better spacing
-    const minFooterSpace = 35 // Increased footer space
-    
-    // Calculate position - ensure QR section fits before footer
-    const maxQRY = pageHeight - marginBottom - qrSectionHeight - minFooterSpace
-    const qrSectionY = Math.min(yPos, maxQRY)
-    
-    // Create elegant QR code section with border and background
-    doc.rect(margin - 10, qrSectionY - 10, contentWidth + 20, qrSectionHeight).fill('#f0f9ff').stroke('#3b82f6').lineWidth(2)
-    
-    // Decorative top border
-    doc.rect(margin - 10, qrSectionY - 10, contentWidth + 20, 4).fill('#6366f1')
-    
-    // Section title with more spacing
-    doc.font('Times-Roman').fontSize(15).fillColor('#1e40af').text('Scan QR Code to Verify Registration', margin, qrSectionY + 8, {
-      align: 'center',
-      width: contentWidth,
-    })
-    
-    // Generate and place QR code centered with more spacing below title
-    try {
-      const qrY = qrSectionY + 28 // Increased from 18 to 28 for more space below title
-      const qrX = (pageWidth - qrSize) / 2
-      
-      // Add elegant white border around QR code with shadow effect
-      doc.rect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20).fill('#ffffff').stroke('#6366f1').lineWidth(2.5)
-      
-      const qrCodeBuffer = await generateQRCodeBuffer(verificationUrl, qrSize)
-      doc.image(qrCodeBuffer, qrX, qrY, {
-        width: qrSize,
-        height: qrSize,
-      })
-      
-      // Instruction text below QR code with more spacing
-      doc.font('Times-Roman').fontSize(10).fillColor('#1e40af').text('Scan with your phone camera to verify your registration', margin, qrY + qrSize + 20, {
-        align: 'center',
-        width: contentWidth,
-      })
-      
-      // URL text - display full URL with proper spacing (may wrap to multiple lines)
-      // Split URL at query parameter for better readability if URL is long
-      const urlY = qrY + qrSize + 38 // Increased spacing below instruction text
-      const questionMarkIndex = verificationUrl.indexOf('?')
-      
-      if (questionMarkIndex > 0 && verificationUrl.length > 120) {
-        // If URL is long and has query params, display base URL and params on separate lines
-        const baseUrl = verificationUrl.substring(0, questionMarkIndex)
-        const queryParams = verificationUrl.substring(questionMarkIndex)
-        
-        doc.font('Times-Roman').fontSize(7).fillColor('#6b7280').text(baseUrl, margin, urlY, {
-          align: 'center',
-          width: contentWidth - 20,
-        })
-        doc.font('Times-Roman').fontSize(7).fillColor('#6b7280').text(queryParams, margin, urlY + 10, {
-          align: 'center',
-          width: contentWidth - 20,
-        })
-      } else {
-        // Display full URL, allow natural wrapping across multiple lines if needed
-        doc.font('Times-Roman').fontSize(7).fillColor('#6b7280').text(verificationUrl, margin, urlY, {
-          align: 'center',
-          width: contentWidth - 20,
-          lineGap: 2,
-        })
-      }
-    } catch {
-      // Continue without QR code if generation fails
-      doc.font('Times-Roman').fontSize(fontSizes.body).fillColor('#6b7280').text('QR code unavailable - Please contact support', margin, qrSectionY + 40, {
-        align: 'center',
-        width: contentWidth,
-      })
-    }
-
-    // ==================== FOOTER ====================
-    const footerY = pageHeight - marginBottom - 25
-    // Add elegant footer background
-    doc.rect(0, footerY - 5, pageWidth, 25).fill('#f3f4f6')
-    doc.font('Times-Roman').fontSize(9).fillColor('#6b7280').text(
-      `© ${new Date().getFullYear()} ${SITE_CONFIG.name}. All rights reserved.`,
-      margin,
-      footerY,
-      {
-        align: 'center',
-        width: contentWidth,
-      }
-    )
-
-  } catch (error) {
-    throw error
+  // ---------- Design tokens ----------
+  const theme = {
+    color: {
+      ink: '#0f172a',          // slate-900 — primary body text
+      mute: '#475569',         // slate-600 — labels, captions
+      faint: '#94a3b8',        // slate-400 — hints, deemphasized URLs
+      rule: '#e2e8f0',         // slate-200 — hairline dividers
+      accent: '#0f4c81',       // brand navy — header band, big numerals
+      accentSoft: '#f1f5f9',   // slate-100 — gentle block backgrounds
+      onAccent: '#ffffff',
+      onAccentMuted: '#cbd5e1',
+    },
+    font: {
+      regular: 'Helvetica',
+      bold: 'Helvetica-Bold',
+    },
+    size: {
+      brand: 18,
+      docSubtitle: 10,
+      sectionLabel: 9,
+      regIdLabel: 8.5,
+      regIdValue: 22,
+      label: 9.5,
+      value: 10.5,
+      body: 10,
+      caption: 8.5,
+      micro: 7.5,
+      footer: 8,
+    },
+    metric: {
+      pageMarginX: 50,
+      pageMarginBottom: 38,
+      headerHeight: 76,
+      logoSize: 40,
+      labelColW: 120,
+      sectionGap: 22,
+      rowGap: 8,
+      qrSize: 110,
+      qrBlockH: 178, // QR + caption + URL
+    },
   }
+
+  const pageWidth: number = doc.page.width
+  const pageHeight: number = doc.page.height
+  const left = theme.metric.pageMarginX
+  const right = pageWidth - theme.metric.pageMarginX
+  const contentWidth = right - left
+
+  // ---------- Helpers ----------
+  const formatIssuedDate = (): string => {
+    try {
+      return new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    } catch {
+      return new Date().toISOString().split('T')[0]
+    }
+  }
+
+  const drawHRule = (atY: number): void => {
+    doc.moveTo(left, atY).lineTo(right, atY)
+      .strokeColor(theme.color.rule).lineWidth(0.75).stroke()
+  }
+
+  const drawSectionHeader = (label: string, atY: number): number => {
+    doc.font(theme.font.bold).fontSize(theme.size.sectionLabel).fillColor(theme.color.mute)
+    doc.text(label.toUpperCase(), left, atY, {
+      width: contentWidth,
+      characterSpacing: 1.6,
+    })
+    const headerHeight = doc.heightOfString(label.toUpperCase(), {
+      width: contentWidth,
+      characterSpacing: 1.6,
+    })
+    drawHRule(atY + headerHeight + 4)
+    return atY + headerHeight + 14
+  }
+
+  const drawRow = (label: string, value: string | undefined, atY: number): number => {
+    if (!value) return atY
+    const labelW = theme.metric.labelColW
+    const valueX = left + labelW
+    const valueW = contentWidth - labelW
+
+    doc.font(theme.font.regular).fontSize(theme.size.value)
+    const valueHeight = doc.heightOfString(value, { width: valueW, lineGap: 1 })
+    const rowHeight = Math.max(valueHeight, 14)
+
+    doc.font(theme.font.regular).fontSize(theme.size.label).fillColor(theme.color.mute)
+    doc.text(label, left, atY, { width: labelW - 8 })
+
+    doc.font(theme.font.regular).fontSize(theme.size.value).fillColor(theme.color.ink)
+    doc.text(value, valueX, atY, { width: valueW, lineGap: 1 })
+
+    return atY + rowHeight + theme.metric.rowGap
+  }
+
+  // ---------- Header band ----------
+  doc.rect(0, 0, pageWidth, theme.metric.headerHeight).fill(theme.color.accent)
+
+  let titleX = left
+  if (logoBuffer && logoBuffer.length > 0) {
+    try {
+      const logoY = (theme.metric.headerHeight - theme.metric.logoSize) / 2
+      doc.image(logoBuffer, left, logoY, {
+        fit: [theme.metric.logoSize, theme.metric.logoSize],
+        align: 'center',
+        valign: 'center',
+      })
+      titleX = left + theme.metric.logoSize + 14
+    } catch {
+      titleX = left
+    }
+  }
+
+  doc.font(theme.font.bold).fontSize(theme.size.brand).fillColor(theme.color.onAccent)
+  doc.text(SITE_CONFIG.name, titleX, 22, {
+    width: right - titleX,
+    lineBreak: false,
+  })
+  doc.font(theme.font.regular).fontSize(theme.size.docSubtitle).fillColor(theme.color.onAccentMuted)
+  doc.text('Registration Confirmation', titleX, 46, {
+    width: right - titleX,
+    lineBreak: false,
+  })
+
+  let y = theme.metric.headerHeight + 26
+
+  // ---------- Registration ID + Issued Date (split row) ----------
+  const splitColW = contentWidth / 2
+
+  doc.font(theme.font.bold).fontSize(theme.size.regIdLabel).fillColor(theme.color.mute)
+  doc.text('REGISTRATION ID', left, y, {
+    width: splitColW,
+    characterSpacing: 1.6,
+  })
+  doc.text('ISSUED', left + splitColW, y, {
+    width: splitColW,
+    characterSpacing: 1.6,
+    align: 'right',
+  })
+  y += 14
+
+  doc.font(theme.font.bold).fontSize(theme.size.regIdValue).fillColor(theme.color.accent)
+  doc.text(sanitizedRegistrationId || 'N/A', left, y, {
+    width: splitColW,
+    lineBreak: false,
+  })
+  doc.font(theme.font.regular).fontSize(theme.size.value).fillColor(theme.color.ink)
+  doc.text(formatIssuedDate(), left + splitColW, y + 8, {
+    width: splitColW,
+    align: 'right',
+    lineBreak: false,
+  })
+
+  y += 36
+  drawHRule(y)
+  y += theme.metric.sectionGap
+
+  // ---------- Event Details ----------
+  y = drawSectionHeader('Event Details', y)
+
+  const firstDate = getFirstEventDate(event.date)
+  const formattedDate = firstDate ? formatEventDates(parseEventDates(event.date), 'long') : 'TBA'
+
+  y = drawRow('Event Name', sanitizeTextForPDF(sanitizedEvent.title || 'Event'), y)
+  y = drawRow('Date', sanitizeTextForPDF(formattedDate || 'TBA'), y)
+  if (sanitizedEvent.time) y = drawRow('Time', sanitizedEvent.time, y)
+  const venue = sanitizedEvent.venue || sanitizedEvent.location
+  if (venue) y = drawRow('Venue', venue, y)
+  if (sanitizedEvent.eligibility) y = drawRow('Eligibility', sanitizedEvent.eligibility, y)
+
+  y += theme.metric.sectionGap - theme.metric.rowGap
+
+  // ---------- Registration Information ----------
+  y = drawSectionHeader('Registration Information', y)
+
+  y = drawRow('Name', sanitizedBooking.name, y)
+  y = drawRow('School', sanitizedBooking.school, y)
+  y = drawRow('Email', sanitizedBooking.email, y)
+  y = drawRow('Phone', sanitizedBooking.phone, y)
+  if (sanitizedBooking.bkashNumber) {
+    y = drawRow('bKash Number', sanitizedBooking.bkashNumber, y)
+  }
+
+  // ---------- Reserve bottom region for QR block + footer ----------
+  // Everything after this point flows into whatever vertical room is left
+  // before the QR section. This guarantees the QR + footer always sit at
+  // their fixed bottom location, no matter the optional content above.
+  const footerH = 28
+  const qrBlockY = pageHeight - theme.metric.pageMarginBottom - footerH - theme.metric.qrBlockH
+  const flowSpaceBottom = qrBlockY - 14
+
+  // ---------- Optional: Additional Information ----------
+  if (sanitizedBooking.information && y + 32 < flowSpaceBottom) {
+    y += 6
+    doc.font(theme.font.bold).fontSize(theme.size.label).fillColor(theme.color.mute)
+    doc.text('Additional Information', left, y, { width: contentWidth })
+    y += 14
+
+    const noteAvail = flowSpaceBottom - y - 24
+    const noteText = truncateTextToFit(
+      sanitizedBooking.information,
+      contentWidth - 24,
+      noteAvail,
+      theme.size.body
+    )
+    doc.font(theme.font.regular).fontSize(theme.size.body)
+    const noteH = doc.heightOfString(noteText, { width: contentWidth - 24, lineGap: 2 })
+    const noteBoxH = Math.min(noteH, noteAvail) + 16
+    doc.rect(left, y, contentWidth, noteBoxH).fill(theme.color.accentSoft)
+    doc.font(theme.font.regular).fontSize(theme.size.body).fillColor(theme.color.ink)
+    doc.text(noteText, left + 12, y + 8, {
+      width: contentWidth - 24,
+      height: noteAvail,
+      lineGap: 2,
+    })
+    y += noteBoxH + 14
+  }
+
+  // ---------- Optional: About the Event ----------
+  const description = sanitizedEvent.fullDescription || sanitizedEvent.description
+  const descRoom = flowSpaceBottom - y
+  if (description && descRoom > 56) {
+    y = drawSectionHeader('About the Event', y)
+    const descAvail = Math.max(0, flowSpaceBottom - y)
+    const descText = truncateTextToFit(description, contentWidth, descAvail, theme.size.body)
+    doc.font(theme.font.regular).fontSize(theme.size.body).fillColor(theme.color.ink)
+    doc.text(descText, left, y, {
+      width: contentWidth,
+      height: descAvail,
+      align: 'left',
+      lineGap: 2,
+    })
+  }
+
+  // ---------- QR Code block (bottom-pinned) ----------
+  drawHRule(qrBlockY - 12)
+
+  const qrSize = theme.metric.qrSize
+  const qrX = (pageWidth - qrSize) / 2
+  const qrY = qrBlockY + 6
+
+  try {
+    const qrCodeBuffer = await generateQRCodeBuffer(verificationUrl, qrSize * 4)
+    doc.rect(qrX - 6, qrY - 6, qrSize + 12, qrSize + 12)
+      .strokeColor(theme.color.rule).lineWidth(0.75).stroke()
+    doc.image(qrCodeBuffer, qrX, qrY, { width: qrSize, height: qrSize })
+  } catch {
+    doc.font(theme.font.regular).fontSize(theme.size.body).fillColor(theme.color.faint)
+    doc.text('QR code unavailable — please contact support', left, qrY + 40, {
+      width: contentWidth,
+      align: 'center',
+    })
+  }
+
+  doc.font(theme.font.regular).fontSize(theme.size.caption).fillColor(theme.color.mute)
+  doc.text('Scan to verify your registration', left, qrY + qrSize + 14, {
+    width: contentWidth,
+    align: 'center',
+  })
+
+  // URL — split at query string if long, otherwise let it wrap naturally
+  const urlY = qrY + qrSize + 30
+  const questionMarkIndex = verificationUrl.indexOf('?')
+  doc.font(theme.font.regular).fontSize(theme.size.micro).fillColor(theme.color.faint)
+  if (questionMarkIndex > 0 && verificationUrl.length > 90) {
+    const base = verificationUrl.substring(0, questionMarkIndex)
+    const params = verificationUrl.substring(questionMarkIndex)
+    doc.text(base, left, urlY, { width: contentWidth, align: 'center' })
+    doc.text(params, left, urlY + 10, { width: contentWidth, align: 'center' })
+  } else {
+    doc.text(verificationUrl, left, urlY, { width: contentWidth, align: 'center', lineGap: 1.5 })
+  }
+
+  // ---------- Footer (bottom-pinned) ----------
+  const footerY = pageHeight - theme.metric.pageMarginBottom + 6
+  drawHRule(footerY - 8)
+  doc.font(theme.font.regular).fontSize(theme.size.footer).fillColor(theme.color.faint)
+  doc.text(
+    `© ${new Date().getFullYear()} ${SITE_CONFIG.name}. All rights reserved.`,
+    left,
+    footerY,
+    { width: contentWidth, align: 'center' }
+  )
 }
 
