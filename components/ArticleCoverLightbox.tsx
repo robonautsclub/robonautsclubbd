@@ -3,6 +3,8 @@
 import { useMemo, useState, useCallback } from 'react'
 import Image from 'next/image'
 import { LightboxPortal } from '@/components/ImageLightboxGallery'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 
 type Props = {
   coverUrl: string
@@ -32,10 +34,11 @@ export default function ArticleCoverLightbox({ coverUrl, extraUrls }: Props) {
 
   return (
     <>
-      <button
+      <Button
         type="button"
+        variant="ghost"
         onClick={() => setOpenIndex(0)}
-        className="relative block w-full aspect-video rounded-2xl overflow-hidden bg-gray-200 mb-10 shadow-md text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 group"
+        className="relative block w-full h-auto p-0 aspect-video rounded-2xl overflow-hidden bg-gray-200 mb-10 shadow-md text-left group hover:bg-gray-200"
         aria-label={slideshowUrls.length > 1 ? 'Open image viewer (cover and gallery)' : 'Open full image'}
       >
         <Image
@@ -46,10 +49,10 @@ export default function ArticleCoverLightbox({ coverUrl, extraUrls }: Props) {
           priority
           sizes="(max-width: 768px) 100vw, 48rem"
         />
-        <span className="absolute bottom-3 right-3 rounded-md bg-black/50 px-2 py-1 text-xs font-medium text-white pointer-events-none">
+        <Badge className="absolute bottom-3 right-3 bg-black/50 hover:bg-black/50 text-white border-0 text-xs font-medium pointer-events-none">
           Click to enlarge
-        </span>
-      </button>
+        </Badge>
+      </Button>
 
       <LightboxPortal
         images={slideshowUrls}

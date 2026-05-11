@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import { SITE_CONFIG } from "@/lib/site-config";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { Card } from "@/components/ui/card";
 
 // Road #7, Sector #3, Uttara (from Google Maps place)
 const position: [number, number] = [23.8644706, 90.3980684];
@@ -18,7 +19,7 @@ const defaultIcon = L.icon({
 
 export default function MapClient() {
   return (
-    <div className="h-[420px] w-full rounded-2xl overflow-hidden border shadow-sm">
+    <Card className="h-[420px] w-full overflow-hidden shadow-sm p-0">
       <MapContainer
         center={position}
         zoom={14}
@@ -48,6 +49,6 @@ export default function MapClient() {
           </Popup>
         </Marker>
       </MapContainer>
-    </div>
+    </Card>
   );
 }

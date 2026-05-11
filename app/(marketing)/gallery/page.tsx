@@ -6,6 +6,7 @@ import { GALLERY_ALBUM_PREVIEW_MAX } from '@/lib/media-gallery'
 import ImageLightboxGallery from '@/components/ImageLightboxGallery'
 import ListingHeroSection from '@/components/ListingHeroSection'
 import { getGalleryGroups } from './actions'
+import { Card, CardContent } from '@/components/ui/card'
 
 export const metadata: Metadata = {
   title: 'Gallery',
@@ -59,10 +60,12 @@ export default async function GalleryPage() {
       <main className="flex-1 py-12 sm:py-16 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto space-y-16 sm:space-y-20">
           {groups.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center text-gray-600">
-              <Images className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p>No gallery albums yet.</p>
-            </div>
+            <Card>
+              <CardContent className="p-12 text-center text-gray-600">
+                <Images className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <p>No gallery albums yet.</p>
+              </CardContent>
+            </Card>
           ) : (
             groups.map((group) => {
               const dateLine = formatDisplayDate(effectiveGalleryDisplayRaw(group))

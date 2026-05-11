@@ -6,6 +6,7 @@ import { SITE_CONFIG } from '@/lib/site-config'
 import { effectiveNewsDisplayRaw } from '@/lib/publicContentDates'
 import ListingHeroSection from '@/components/ListingHeroSection'
 import { getPublishedNews } from './actions'
+import { Card, CardContent } from '@/components/ui/card'
 
 export const metadata: Metadata = {
   title: 'News',
@@ -59,52 +60,56 @@ export default async function NewsPage() {
       <main className="flex-1 py-12 sm:py-16 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
           {articles.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center text-gray-600">
-              <Newspaper className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p>No published articles yet. Check back soon.</p>
-            </div>
+            <Card>
+              <CardContent className="p-12 text-center text-gray-600">
+                <Newspaper className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <p>No published articles yet. Check back soon.</p>
+              </CardContent>
+            </Card>
           ) : (
             <ul className="grid gap-6 sm:gap-8 sm:grid-cols-2 lg:grid-cols-3">
               {articles.map((article) => {
                 const dateLabel = formatDate(effectiveNewsDisplayRaw(article))
                 return (
                 <li key={article.id}>
-                  <Link
-                    href={`/news/${article.slug}`}
-                    prefetch={false}
-                    className="group block h-full bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md hover:border-indigo-200 transition-all"
-                  >
-                    <div className="aspect-video relative bg-gray-100">
-                      {article.coverImageUrl ? (
-                        <Image
-                          src={article.coverImageUrl}
-                          alt=""
-                          fill
-                          className="object-cover group-hover:scale-[1.02] transition-transform duration-300"
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                          <Newspaper className="w-14 h-14 opacity-40" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-5 sm:p-6">
-                      {dateLabel ? (
-                          <p className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
-                            <Calendar className="w-3.5 h-3.5 shrink-0" />
-                            {dateLabel}
-                          </p>
-                        ) : null}
-                      <h2 className="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-2">
-                        {article.title}
-                      </h2>
-                      <span className="inline-flex items-center gap-1 mt-3 text-sm font-medium text-indigo-600">
-                        Read more
-                        <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                      </span>
-                    </div>
-                  </Link>
+                  <Card className="group h-full overflow-hidden shadow-sm hover:shadow-md hover:border-indigo-200 transition-all p-0">
+                    <Link
+                      href={`/news/${article.slug}`}
+                      prefetch={false}
+                      className="block h-full"
+                    >
+                      <div className="aspect-video relative bg-gray-100">
+                        {article.coverImageUrl ? (
+                          <Image
+                            src={article.coverImageUrl}
+                            alt=""
+                            fill
+                            className="object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                            <Newspaper className="w-14 h-14 opacity-40" />
+                          </div>
+                        )}
+                      </div>
+                      <CardContent className="p-5 sm:p-6">
+                        {dateLabel ? (
+                            <p className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
+                              <Calendar className="w-3.5 h-3.5 shrink-0" />
+                              {dateLabel}
+                            </p>
+                          ) : null}
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-2">
+                          {article.title}
+                        </h2>
+                        <span className="inline-flex items-center gap-1 mt-3 text-sm font-medium text-indigo-600">
+                          Read more
+                          <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                        </span>
+                      </CardContent>
+                    </Link>
+                  </Card>
                 </li>
                 )
               })}

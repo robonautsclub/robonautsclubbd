@@ -81,7 +81,7 @@ async function uploadPDFWithResourceType(
       // publicId already contains the full path: events/<event-id>/booking-<bookingId>
       // Cloudinary will automatically create the folder structure (events/<event-id>/) if it doesn't exist
       // The folder is part of the public_id path, so no need for separate folder option
-      const uploadOptions: any = {
+      const uploadOptions = {
         resource_type: resourceType,
         public_id: publicId, // Full path including folder structure: events/<event-id>/booking-<bookingId>
         format: 'pdf',

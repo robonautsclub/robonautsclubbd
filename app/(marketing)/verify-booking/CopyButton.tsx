@@ -2,6 +2,8 @@
 
 import { Copy, Check } from 'lucide-react'
 import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 interface CopyButtonProps {
   text: string
@@ -16,8 +18,7 @@ export default function CopyButton({ text, label }: CopyButtonProps) {
       await navigator.clipboard.writeText(text)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    } catch (error) {
-      // Fallback for older browsers
+    } catch {
       const textArea = document.createElement('textarea')
       textArea.value = text
       textArea.style.position = 'fixed'
@@ -36,22 +37,25 @@ export default function CopyButton({ text, label }: CopyButtonProps) {
   }
 
   return (
-    <button
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
       onClick={handleCopy}
-      className={`ml-2 p-1.5 rounded-lg transition-all duration-200 group ${
-        copied 
-          ? 'bg-green-100 text-green-700' 
-          : 'hover:bg-indigo-100 text-indigo-600 hover:text-indigo-700'
-      }`}
       title={copied ? 'Copied!' : `Copy ${label}`}
       aria-label={`Copy ${label}`}
+      className={cn(
+        'ml-2 size-8 group',
+        copied
+          ? 'bg-green-100 text-green-700 hover:bg-green-100'
+          : 'text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700'
+      )}
     >
       {copied ? (
         <Check className="w-4 h-4" />
       ) : (
         <Copy className="w-4 h-4 group-hover:scale-110 transition-transform" />
       )}
-    </button>
+    </Button>
   )
 }
-

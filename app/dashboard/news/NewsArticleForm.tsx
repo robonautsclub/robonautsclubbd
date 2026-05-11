@@ -1,13 +1,29 @@
 'use client'
 
-import { useState, FormEvent, useRef } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import Image from 'next/image'
 import Link from 'next/link'
 import { createNewsArticle, updateNewsArticle } from './actions'
 import type { NewsArticle } from '@/types/news'
 import { slugifyForUrl } from '@/lib/multilingualText'
+import { newsArticleFormSchema, type NewsArticleFormValues } from '@/lib/validation/news'
 import { ArrowLeft, Calendar, ImageIcon, Loader2, Plus, Trash2, Upload } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 
 type Props = {
   article?: NewsArticle | null
@@ -31,25 +47,31 @@ export default function NewsArticleForm({ article }: Props) {
   const extraInputRef = useRef<HTMLInputElement>(null)
   const isEdit = Boolean(article)
 
-  const [loading, setLoading] = useState(false)
+  const [images, setImages] = useState<string[]>(article?.images ?? [])
   const [uploadingCover, setUploadingCover] = useState(false)
   const [uploadingExtra, setUploadingExtra] = useState(false)
-  const [error, setError] = useState('')
+  const [uploadError, setUploadError] = useState('')
 
-  const [title, setTitle] = useState(article?.title ?? '')
-  const [slugOverride, setSlugOverride] = useState(article?.slug ?? '')
-  const [body, setBody] = useState(article?.body ?? '')
-  const [coverImageUrl, setCoverImageUrl] = useState(article?.coverImageUrl ?? '')
-  const [images, setImages] = useState<string[]>(article?.images ?? [])
-  const [published, setPublished] = useState(article?.published ?? false)
-  const [displayDateInput, setDisplayDateInput] = useState(() => {
-    if (article) {
-      return isoOrDateToYmd(article.displayDate ?? article.publishedAt ?? article.createdAt) || todayLocalYmd()
-    }
-    return todayLocalYmd()
+  const form = useForm<NewsArticleFormValues>({
+    resolver: standardSchemaResolver(newsArticleFormSchema),
+    defaultValues: {
+      title: article?.title ?? '',
+      slugOverride: article?.slug ?? '',
+      body: article?.body ?? '',
+      coverImageUrl: article?.coverImageUrl ?? '',
+      displayDateInput:
+        article
+          ? isoOrDateToYmd(article.displayDate ?? article.publishedAt ?? article.createdAt) || todayLocalYmd()
+          : todayLocalYmd(),
+      published: article?.published ?? false,
+    },
   })
 
-  const suggestedSlug = slugifyForUrl(title.trim() || slugOverride.trim() || 'article')
+  const titleValue = form.watch('title')
+  const slugOverrideValue = form.watch('slugOverride')
+  const suggestedSlug = slugifyForUrl(titleValue.trim() || slugOverrideValue.trim() || 'article')
+
+  const loading = form.formState.isSubmitting
 
   const uploadFile = async (file: File) => {
     const uploadFormData = new FormData()
@@ -70,13 +92,13 @@ export default function NewsArticleForm({ article }: Props) {
   const onCoverSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setError('')
+    setUploadError('')
     setUploadingCover(true)
     try {
       const url = await uploadFile(file)
-      setCoverImageUrl(url)
+      form.setValue('coverImageUrl', url)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Cover upload failed')
+      setUploadError(err instanceof Error ? err.message : 'Cover upload failed')
     } finally {
       setUploadingCover(false)
       if (coverInputRef.current) coverInputRef.current.value = ''
@@ -86,13 +108,13 @@ export default function NewsArticleForm({ article }: Props) {
   const onExtraSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setError('')
+    setUploadError('')
     setUploadingExtra(true)
     try {
       const url = await uploadFile(file)
       setImages((prev) => [...prev, url])
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Image upload failed')
+      setUploadError(err instanceof Error ? err.message : 'Image upload failed')
     } finally {
       setUploadingExtra(false)
       if (extraInputRef.current) extraInputRef.current.value = ''
@@ -103,195 +125,235 @@ export default function NewsArticleForm({ article }: Props) {
     setImages((prev) => prev.filter((u) => u !== url))
   }
 
-  const onSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+  const onSubmit = async (values: NewsArticleFormValues) => {
+    setUploadError('')
     try {
       if (isEdit && article) {
         await updateNewsArticle(article.id, {
-          title,
-          slug: slugOverride.trim() || undefined,
-          body,
-          coverImageUrl: coverImageUrl || undefined,
+          title: values.title,
+          slug: values.slugOverride.trim() || undefined,
+          body: values.body,
+          coverImageUrl: values.coverImageUrl || undefined,
           images,
-          published,
-          displayDate: displayDateInput,
+          published: values.published,
+          displayDate: values.displayDateInput,
         })
         router.push('/dashboard/news')
         router.refresh()
       } else {
         await createNewsArticle({
-          title,
-          slug: slugOverride.trim() || undefined,
-          body,
-          coverImageUrl: coverImageUrl || undefined,
+          title: values.title,
+          slug: values.slugOverride.trim() || undefined,
+          body: values.body,
+          coverImageUrl: values.coverImageUrl || undefined,
           images,
-          published,
-          displayDate: displayDateInput,
+          published: values.published,
+          displayDate: values.displayDateInput,
         })
         router.push('/dashboard/news')
         router.refresh()
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
-    } finally {
-      setLoading(false)
+      setUploadError(err instanceof Error ? err.message : 'Something went wrong')
     }
   }
 
+  const coverImageUrl = form.watch('coverImageUrl')
+
   return (
-    <form onSubmit={onSubmit} className="space-y-6 max-w-3xl">
-      <Link
-        href="/dashboard/news"
-        prefetch={false}
-        className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-800"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to news
-      </Link>
-
-      {error ? (
-        <div className="rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm px-4 py-3">{error}</div>
-      ) : null}
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-indigo-600" />
-          Display date
-        </label>
-        <input
-          type="date"
-          value={displayDateInput}
-          onChange={(e) => setDisplayDateInput(e.target.value)}
-          className="w-full max-w-xs rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-        />
-        <p className="text-xs text-gray-500 mt-1">
-          Shown on the public news page and used for sorting. If empty when publishing, today&apos;s date is used.
-        </p>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          required
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          URL slug <span className="text-gray-400 font-normal">(optional — leave blank to derive from title)</span>
-        </label>
-        <input
-          type="text"
-          value={slugOverride}
-          onChange={(e) => setSlugOverride(e.target.value)}
-          placeholder={suggestedSlug}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-        />
-        <p className="text-xs text-gray-500 mt-1">Public URL: /news/{slugOverride.trim() ? slugifyForUrl(slugOverride) : suggestedSlug}</p>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Article</label>
-        <textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          rows={14}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-sans"
-          required
-        />
-      </div>
-
-      <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
-        <p className="text-sm font-medium text-gray-900 flex items-center gap-2">
-          <ImageIcon className="w-4 h-4 text-indigo-600" />
-          Cover image
-        </p>
-        <input ref={coverInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={onCoverSelect} />
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={() => coverInputRef.current?.click()}
-            disabled={uploadingCover}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {uploadingCover ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-            Upload cover
-          </button>
-          {coverImageUrl ? (
-            <button type="button" onClick={() => setCoverImageUrl('')} className="text-sm text-red-600 hover:underline">
-              Remove cover
-            </button>
-          ) : null}
-        </div>
-        {coverImageUrl ? (
-          <div className="relative w-full max-w-md aspect-video rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
-            <Image src={coverImageUrl} alt="" fill className="object-cover" sizes="(max-width: 448px) 100vw, 448px" />
-          </div>
-        ) : null}
-      </div>
-
-      <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
-        <p className="text-sm font-medium text-gray-900 flex items-center gap-2">
-          <Plus className="w-4 h-4 text-indigo-600" />
-          Extra photos (shown below the article)
-        </p>
-        <input ref={extraInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={onExtraSelect} />
-        <button
-          type="button"
-          onClick={() => extraInputRef.current?.click()}
-          disabled={uploadingExtra}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-800 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
-        >
-          {uploadingExtra ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-          Add image
-        </button>
-        {images.length > 0 ? (
-          <ul className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
-            {images.map((url) => (
-              <li key={url} className="relative aspect-video rounded-lg overflow-hidden bg-gray-100 group border border-gray-200">
-                <Image src={url} alt="" fill className="object-cover" sizes="200px" />
-                <button
-                  type="button"
-                  onClick={() => removeExtra(url)}
-                  className="absolute top-2 right-2 p-1.5 rounded-md bg-red-600 text-white opacity-90 hover:opacity-100 shadow"
-                  aria-label="Remove image"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
-
-      <label className="flex items-center gap-2 cursor-pointer">
-        <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
-        <span className="text-sm font-medium text-gray-800">Published (visible on public news page)</span>
-      </label>
-
-      <div className="flex flex-wrap gap-3 pt-2">
-        <button
-          type="submit"
-          disabled={loading}
-          className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700 disabled:opacity-50"
-        >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-          {isEdit ? 'Save changes' : 'Create article'}
-        </button>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-3xl">
         <Link
           href="/dashboard/news"
           prefetch={false}
-          className="inline-flex items-center justify-center px-6 py-2.5 rounded-lg border border-gray-300 text-gray-800 font-medium hover:bg-gray-50"
+          className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-800"
         >
-          Cancel
+          <ArrowLeft className="w-4 h-4" />
+          Back to news
         </Link>
-      </div>
-    </form>
+
+        {uploadError && (
+          <Alert variant="destructive">
+            <AlertDescription>{uploadError}</AlertDescription>
+          </Alert>
+        )}
+
+        <FormField
+          control={form.control}
+          name="displayDateInput"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-indigo-600" />
+                Display date
+              </FormLabel>
+              <FormControl>
+                <Input type="date" className="max-w-xs" {...field} />
+              </FormControl>
+              <p className="text-xs text-gray-500">
+                Shown on the public news page and used for sorting. If empty when publishing, today&apos;s date is
+                used.
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="title"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Title</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="slugOverride"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                URL slug <span className="text-gray-400 font-normal">(optional — leave blank to derive from title)</span>
+              </FormLabel>
+              <FormControl>
+                <Input {...field} placeholder={suggestedSlug} />
+              </FormControl>
+              <p className="text-xs text-gray-500">
+                Public URL: /news/{slugOverrideValue.trim() ? slugifyForUrl(slugOverrideValue) : suggestedSlug}
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="body"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Article</FormLabel>
+              <FormControl>
+                <Textarea rows={14} className="font-sans min-h-[320px]" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+          <p className="text-sm font-medium text-gray-900 flex items-center gap-2">
+            <ImageIcon className="w-4 h-4 text-indigo-600" />
+            Cover image
+          </p>
+          <input
+            ref={coverInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            onChange={onCoverSelect}
+          />
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              onClick={() => coverInputRef.current?.click()}
+              disabled={uploadingCover}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            >
+              {uploadingCover ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              Upload cover
+            </Button>
+            {coverImageUrl ? (
+              <button
+                type="button"
+                onClick={() => form.setValue('coverImageUrl', '')}
+                className="text-sm text-red-600 hover:underline"
+              >
+                Remove cover
+              </button>
+            ) : null}
+          </div>
+          {coverImageUrl ? (
+            <div className="relative w-full max-w-md aspect-video rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+              <Image src={coverImageUrl} alt="" fill className="object-cover" sizes="(max-width: 448px) 100vw, 448px" />
+            </div>
+          ) : null}
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+          <p className="text-sm font-medium text-gray-900 flex items-center gap-2">
+            <Plus className="w-4 h-4 text-indigo-600" />
+            Extra photos (shown below the article)
+          </p>
+          <input
+            ref={extraInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            onChange={onExtraSelect}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => extraInputRef.current?.click()}
+            disabled={uploadingExtra}
+          >
+            {uploadingExtra ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            Add image
+          </Button>
+          {images.length > 0 ? (
+            <ul className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
+              {images.map((url) => (
+                <li key={url} className="relative aspect-video rounded-lg overflow-hidden bg-gray-100 group border border-gray-200">
+                  <Image src={url} alt="" fill className="object-cover" sizes="200px" />
+                  <button
+                    type="button"
+                    onClick={() => removeExtra(url)}
+                    className="absolute top-2 right-2 p-1.5 rounded-md bg-red-600 text-white opacity-90 hover:opacity-100 shadow"
+                    aria-label="Remove image"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+
+        <FormField
+          control={form.control}
+          name="published"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+              <FormControl>
+                <Checkbox checked={field.value} onCheckedChange={(v) => field.onChange(v === true)} />
+              </FormControl>
+              <div className="space-y-1 leading-none">
+                <FormLabel>Published (visible on public news page)</FormLabel>
+              </div>
+            </FormItem>
+          )}
+        />
+
+        <div className="flex flex-wrap gap-3 pt-2">
+          <Button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            {isEdit ? 'Save changes' : 'Create article'}
+          </Button>
+          <Link
+            href="/dashboard/news"
+            prefetch={false}
+            className="inline-flex items-center justify-center px-6 py-2.5 rounded-lg border border-gray-300 text-gray-800 font-medium hover:bg-gray-50"
+          >
+            Cancel
+          </Link>
+        </div>
+      </form>
+    </Form>
   )
 }

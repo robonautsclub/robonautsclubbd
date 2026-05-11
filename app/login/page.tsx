@@ -1,27 +1,56 @@
 'use client'
 
-import { useState, FormEvent, Suspense } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 import { SESSION_DURATION_SECONDS, ASSIGN_ROLE_LAST_SYNC_STORAGE_KEY } from '@/lib/session'
+import {
+  loginSchema,
+  forgotPasswordSchema,
+  type LoginFormValues,
+  type ForgotPasswordFormValues,
+} from '@/lib/validation/auth'
 import { X, Mail, Sparkles } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showForgotPassword, setShowForgotPassword] = useState(false)
-  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('')
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false)
   const [forgotPasswordError, setForgotPasswordError] = useState('')
   const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState(false)
+  const [lastResetEmail, setLastResetEmail] = useState('')
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
+  const loginForm = useForm<LoginFormValues>({
+    resolver: standardSchemaResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  })
+
+  const forgotForm = useForm<ForgotPasswordFormValues>({
+    resolver: standardSchemaResolver(forgotPasswordSchema),
+    defaultValues: { email: '' },
+  })
+
+  const onLoginSubmit = async (values: LoginFormValues) => {
     setError('')
     setLoading(true)
 
@@ -32,30 +61,24 @@ function LoginForm() {
     }
 
     try {
-      // Sign in with Firebase Auth
-      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password)
       const token = await userCredential.user.getIdToken()
       const user = userCredential.user
 
-      // Assign role via server-side API (sets custom claims)
       let assignedRole: 'superAdmin' | 'admin' = 'admin'
       const finalToken = token
 
       try {
-        console.log('Calling role assignment API...')
         const roleResponse = await fetch('/api/auth/assign-role', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
           credentials: 'include',
         })
 
-        if (!roleResponse.ok) {
-          // Role assignment failed, but continue with login
-          // The role will be assigned on next token refresh
-        } else {
+        if (roleResponse.ok) {
           const roleData = await roleResponse.json()
           assignedRole = roleData.role || 'admin'
           try {
@@ -66,15 +89,10 @@ function LoginForm() {
         }
       } catch (roleError) {
         console.error('Error assigning role:', roleError)
-        // Continue with login even if role assignment fails
-        // The role will be assigned on next token refresh
       }
 
-      // Set the final token in cookie (30-minute session)
       document.cookie = `auth-token=${finalToken}; path=/; max-age=${SESSION_DURATION_SECONDS}; SameSite=Lax`
 
-      // Store user info in cookie (for fallback when Admin SDK is not available)
-      // Include role for client-side access
       const userInfo = {
         uid: user.uid,
         email: user.email || '',
@@ -84,20 +102,15 @@ function LoginForm() {
       }
       document.cookie = `user-info=${JSON.stringify(userInfo)}; path=/; max-age=${SESSION_DURATION_SECONDS}; SameSite=Lax`
 
-      // Session start for 30-minute auto logout timer
       document.cookie = `session-start=${Date.now()}; path=/; max-age=${SESSION_DURATION_SECONDS}; SameSite=Lax`
 
-      // Redirect to dashboard or the redirect URL
       const redirectTo = searchParams.get('redirect') || '/dashboard'
       router.push(redirectTo)
       router.refresh()
     } catch (err) {
       console.error('Login error:', err)
-      
-      // Type guard for Firebase Auth errors
       const firebaseError = err as { code?: string }
-      
-      // User-friendly error messages
+
       if (firebaseError.code === 'auth/invalid-email') {
         setError('Invalid email address')
       } else if (firebaseError.code === 'auth/user-not-found') {
@@ -114,17 +127,10 @@ function LoginForm() {
     }
   }
 
-  const handleForgotPassword = async (e: FormEvent) => {
-    e.preventDefault()
+  const onForgotSubmit = async (values: ForgotPasswordFormValues) => {
     setForgotPasswordError('')
     setForgotPasswordSuccess(false)
     setForgotPasswordLoading(true)
-
-    if (!forgotPasswordEmail.trim()) {
-      setForgotPasswordError('Please enter your email address')
-      setForgotPasswordLoading(false)
-      return
-    }
 
     if (!auth) {
       setForgotPasswordError('Firebase is not configured. Please check your environment variables.')
@@ -133,17 +139,18 @@ function LoginForm() {
     }
 
     try {
-      await sendPasswordResetEmail(auth, forgotPasswordEmail.trim())
+      await sendPasswordResetEmail(auth, values.email.trim())
+      setLastResetEmail(values.email.trim())
       setForgotPasswordSuccess(true)
       setTimeout(() => {
         setShowForgotPassword(false)
-        setForgotPasswordEmail('')
+        forgotForm.reset({ email: '' })
         setForgotPasswordSuccess(false)
       }, 3000)
     } catch (err) {
       console.error('Password reset error:', err)
       const firebaseError = err as { code?: string }
-      
+
       if (firebaseError.code === 'auth/user-not-found') {
         setForgotPasswordError('No account found with this email address')
       } else if (firebaseError.code === 'auth/invalid-email') {
@@ -158,190 +165,209 @@ function LoginForm() {
 
   return (
     <div className="min-h-screen relative overflow-hidden flex items-center justify-center px-4">
-      {/* Simplified Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100"></div>
-      
-      {/* Simple subtle pattern */}
+
       <div className="absolute inset-0 opacity-40">
         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-200 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-200 rounded-full blur-3xl"></div>
       </div>
 
-      {/* Close Button */}
-      <button
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
         onClick={() => {
-          // Using client-side navigation to root
-          window.location.href = '/';
+          window.location.href = '/'
         }}
-        className="absolute top-4 hover:cursor-pointer right-4 z-20 p-2 rounded-full bg-white/90 hover:bg-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110"
+        className="absolute top-4 right-4 z-20 rounded-full bg-white/90 hover:bg-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110"
         aria-label="Go back"
       >
         <X className="w-6 h-6 text-gray-600" />
-      </button>
+      </Button>
 
-      {/* Content */}
       <div className="max-w-md w-full relative z-10 animate-fade-in-up">
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/20">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 mb-4 shadow-lg">
-              <Sparkles className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent mb-2">
-              Admin Login
-            </h1>
-            <p className="text-gray-600">Sign in to access the dashboard</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <div className="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                {error}
+        <Card className="bg-white/95 backdrop-blur-xl shadow-2xl border-white/20">
+          <CardContent className="p-8">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 mb-4 shadow-lg">
+                <Sparkles className="w-8 h-8 text-white" />
               </div>
-            )}
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-colors"
-                placeholder="admin@example.com"
-                disabled={loading}
-              />
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent mb-2">
+                Admin Login
+              </h1>
+              <p className="text-gray-600">Sign in to access the dashboard</p>
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-colors"
-                placeholder="Enter your password"
-                disabled={loading}
-              />
-            </div>
+            <Form {...loginForm}>
+              <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-6">
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
 
-            <div className="text-right">
-              <button
-                type="button"
-                onClick={() => setShowForgotPassword(true)}
-                className="text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
-                disabled={loading}
-              >
-                Forgot Password?
-              </button>
-            </div>
+                <FormField
+                  control={loginForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700">Email Address</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="admin@example.com"
+                          disabled={loading}
+                          className="border-2 border-gray-200 rounded-lg py-3 h-auto"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 px-6 bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white font-semibold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-            >
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </form>
-        </div>
+                <FormField
+                  control={loginForm.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700">Password</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="Enter your password"
+                          disabled={loading}
+                          className="border-2 border-gray-200 rounded-lg py-3 h-auto"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="text-right">
+                  <Button
+                    type="button"
+                    variant="link"
+                    onClick={() => {
+                      forgotForm.reset({
+                        email: loginForm.getValues('email')?.trim() || '',
+                      })
+                      setShowForgotPassword(true)
+                    }}
+                    className="text-sm text-indigo-600 hover:text-indigo-800 font-medium h-auto p-0"
+                    disabled={loading}
+                  >
+                    Forgot Password?
+                  </Button>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  size="lg"
+                  className="w-full py-6 bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white font-semibold shadow-lg hover:shadow-xl"
+                >
+                  {loading ? 'Signing in...' : 'Sign In'}
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Forgot Password Modal */}
-      {showForgotPassword && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in-up">
-          <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl max-w-md w-full p-6 border border-white/20">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-gray-900">Reset Password</h2>
-              <button
-                onClick={() => {
-                  setShowForgotPassword(false)
-                  setForgotPasswordEmail('')
-                  setForgotPasswordError('')
-                  setForgotPasswordSuccess(false)
-                }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-                disabled={forgotPasswordLoading}
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
+      <Dialog
+        open={showForgotPassword}
+        onOpenChange={(open) => {
+          if (forgotPasswordLoading) return
+          setShowForgotPassword(open)
+          if (!open) {
+            forgotForm.reset({ email: '' })
+            setForgotPasswordError('')
+            setForgotPasswordSuccess(false)
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md bg-white/95 backdrop-blur-xl border-white/20">
+          <DialogTitle className="text-2xl font-bold text-gray-900">Reset Password</DialogTitle>
+          <DialogDescription className="sr-only">
+            Reset your account password by entering your email address to receive a reset link.
+          </DialogDescription>
 
-            {forgotPasswordSuccess ? (
-              <div className="text-center py-4">
-                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-                  <Mail className="w-8 h-8 text-green-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Check Your Email
-                </h3>
-                <p className="text-gray-600 text-sm">
-                  We&apos;ve sent a password reset link to <strong>{forgotPasswordEmail}</strong>
-                </p>
-                <p className="text-gray-500 text-xs mt-2">
-                  Please check your inbox and follow the instructions to reset your password.
-                </p>
+          {forgotPasswordSuccess ? (
+            <div className="text-center py-4">
+              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                <Mail className="w-8 h-8 text-green-600" />
               </div>
-            ) : (
-              <form onSubmit={handleForgotPassword} className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Check Your Email</h3>
+              <p className="text-gray-600 text-sm">
+                We&apos;ve sent a password reset link to <strong>{lastResetEmail}</strong>
+              </p>
+              <p className="text-gray-500 text-xs mt-2">
+                Please check your inbox and follow the instructions to reset your password.
+              </p>
+            </div>
+          ) : (
+            <Form {...forgotForm}>
+              <form onSubmit={forgotForm.handleSubmit(onForgotSubmit)} className="space-y-4">
                 <p className="text-gray-600 text-sm">
                   Enter your email address and we&apos;ll send you a link to reset your password.
                 </p>
 
                 {forgotPasswordError && (
-                  <div className="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                    {forgotPasswordError}
-                  </div>
+                  <Alert variant="destructive">
+                    <AlertDescription>{forgotPasswordError}</AlertDescription>
+                  </Alert>
                 )}
 
-                <div>
-                  <label htmlFor="forgot-email" className="block text-sm font-medium text-gray-700 mb-2">
-                    Email Address
-                  </label>
-                  <input
-                    id="forgot-email"
-                    type="email"
-                    value={forgotPasswordEmail}
-                    onChange={(e) => setForgotPasswordEmail(e.target.value)}
-                    required
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-colors"
-                    placeholder="Enter your email"
-                    disabled={forgotPasswordLoading}
-                  />
-                </div>
+                <FormField
+                  control={forgotForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700">Email Address</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="Enter your email"
+                          disabled={forgotPasswordLoading}
+                          className="border-2 border-gray-200 rounded-lg py-3 h-auto"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <div className="flex gap-3 pt-2">
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
                     onClick={() => {
                       setShowForgotPassword(false)
-                      setForgotPasswordEmail('')
+                      forgotForm.reset({ email: '' })
                       setForgotPasswordError('')
                     }}
                     disabled={forgotPasswordLoading}
-                    className="flex-1 px-4 py-2 border-2 border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1"
                   >
                     Cancel
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="submit"
                     disabled={forgotPasswordLoading}
-                    className="flex-1 px-4 py-2 bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white font-medium rounded-lg transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white shadow-md hover:shadow-lg"
                   >
                     {forgotPasswordLoading ? 'Sending...' : 'Send Reset Link'}
-                  </button>
+                  </Button>
                 </div>
               </form>
-            )}
-          </div>
-        </div>
-      )}
+            </Form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -353,17 +379,20 @@ export default function LoginPage() {
         <div className="min-h-screen relative overflow-hidden flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100"></div>
           <div className="max-w-md w-full relative z-10">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 mb-4 shadow-lg animate-pulse">
-                  <Sparkles className="w-8 h-8 text-white" />
+            <Card className="shadow-2xl">
+              <CardContent className="p-8 space-y-6">
+                <div className="flex flex-col items-center gap-4">
+                  <Skeleton className="w-16 h-16 rounded-2xl" />
+                  <Skeleton className="h-8 w-40" />
+                  <Skeleton className="h-4 w-56" />
                 </div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent mb-2">
-                  Admin Login
-                </h1>
-                <p className="text-gray-600">Loading...</p>
-              </div>
-            </div>
+                <div className="space-y-4 pt-2">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       }
@@ -372,4 +401,3 @@ export default function LoginPage() {
     </Suspense>
   )
 }
-

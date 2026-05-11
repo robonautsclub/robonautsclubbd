@@ -13,14 +13,10 @@ interface MultiDatePickerProps {
 
 export default function MultiDatePicker({ value, onChange, disabled, required }: MultiDatePickerProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [selectedDates, setSelectedDates] = useState<string[]>(value || [])
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const inputRef = useRef<HTMLInputElement>(null)
   const calendarRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    setSelectedDates(value || [])
-  }, [value])
+  const selectedDates = value || []
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -48,15 +44,13 @@ export default function MultiDatePicker({ value, onChange, disabled, required }:
     const newDates = selectedDates.includes(dateString)
       ? selectedDates.filter(d => d !== dateString)
       : [...selectedDates, dateString].sort()
-    
-    setSelectedDates(newDates)
+
     onChange(newDates)
   }
 
   const handleRemoveDate = (dateString: string, e: React.MouseEvent) => {
     e.stopPropagation()
     const newDates = selectedDates.filter(d => d !== dateString)
-    setSelectedDates(newDates)
     onChange(newDates)
   }
 
@@ -124,7 +118,6 @@ export default function MultiDatePicker({ value, onChange, disabled, required }:
             type="button"
             onClick={(e) => {
               e.stopPropagation()
-              setSelectedDates([])
               onChange([])
             }}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
@@ -236,7 +229,6 @@ export default function MultiDatePicker({ value, onChange, disabled, required }:
                 const today = format(new Date(), 'yyyy-MM-dd')
                 if (!selectedDates.includes(today)) {
                   const newDates = [...selectedDates, today].sort()
-                  setSelectedDates(newDates)
                   onChange(newDates)
                 }
               }}
@@ -252,7 +244,6 @@ export default function MultiDatePicker({ value, onChange, disabled, required }:
                 const tomorrowString = format(tomorrow, 'yyyy-MM-dd')
                 if (!selectedDates.includes(tomorrowString)) {
                   const newDates = [...selectedDates, tomorrowString].sort()
-                  setSelectedDates(newDates)
                   onChange(newDates)
                 }
               }}
