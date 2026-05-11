@@ -1,28 +1,35 @@
 'use client'
 
 import { useMemo, useState, useTransition } from 'react'
+import { useForm } from 'react-hook-form'
+import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import type { SchoolDirectoryEntry } from '@/lib/schoolDirectory'
 import {
   createSchoolDirectoryEntry,
   seedEnglishMediumSchools,
   updateSchoolDirectoryEntry,
 } from './actions'
+import { schoolDirectoryFormSchema, type SchoolDirectoryFormValues } from '@/lib/validation/schools'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 
 type Props = {
   schools: SchoolDirectoryEntry[]
 }
 
-type FormState = {
-  name: string
-  city: string
-  isActive: boolean
-}
-
-const initialFormState: FormState = {
+const emptyDefaults: SchoolDirectoryFormValues = {
   name: '',
   city: '',
   isActive: true,
@@ -30,29 +37,32 @@ const initialFormState: FormState = {
 
 export default function SchoolDirectoryManager({ schools }: Props) {
   const [isPending, startTransition] = useTransition()
-  const [form, setForm] = useState<FormState>(initialFormState)
   const [editId, setEditId] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<string>('')
 
+  const form = useForm<SchoolDirectoryFormValues>({
+    resolver: standardSchemaResolver(schoolDirectoryFormSchema),
+    defaultValues: emptyDefaults,
+  })
+
   const sortedSchools = useMemo(
     () => [...schools].sort((a, b) => a.name.localeCompare(b.name)),
-    [schools]
+    [schools],
   )
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const onSubmit = (values: SchoolDirectoryFormValues) => {
     setFeedback('')
     startTransition(async () => {
       const result = editId
-        ? await updateSchoolDirectoryEntry(editId, form)
-        : await createSchoolDirectoryEntry(form)
+        ? await updateSchoolDirectoryEntry(editId, values)
+        : await createSchoolDirectoryEntry(values)
 
       if (!result.success) {
         setFeedback(result.error || 'Failed to save school.')
         return
       }
       setFeedback(editId ? 'School updated.' : 'School added.')
-      setForm(initialFormState)
+      form.reset(emptyDefaults)
       setEditId(null)
     })
   }
@@ -60,11 +70,16 @@ export default function SchoolDirectoryManager({ schools }: Props) {
   const startEdit = (school: SchoolDirectoryEntry) => {
     setFeedback('')
     setEditId(school.id)
-    setForm({
+    form.reset({
       name: school.name,
       city: school.city || '',
       isActive: school.isActive,
     })
+  }
+
+  const handleCancel = () => {
+    setEditId(null)
+    form.reset(emptyDefaults)
   }
 
   const handleSeed = () => {
@@ -90,54 +105,76 @@ export default function SchoolDirectoryManager({ schools }: Props) {
             Seed Major Schools
           </Button>
         </div>
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <input
-            value={form.name}
-            onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-            placeholder="School name"
-            className="px-3 py-2 border border-gray-300 rounded-lg"
-            disabled={isPending}
-            required
-          />
-          <input
-            value={form.city}
-            onChange={(e) => setForm((prev) => ({ ...prev, city: e.target.value }))}
-            placeholder="City (optional)"
-            className="px-3 py-2 border border-gray-300 rounded-lg"
-            disabled={isPending}
-          />
-          <div className="flex items-center gap-3">
-            <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={form.isActive}
-                onChange={(e) => setForm((prev) => ({ ...prev, isActive: e.target.checked }))}
-                disabled={isPending}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="sr-only">School name</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder="School name"
+                      disabled={isPending}
+                      autoComplete="organization"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="sr-only">City</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder="City (optional)"
+                      disabled={isPending}
+                      autoComplete="address-level2"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="flex flex-wrap items-center gap-3">
+              <FormField
+                control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center gap-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={(v) => field.onChange(v === true)}
+                        disabled={isPending}
+                      />
+                    </FormControl>
+                    <FormLabel className="text-sm font-normal text-gray-700">Active</FormLabel>
+                  </FormItem>
+                )}
               />
-              Active
-            </label>
-            <Button
-              type="submit"
-              disabled={isPending}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white"
-            >
-              {editId ? 'Update' : 'Add'}
-            </Button>
-            {editId && (
               <Button
-                type="button"
-                variant="outline"
+                type="submit"
                 disabled={isPending}
-                onClick={() => {
-                  setEditId(null)
-                  setForm(initialFormState)
-                }}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
               >
-                Cancel
+                {editId ? 'Update' : 'Add'}
               </Button>
-            )}
-          </div>
-        </form>
+              {editId && (
+                <Button type="button" variant="outline" disabled={isPending} onClick={handleCancel}>
+                  Cancel
+                </Button>
+              )}
+            </div>
+          </form>
+        </Form>
         {feedback && <p className="mt-3 text-sm text-gray-700">{feedback}</p>}
       </Card>
 

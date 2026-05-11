@@ -2,6 +2,7 @@
  * Path Utilities for File System Operations
  * Handles sanitization and path generation for event-based folder structures
  */
+import { join } from 'path'
 
 /**
  * Generates a filesystem-safe slug from an event title
@@ -59,7 +60,6 @@ export function getPDFStoragePath(eventSlug: string, bookingId: string): string 
  * @returns The absolute filesystem path (public/uploads/events/...)
  */
 export function getAbsolutePDFPath(eventSlug: string, bookingId: string): string {
-  const { join } = require('path')
   const relativePath = getPDFStoragePath(eventSlug, bookingId)
   // Remove leading slash and prepend 'public' for Next.js static file serving
   const pathWithoutLeadingSlash = relativePath.startsWith('/') ? relativePath.substring(1) : relativePath
@@ -85,7 +85,6 @@ export function getEventDirectoryPath(eventSlug: string): string {
  * @returns The absolute directory path (public/uploads/events/...)
  */
 export function getAbsoluteEventDirectoryPath(eventSlug: string): string {
-  const { join } = require('path')
   const relativePath = getEventDirectoryPath(eventSlug)
   const pathWithoutLeadingSlash = relativePath.startsWith('/') ? relativePath.substring(1) : relativePath
   return join(process.cwd(), 'public', pathWithoutLeadingSlash)

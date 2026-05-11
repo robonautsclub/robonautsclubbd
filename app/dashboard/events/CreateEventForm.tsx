@@ -1,57 +1,69 @@
 'use client'
 
-import { useState, FormEvent, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { useForm, useWatch } from 'react-hook-form'
+import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import Image from 'next/image'
 import { createEvent } from '../actions'
 import { Plus, X, Calendar, Clock, MapPin, FileText, Users, Image as ImageIcon, Sparkles, Upload, Trash2, Tag, Banknote } from 'lucide-react'
 import MultiDatePicker from './MultiDatePicker'
 import TimePicker from './TimePicker'
 import CustomFormBuilder from './CustomFormBuilder'
-import type { EventCustomFormField, EventDefaultRegistrationFields } from '@/types/event'
+import type { Event, EventDefaultRegistrationFields } from '@/types/event'
+import { dashboardEventFormSchema, type DashboardEventFormValues } from '@/lib/validation/events'
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+
+const createEventFormDefaults: DashboardEventFormValues = {
+  title: '',
+  dates: [],
+  description: '',
+  time: '9:00 AM - 5:00 PM',
+  location: '',
+  venue: '',
+  fullDescription: '',
+  eligibility: '',
+  agenda: '',
+  image: '',
+  tags: [],
+  isPaid: false,
+  amount: '',
+  paymentBkashNumber: '',
+  categories: [],
+  registrationClosingDate: '',
+  registrationDisabled: false,
+  contactPersonName: '',
+  contactPersonDesignation: '',
+  contactPersonMobileOrEmail: '',
+  customFormFields: [],
+  defaultRegistrationFields: {
+    name: { enabled: true, required: true },
+    email: { enabled: true, required: true },
+    phone: { enabled: true, required: true },
+    school: { enabled: true, required: true },
+    category: { enabled: true, required: false },
+    information: { enabled: true, required: false },
+  } as EventDefaultRegistrationFields,
+}
 
 export default function CreateEventForm() {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isOpen, setIsOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [formData, setFormData] = useState({
-    title: '',
-    dates: [] as string[],
-    description: '',
-    time: '9:00 AM - 5:00 PM', // Default time
-    location: '',
-    venue: '',
-    fullDescription: '',
-    eligibility: '',
-    agenda: '',
-    image: '',
-    tags: [] as string[],
-    isPaid: false,
-    amount: '' as '' | number,
-    paymentBkashNumber: '',
-    categories: [] as Array<{ name: string; amount: '' | number }>,
-    registrationClosingDate: '',
-    contactPersonName: '',
-    contactPersonDesignation: '',
-    contactPersonMobileOrEmail: '',
-    customFormFields: [] as EventCustomFormField[],
-    defaultRegistrationFields: {
-      name: { enabled: true, required: true },
-      email: { enabled: true, required: true },
-      phone: { enabled: true, required: true },
-      school: { enabled: true, required: true },
-      category: { enabled: true, required: false },
-      information: { enabled: true, required: false },
-    } as EventDefaultRegistrationFields,
-  })
   const [tagInput, setTagInput] = useState('')
+
+  const form = useForm<DashboardEventFormValues>({
+    resolver: standardSchemaResolver(dashboardEventFormSchema),
+    defaultValues: createEventFormDefaults,
+  })
+
+  const formData = useWatch({ control: form.control }) as DashboardEventFormValues
+  const loading = form.formState.isSubmitting
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -103,8 +115,7 @@ export default function CreateEventForm() {
         throw new Error(data.error || 'Failed to upload image')
       }
 
-      // Store the Cloudinary URL in form data
-      setFormData({ ...formData, image: data.secure_url })
+      form.setValue('image', data.secure_url)
       setImagePreview(null)
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
@@ -121,7 +132,7 @@ export default function CreateEventForm() {
 
   const handleRemoveImage = () => {
     setImagePreview(null)
-    setFormData({ ...formData, image: '' })
+    form.setValue('image', '')
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -129,113 +140,61 @@ export default function CreateEventForm() {
 
   const handleAddTag = (tag: string) => {
     const trimmedTag = tag.trim()
-    if (trimmedTag && !formData.tags.includes(trimmedTag)) {
-      setFormData({ ...formData, tags: [...formData.tags, trimmedTag] })
+    const tags = form.getValues('tags')
+    if (trimmedTag && !tags.includes(trimmedTag)) {
+      form.setValue('tags', [...tags, trimmedTag])
       setTagInput('')
     }
   }
 
   const handleRemoveTag = (index: number) => {
-    const newTags = formData.tags.filter((_, i) => i !== index)
-    setFormData({ ...formData, tags: newTags })
+    const tags = form.getValues('tags')
+    form.setValue(
+      'tags',
+      tags.filter((_, i) => i !== index),
+    )
   }
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
+  const onSubmit = async (values: DashboardEventFormValues) => {
     setError('')
-    setLoading(true)
-
-    // Basic validation
-    if (!formData.title.trim() || formData.dates.length === 0 || !formData.description.trim()) {
-      setError('Please fill in all required fields (Name, Date(s), Description)')
-      setLoading(false)
-      return
-    }
-    const validCategories = formData.categories
+    const validCategories = values.categories
       .map((category) => ({
         name: category.name.trim(),
         amount:
-          category.amount === '' || category.amount == null || isNaN(Number(category.amount))
+          category.amount === '' || category.amount == null || Number.isNaN(Number(category.amount))
             ? undefined
             : Number(category.amount),
       }))
       .filter((category) => category.name.length > 0)
-    const hasNamedCategories = validCategories.length > 0
 
-    if (hasNamedCategories && formData.isPaid) {
-      const invalidCategoryAmount = validCategories.some((category) => !category.amount || category.amount <= 0)
-      if (invalidCategoryAmount) {
-        setError('Please provide a valid amount for every category (greater than 0).')
-        setLoading(false)
-        return
-      }
-    } else if (formData.isPaid) {
-      const amt = typeof formData.amount === 'number' ? formData.amount : Number(formData.amount)
-      if (amt === undefined || amt === null || isNaN(amt) || amt <= 0) {
-        setError('Please enter a valid base amount (or add categories and set amount for each).')
-        setLoading(false)
-        return
-      }
-    }
-
-    // Set default time if not provided
-    const eventTime = formData.time || '9:00 AM - 5:00 PM'
-
-    // Convert dates array to string (comma-separated) or single date
-    const dateValue = formData.dates.length === 1 ? formData.dates[0] : formData.dates.join(',')
+    const eventTime = values.time || '9:00 AM - 5:00 PM'
+    const dateValue = values.dates.length === 1 ? values.dates[0] : values.dates.join(',')
 
     try {
+      const { dates, registrationDisabled, ...restValues } = values
+      void dates
+      void registrationDisabled
       const result = await createEvent({
-        ...formData,
+        ...restValues,
         date: dateValue,
         time: eventTime,
-        isPaid: formData.isPaid,
-        amount: formData.isPaid && formData.amount !== '' ? Number(formData.amount) : undefined,
+        isPaid: values.isPaid,
+        amount: values.isPaid && values.amount !== '' ? Number(values.amount) : undefined,
         paymentBkashNumber: undefined,
         categories: validCategories.map((category) => ({
           name: category.name,
-          amount: formData.isPaid ? category.amount : undefined,
+          amount: values.isPaid ? category.amount : undefined,
         })),
-        registrationClosingDate: formData.registrationClosingDate?.trim() || undefined,
-        contactPersonName: formData.contactPersonName.trim(),
-        contactPersonDesignation: formData.contactPersonDesignation.trim(),
-        contactPersonMobileOrEmail: formData.contactPersonMobileOrEmail.trim(),
-        customFormFields: formData.customFormFields,
-        defaultRegistrationFields: formData.defaultRegistrationFields,
+        registrationClosingDate: values.registrationClosingDate?.trim() || undefined,
+        contactPersonName: values.contactPersonName.trim(),
+        contactPersonDesignation: values.contactPersonDesignation.trim(),
+        contactPersonMobileOrEmail: values.contactPersonMobileOrEmail.trim(),
+        customFormFields: values.customFormFields,
+        defaultRegistrationFields: values.defaultRegistrationFields as Event['defaultRegistrationFields'],
       })
 
       if (result.success) {
-        // Reset form and close modal
-        setFormData({
-          title: '',
-          dates: [],
-          description: '',
-          time: '9:00 AM - 5:00 PM', // Reset to default time
-          location: '',
-          venue: '',
-          fullDescription: '',
-          eligibility: '',
-          agenda: '',
-          image: '',
-          tags: [],
-          isPaid: false,
-          amount: '',
-          paymentBkashNumber: '',
-          categories: [],
-          registrationClosingDate: '',
-          contactPersonName: '',
-          contactPersonDesignation: '',
-          contactPersonMobileOrEmail: '',
-          customFormFields: [],
-          defaultRegistrationFields: {
-            name: { enabled: true, required: true },
-            email: { enabled: true, required: true },
-            phone: { enabled: true, required: true },
-            school: { enabled: true, required: true },
-            category: { enabled: true, required: false },
-            information: { enabled: true, required: false },
-          },
-        })
+        form.reset(createEventFormDefaults)
         setTagInput('')
         setImagePreview(null)
         if (fileInputRef.current) {
@@ -249,8 +208,6 @@ export default function CreateEventForm() {
     } catch (err) {
       console.error('Error creating event:', err)
       setError('An unexpected error occurred')
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -261,6 +218,7 @@ export default function CreateEventForm() {
       setError('')
       setImagePreview(null)
       setTagInput('')
+      form.reset(createEventFormDefaults)
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
@@ -308,7 +266,7 @@ export default function CreateEventForm() {
 
         {/* Form Content */}
         <div className="flex-1 overflow-y-auto">
-          <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 sm:p-6 space-y-4 sm:space-y-6">
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
@@ -325,7 +283,7 @@ export default function CreateEventForm() {
                 id="title"
                 type="text"
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onChange={(e) => form.setValue('title', e.target.value)}
                 required
                 placeholder="Enter event name"
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
@@ -342,7 +300,7 @@ export default function CreateEventForm() {
                 </label>
                 <MultiDatePicker
                   value={formData.dates}
-                  onChange={(dates) => setFormData({ ...formData, dates })}
+                  onChange={(dates) => form.setValue('dates', dates)}
                   disabled={loading || uploading}
                   required
                 />
@@ -356,7 +314,7 @@ export default function CreateEventForm() {
                 </label>
                 <TimePicker
                   value={formData.time}
-                  onChange={(value) => setFormData({ ...formData, time: value })}
+                  onChange={(value) => form.setValue('time', value)}
                   disabled={loading}
                 />
               </div>
@@ -371,10 +329,10 @@ export default function CreateEventForm() {
               <MultiDatePicker
                 value={formData.registrationClosingDate ? [formData.registrationClosingDate] : []}
                 onChange={(dates) =>
-                  setFormData({
-                    ...formData,
-                    registrationClosingDate: dates.length === 0 ? '' : dates[dates.length - 1] ?? '',
-                  })
+                  form.setValue(
+                    'registrationClosingDate',
+                    dates.length === 0 ? '' : dates[dates.length - 1] ?? '',
+                  )
                 }
                 disabled={loading || uploading}
               />
@@ -391,7 +349,7 @@ export default function CreateEventForm() {
                 id="description"
                 rows={3}
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) => form.setValue('description', e.target.value)}
                 required
                 placeholder="Brief description of the event"
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all resize-none"
@@ -409,7 +367,7 @@ export default function CreateEventForm() {
                 id="fullDescription"
                 rows={4}
                 value={formData.fullDescription}
-                onChange={(e) => setFormData({ ...formData, fullDescription: e.target.value })}
+                onChange={(e) => form.setValue('fullDescription', e.target.value)}
                 placeholder="Detailed description of the event"
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all resize-none"
                 disabled={loading}
@@ -427,7 +385,7 @@ export default function CreateEventForm() {
                   id="location"
                   type="text"
                   value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  onChange={(e) => form.setValue('location', e.target.value)}
                   placeholder="Event location"
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
                   disabled={loading}
@@ -443,7 +401,7 @@ export default function CreateEventForm() {
                   id="venue"
                   type="text"
                   value={formData.venue}
-                  onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
+                  onChange={(e) => form.setValue('venue', e.target.value)}
                   placeholder="Specific venue name"
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
                   disabled={loading}
@@ -461,7 +419,7 @@ export default function CreateEventForm() {
                 id="eligibility"
                 type="text"
                 value={formData.eligibility}
-                onChange={(e) => setFormData({ ...formData, eligibility: e.target.value })}
+                onChange={(e) => form.setValue('eligibility', e.target.value)}
                 placeholder="e.g., Ages 10-18, Students in grades 3-12"
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
                 disabled={loading}
@@ -481,9 +439,9 @@ export default function CreateEventForm() {
                       type="text"
                       value={category.name}
                       onChange={(e) => {
-                        const categories = [...formData.categories]
+                        const categories = [...form.getValues('categories')]
                         categories[index] = { ...categories[index], name: e.target.value }
-                        setFormData({ ...formData, categories })
+                        form.setValue('categories', categories)
                       }}
                       placeholder="Category name (e.g. Junior, Senior)"
                       disabled={loading}
@@ -492,8 +450,10 @@ export default function CreateEventForm() {
                     <button
                       type="button"
                       onClick={() => {
-                        const categories = formData.categories.filter((_, i) => i !== index)
-                        setFormData({ ...formData, categories })
+                        form.setValue(
+                          'categories',
+                          form.getValues('categories').filter((_, i) => i !== index),
+                        )
                       }}
                       disabled={loading}
                       className="md:col-span-1 px-3 py-2.5 border-2 border-red-200 text-red-600 rounded-xl hover:bg-red-50 transition-all"
@@ -505,10 +465,7 @@ export default function CreateEventForm() {
                 <button
                   type="button"
                   onClick={() =>
-                    setFormData({
-                      ...formData,
-                      categories: [...formData.categories, { name: '', amount: '' }],
-                    })
+                    form.setValue('categories', [...form.getValues('categories'), { name: '', amount: '' }])
                   }
                   disabled={loading}
                   className="px-4 py-2.5 border-2 border-indigo-200 text-indigo-700 rounded-xl hover:bg-indigo-50 transition-all text-sm font-medium"
@@ -531,18 +488,20 @@ export default function CreateEventForm() {
                 <input
                   type="checkbox"
                   checked={formData.isPaid}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      isPaid: e.target.checked,
-                      amount: e.target.checked ? formData.amount : '',
-                      paymentBkashNumber: '',
-                      categories: formData.categories.map((category) => ({
+                  onChange={(e) => {
+                    const checked = e.target.checked
+                    const cur = form.getValues()
+                    form.setValue('isPaid', checked)
+                    form.setValue('amount', checked ? cur.amount : '')
+                    form.setValue('paymentBkashNumber', '')
+                    form.setValue(
+                      'categories',
+                      cur.categories.map((category) => ({
                         ...category,
-                        amount: e.target.checked ? category.amount : '',
+                        amount: checked ? category.amount : '',
                       })),
-                    })
-                  }
+                    )
+                  }}
                   disabled={loading}
                   className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                 />
@@ -564,12 +523,12 @@ export default function CreateEventForm() {
                               min={1}
                               value={category.amount === '' ? '' : category.amount}
                               onChange={(e) => {
-                                const categories = [...formData.categories]
+                                const categories = [...form.getValues('categories')]
                                 categories[index] = {
                                   ...categories[index],
                                   amount: e.target.value === '' ? '' : Number(e.target.value),
                                 }
-                                setFormData({ ...formData, categories })
+                                form.setValue('categories', categories)
                               }}
                               placeholder={`Amount for ${category.name.trim()}`}
                               disabled={loading}
@@ -590,10 +549,7 @@ export default function CreateEventForm() {
                         min={1}
                         value={formData.amount === '' ? '' : formData.amount}
                         onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            amount: e.target.value === '' ? '' : Number(e.target.value),
-                          })
+                          form.setValue('amount', e.target.value === '' ? '' : Number(e.target.value))
                         }
                         placeholder="e.g. 500"
                         disabled={loading}
@@ -618,7 +574,7 @@ export default function CreateEventForm() {
                 id="agenda"
                 rows={4}
                 value={formData.agenda}
-                onChange={(e) => setFormData({ ...formData, agenda: e.target.value })}
+                onChange={(e) => form.setValue('agenda', e.target.value)}
                 placeholder="Event schedule and timeline (one per line)"
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all resize-none font-mono text-sm"
                 disabled={loading}
@@ -777,7 +733,7 @@ export default function CreateEventForm() {
                 <input
                   type="text"
                   value={formData.contactPersonName}
-                  onChange={(e) => setFormData({ ...formData, contactPersonName: e.target.value })}
+                  onChange={(e) => form.setValue('contactPersonName', e.target.value)}
                   placeholder="Contact person name"
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
                   disabled={loading}
@@ -785,7 +741,7 @@ export default function CreateEventForm() {
                 <input
                   type="text"
                   value={formData.contactPersonDesignation}
-                  onChange={(e) => setFormData({ ...formData, contactPersonDesignation: e.target.value })}
+                  onChange={(e) => form.setValue('contactPersonDesignation', e.target.value)}
                   placeholder="Designation"
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
                   disabled={loading}
@@ -794,7 +750,7 @@ export default function CreateEventForm() {
               <input
                 type="text"
                 value={formData.contactPersonMobileOrEmail}
-                onChange={(e) => setFormData({ ...formData, contactPersonMobileOrEmail: e.target.value })}
+                onChange={(e) => form.setValue('contactPersonMobileOrEmail', e.target.value)}
                 placeholder="Mobile number or email"
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
                 disabled={loading}
@@ -828,21 +784,17 @@ export default function CreateEventForm() {
                           <input
                             type="checkbox"
                             checked={formData.defaultRegistrationFields[fieldKey].enabled}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                defaultRegistrationFields: {
-                                  ...formData.defaultRegistrationFields,
-                                  [fieldKey]: {
-                                    ...formData.defaultRegistrationFields[fieldKey],
-                                    enabled: e.target.checked,
-                                    required: e.target.checked
-                                      ? formData.defaultRegistrationFields[fieldKey].required
-                                      : false,
-                                  },
+                            onChange={(e) => {
+                              const drf = form.getValues('defaultRegistrationFields')
+                              form.setValue('defaultRegistrationFields', {
+                                ...drf,
+                                [fieldKey]: {
+                                  ...drf[fieldKey],
+                                  enabled: e.target.checked,
+                                  required: e.target.checked ? drf[fieldKey].required : false,
                                 },
-                              })
-                            }
+                              } as EventDefaultRegistrationFields)
+                            }}
                             disabled={
                               loading ||
                               uploading ||
@@ -859,18 +811,16 @@ export default function CreateEventForm() {
                         <input
                           type="checkbox"
                           checked={formData.defaultRegistrationFields[fieldKey].required}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              defaultRegistrationFields: {
-                                ...formData.defaultRegistrationFields,
-                                [fieldKey]: {
-                                  ...formData.defaultRegistrationFields[fieldKey],
-                                  required: e.target.checked,
-                                },
+                          onChange={(e) => {
+                            const drf = form.getValues('defaultRegistrationFields')
+                            form.setValue('defaultRegistrationFields', {
+                              ...drf,
+                              [fieldKey]: {
+                                ...drf[fieldKey],
+                                required: e.target.checked,
                               },
-                            })
-                          }
+                            } as EventDefaultRegistrationFields)
+                          }}
                           disabled={loading || uploading || !formData.defaultRegistrationFields[fieldKey].enabled}
                         />
                         Required
@@ -882,7 +832,7 @@ export default function CreateEventForm() {
 
               <CustomFormBuilder
                 fields={formData.customFormFields}
-                onChange={(customFormFields) => setFormData({ ...formData, customFormFields })}
+                onChange={(customFormFields) => form.setValue('customFormFields', customFormFields)}
                 disabled={loading || uploading}
               />
             </div>

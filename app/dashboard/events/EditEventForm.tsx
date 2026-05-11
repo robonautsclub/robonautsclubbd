@@ -1,43 +1,35 @@
 'use client'
 
-import { useState, FormEvent, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { useForm, useWatch } from 'react-hook-form'
+import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import Image from 'next/image'
 import { updateEvent } from '../actions'
-import { X, Calendar, Clock, MapPin, FileText, Users, Image as ImageIcon, Sparkles, Edit, Tag, Banknote, Upload, Trash2, Lock } from 'lucide-react'
+import { X, Calendar, Clock, MapPin, FileText, Users, Image as ImageIcon, Sparkles, Edit, Upload, Trash2, Tag, Banknote, Lock } from 'lucide-react'
 import MultiDatePicker from './MultiDatePicker'
 import TimePicker from './TimePicker'
 import CustomFormBuilder from './CustomFormBuilder'
 import type { Event, EventCustomFormField, EventDefaultRegistrationFields } from '@/types/event'
 import { normalizeDefaultRegistrationFields } from '@/lib/registrationFields'
+import { dashboardEventFormSchema, type DashboardEventFormValues } from '@/lib/validation/events'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
-interface EditEventFormProps {
-  event: Event
-  onClose: () => void
+function parseEventDates(date: string | string[] | undefined): string[] {
+  if (!date) return []
+  if (Array.isArray(date)) return date
+  if (typeof date === 'string' && date.includes(',')) {
+    return date.split(',').map((d) => d.trim()).filter((d) => d.length > 0)
+  }
+  return [date]
 }
 
-export default function EditEventForm({ event, onClose }: EditEventFormProps) {
-  const router = useRouter()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  // Helper function to parse dates (handle both string and array, comma-separated)
-  const parseDates = (date: string | string[] | undefined): string[] => {
-    if (!date) return []
-    if (Array.isArray(date)) return date
-    // Handle comma-separated string
-    if (typeof date === 'string' && date.includes(',')) {
-      return date.split(',').map(d => d.trim()).filter(d => d.length > 0)
-    }
-    // Single date string
-    return [date]
-  }
-
-  const [formData, setFormData] = useState({
+function editEventFormDefaults(event: Event): DashboardEventFormValues {
+  return {
     title: event.title || '',
-    dates: parseDates(event.date),
+    dates: parseEventDates(event.date),
     description: event.description || '',
     time: event.time || '9:00 AM - 5:00 PM',
     location: event.location || '',
@@ -48,15 +40,16 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
     image: event.image || '',
     tags: event.tags || [],
     isPaid: event.isPaid ?? false,
-    amount: event.amount ?? '' as '' | number,
+    amount: event.amount ?? ('' as '' | number),
     paymentBkashNumber: event.paymentBkashNumber ?? '',
     categories: Array.isArray(event.categories)
       ? event.categories.map((category) => ({
           name: category.name || '',
-          amount: category.amount ?? '',
+          amount: category.amount ?? ('' as '' | number),
         }))
       : [],
-    registrationClosingDate: (typeof event.registrationClosingDate === 'string' ? event.registrationClosingDate : '') ?? '',
+    registrationClosingDate:
+      (typeof event.registrationClosingDate === 'string' ? event.registrationClosingDate : '') ?? '',
     registrationDisabled: event.registrationDisabled ?? false,
     contactPersonName: event.contactPersonName ?? '',
     contactPersonDesignation: event.contactPersonDesignation ?? '',
@@ -65,121 +58,156 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
     defaultRegistrationFields: normalizeDefaultRegistrationFields(event.defaultRegistrationFields, {
       hasCategories: Array.isArray(event.categories) && event.categories.length > 0,
     }) as EventDefaultRegistrationFields,
-  })
-  const [tagInput, setTagInput] = useState('')
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [uploading, setUploading] = useState(false)
+  }
+}
+
+interface EditEventFormProps {
+  event: Event
+  onClose: () => void
+}
+
+export default function EditEventForm({ event, onClose }: EditEventFormProps) {
+  const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState('')
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [tagInput, setTagInput] = useState('')
+
+  const form = useForm<DashboardEventFormValues>({
+    resolver: standardSchemaResolver(dashboardEventFormSchema),
+    defaultValues: editEventFormDefaults(event),
+  })
+
+  const formData = useWatch({ control: form.control }) as DashboardEventFormValues
+  const loading = form.formState.isSubmitting
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+
+    // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
     if (!allowedTypes.includes(file.type)) {
       setError('Invalid file type. Please select an image file (JPEG, PNG, WebP, or GIF).')
       return
     }
+
+    // Validate file size (5MB)
     const maxSize = 5 * 1024 * 1024
     if (file.size > maxSize) {
       setError('File size exceeds 5MB. Please select a smaller image.')
       return
     }
+
     setError('')
+
+    // Create preview
     const reader = new FileReader()
-    reader.onloadend = () => setImagePreview(reader.result as string)
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string)
+    }
     reader.readAsDataURL(file)
+
+    // Automatically upload the image
     await uploadImageFile(file)
   }
 
   const uploadImageFile = async (file: File) => {
     setUploading(true)
     setError('')
+
     try {
       const uploadFormData = new FormData()
       uploadFormData.append('image', file)
-      const response = await fetch('/api/upload-image', { method: 'POST', body: uploadFormData })
+
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        body: uploadFormData,
+      })
+
       const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Failed to upload image')
-      setFormData((prev) => ({ ...prev, image: data.secure_url }))
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to upload image')
+      }
+
+      form.setValue('image', data.secure_url)
       setImagePreview(null)
-      if (fileInputRef.current) fileInputRef.current.value = ''
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
     } catch (err) {
       console.error('Error uploading image:', err)
       setError(err instanceof Error ? err.message : 'Failed to upload image. Please try again.')
+      // Keep the preview so user can retry
     } finally {
       setUploading(false)
     }
   }
 
+
   const handleRemoveImage = () => {
     setImagePreview(null)
-    setFormData((prev) => ({ ...prev, image: '' }))
-    if (fileInputRef.current) fileInputRef.current.value = ''
+    form.setValue('image', '')
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
   }
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-
-    // Basic validation
-    if (!formData.title.trim() || formData.dates.length === 0 || !formData.description.trim()) {
-      setError('Please fill in all required fields (Name, Date(s), Description)')
-      setLoading(false)
-      return
+  const handleAddTag = (tag: string) => {
+    const trimmedTag = tag.trim()
+    const tags = form.getValues('tags')
+    if (trimmedTag && !tags.includes(trimmedTag)) {
+      form.setValue('tags', [...tags, trimmedTag])
+      setTagInput('')
     }
-    const validCategories = formData.categories
+  }
+
+  const handleRemoveTag = (index: number) => {
+    const tags = form.getValues('tags')
+    form.setValue(
+      'tags',
+      tags.filter((_, i) => i !== index),
+    )
+  }
+
+  const onSubmit = async (values: DashboardEventFormValues) => {
+    setError('')
+    const validCategories = values.categories
       .map((category) => ({
         name: category.name.trim(),
         amount:
-          category.amount === '' || category.amount == null || isNaN(Number(category.amount))
+          category.amount === '' || category.amount == null || Number.isNaN(Number(category.amount))
             ? undefined
             : Number(category.amount),
       }))
       .filter((category) => category.name.length > 0)
-    const hasNamedCategories = validCategories.length > 0
 
-    if (hasNamedCategories && formData.isPaid) {
-      const invalidCategoryAmount = validCategories.some((category) => !category.amount || category.amount <= 0)
-      if (invalidCategoryAmount) {
-        setError('Please provide a valid amount for every category (greater than 0).')
-        setLoading(false)
-        return
-      }
-    } else if (formData.isPaid) {
-      const amt = typeof formData.amount === 'number' ? formData.amount : Number(formData.amount)
-      if (amt === undefined || amt === null || isNaN(amt) || amt <= 0) {
-        setError('Please enter a valid base amount (or add categories and set amount for each).')
-        setLoading(false)
-        return
-      }
-    }
-
-    // Set default time if not provided
-    const eventTime = formData.time || '9:00 AM - 5:00 PM'
-
-    // Convert dates array to string (comma-separated) or single date
-    const dateValue = formData.dates.length === 1 ? formData.dates[0] : formData.dates.join(',')
+    const eventTime = values.time || '9:00 AM - 5:00 PM'
+    const dateValue = values.dates.length === 1 ? values.dates[0] : values.dates.join(',')
 
     try {
+      const { dates, ...restValues } = values
+      void dates
       const result = await updateEvent(event.id, {
-        ...formData,
+        ...restValues,
         date: dateValue,
         time: eventTime,
-        isPaid: formData.isPaid,
-        amount: formData.isPaid && formData.amount !== '' ? Number(formData.amount) : undefined,
+        isPaid: values.isPaid,
+        amount: values.isPaid && values.amount !== '' ? Number(values.amount) : undefined,
         paymentBkashNumber: '',
         categories: validCategories.map((category) => ({
           name: category.name,
-          amount: formData.isPaid ? category.amount : undefined,
+          amount: values.isPaid ? category.amount : undefined,
         })),
-        registrationClosingDate: formData.registrationClosingDate?.trim() ?? '',
-        registrationDisabled: formData.registrationDisabled,
-        contactPersonName: formData.contactPersonName.trim(),
-        contactPersonDesignation: formData.contactPersonDesignation.trim(),
-        contactPersonMobileOrEmail: formData.contactPersonMobileOrEmail.trim(),
-        customFormFields: formData.customFormFields,
-        defaultRegistrationFields: formData.defaultRegistrationFields,
+        registrationClosingDate: values.registrationClosingDate?.trim() ?? '',
+        registrationDisabled: values.registrationDisabled,
+        contactPersonName: values.contactPersonName.trim(),
+        contactPersonDesignation: values.contactPersonDesignation.trim(),
+        contactPersonMobileOrEmail: values.contactPersonMobileOrEmail.trim(),
+        customFormFields: values.customFormFields,
+        defaultRegistrationFields: values.defaultRegistrationFields as Event['defaultRegistrationFields'],
       })
 
       if (result.success) {
@@ -191,13 +219,16 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
     } catch (err) {
       console.error('Error updating event:', err)
       setError('An unexpected error occurred')
-    } finally {
-      setLoading(false)
     }
   }
 
   return (
-    <Sheet open onOpenChange={(open) => { if (!open && !loading && !uploading) onClose() }}>
+    <Sheet
+      open
+      onOpenChange={(open) => {
+        if (!open && !loading && !uploading) onClose()
+      }}
+    >
       <SheetContent
         side="right"
         showCloseButton={false}
@@ -226,405 +257,472 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
           </Button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <div>
-            <label htmlFor="edit-title" className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-              <Sparkles className="w-4 h-4 text-indigo-500" />
-              Event Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="edit-title"
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              required
-              className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
-              disabled={loading}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="edit-date" className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                <Calendar className="w-4 h-4 text-indigo-500" />
-                Date(s) <span className="text-red-500">*</span>
-              </label>
-              <MultiDatePicker
-                value={formData.dates}
-                onChange={(dates) => setFormData({ ...formData, dates })}
-                disabled={loading}
-                required
-              />
-              <p className="text-xs text-gray-500 mt-1">Select one or multiple dates</p>
-            </div>
-
-            <div>
-              <label htmlFor="edit-time" className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                <Clock className="w-4 h-4 text-indigo-500" />
-                Time
-              </label>
-              <TimePicker
-                value={formData.time}
-                onChange={(time) => setFormData({ ...formData, time })}
-                disabled={loading}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-              <Calendar className="w-4 h-4 text-indigo-500" />
-              Registration closes on
-            </label>
-            <MultiDatePicker
-              value={formData.registrationClosingDate ? [formData.registrationClosingDate] : []}
-              onChange={(dates) =>
-                setFormData({
-                  ...formData,
-                  registrationClosingDate: dates.length === 0 ? '' : dates[dates.length - 1] ?? '',
-                })
-              }
-              disabled={loading || uploading}
-            />
-            <p className="text-xs text-gray-500 mt-1">Optional. Select one date to close registration; leave empty to keep registration open until the event date.</p>
-          </div>
-
-          <div>
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-              <Lock className="w-4 h-4 text-indigo-500" />
-              Disable registration
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.registrationDisabled}
-                onChange={(e) => setFormData({ ...formData, registrationDisabled: e.target.checked })}
-                disabled={loading}
-                className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              <span className="text-sm text-gray-700">Close registration now (only you or a Super Admin can change this)</span>
-            </label>
-          </div>
-
-          <div>
-            <label htmlFor="edit-description" className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-              <FileText className="w-4 h-4 text-indigo-500" />
-              Description <span className="text-red-500">*</span>
-            </label>
-            <textarea
-              id="edit-description"
-              rows={3}
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              required
-              className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 resize-none transition-all"
-              disabled={loading}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="edit-fullDescription" className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-              <FileText className="w-4 h-4 text-indigo-500" />
-              Full Description
-            </label>
-            <textarea
-              id="edit-fullDescription"
-              rows={4}
-              value={formData.fullDescription}
-              onChange={(e) => setFormData({ ...formData, fullDescription: e.target.value })}
-              className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 resize-none transition-all"
-              disabled={loading}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="edit-location" className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                <MapPin className="w-4 h-4 text-indigo-500" />
-                Location
-              </label>
-              <input
-                id="edit-location"
-                type="text"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
-                disabled={loading}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="edit-venue" className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                <MapPin className="w-4 h-4 text-indigo-500" />
-                Venue
-              </label>
-              <input
-                id="edit-venue"
-                type="text"
-                value={formData.venue}
-                onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
-                className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
-                disabled={loading}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="edit-eligibility" className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-              <Users className="w-4 h-4 text-indigo-500" />
-              Eligibility
-            </label>
-            <input
-              id="edit-eligibility"
-              type="text"
-              value={formData.eligibility}
-              onChange={(e) => setFormData({ ...formData, eligibility: e.target.value })}
-              placeholder="e.g., Ages 10-18"
-              className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
-              disabled={loading}
-            />
-          </div>
-
-          <div>
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-              <Tag className="w-4 h-4 text-indigo-500" />
-              Event Categories (optional)
-            </label>
-            <div className="space-y-2">
-              {formData.categories.map((category, index) => (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-2">
-                  <input
-                    type="text"
-                    value={category.name}
-                    onChange={(e) => {
-                      const categories = [...formData.categories]
-                      categories[index] = { ...categories[index], name: e.target.value }
-                      setFormData({ ...formData, categories })
-                    }}
-                    placeholder="Category name (e.g. Junior, Senior)"
-                    disabled={loading}
-                    className="md:col-span-3 w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const categories = formData.categories.filter((_, i) => i !== index)
-                      setFormData({ ...formData, categories })
-                    }}
-                    disabled={loading}
-                    className="md:col-span-1 px-3 py-2.5 border-2 border-red-200 text-red-600 rounded-xl hover:bg-red-50 transition-all"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() =>
-                  setFormData({
-                    ...formData,
-                    categories: [...formData.categories, { name: '', amount: '' }],
-                  })
-                }
-                disabled={loading}
-                className="px-4 py-2.5 border-2 border-indigo-200 text-indigo-700 rounded-xl hover:bg-indigo-50 transition-all text-sm font-medium"
-              >
-                + Add Category
-              </button>
-              <p className="text-xs text-gray-500">
-                Add category names first. If paid is enabled, amount inputs will appear for each category.
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-              <Banknote className="w-4 h-4 text-indigo-500" />
-              Paid event
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.isPaid}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    isPaid: e.target.checked,
-                    amount: e.target.checked ? formData.amount : '',
-                    paymentBkashNumber: '',
-                    categories: formData.categories.map((category) => ({
-                      ...category,
-                      amount: e.target.checked ? category.amount : '',
-                    })),
-                  })
-                }
-                disabled={loading}
-                className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              <span className="text-sm text-gray-700">This is a paid event</span>
-            </label>
-            {formData.isPaid && (
-              <div className="mt-2 space-y-3">
-                {formData.categories.filter((category) => category.name.trim()).length > 0 ? (
-                  <div className="space-y-2">
-                    {formData.categories.map((category, index) => {
-                      if (!category.name.trim()) return null
-                      return (
-                        <div key={`edit-category-amount-${index}`}>
-                          <label className="block text-sm font-medium text-gray-600 mb-1">
-                            {category.name.trim()} Amount (BDT) <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="number"
-                            min={1}
-                            value={category.amount === '' ? '' : category.amount}
-                            onChange={(e) => {
-                              const categories = [...formData.categories]
-                              categories[index] = {
-                                ...categories[index],
-                                amount: e.target.value === '' ? '' : Number(e.target.value),
-                              }
-                              setFormData({ ...formData, categories })
-                            }}
-                            placeholder={`Amount for ${category.name.trim()}`}
-                            disabled={loading}
-                            className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
-                          />
-                        </div>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <div>
-                    <label htmlFor="edit-amount" className="block text-sm font-medium text-gray-600 mb-1">
-                      Base Amount (BDT) <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="edit-amount"
-                      type="number"
-                      min={1}
-                      value={formData.amount === '' ? '' : formData.amount}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          amount: e.target.value === '' ? '' : Number(e.target.value),
-                        })
-                      }
-                      placeholder="e.g. 500"
-                      disabled={loading}
-                      className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
-                    />
-                  </div>
-                )}
-                <p className="text-xs text-indigo-600">
-                  Category amount overrides base amount during checkout when categories exist.
-                </p>
-              </div>
+        {/* Form Content */}
+        <div className="flex-1 overflow-y-auto">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
-          </div>
 
-          <div>
-            <label htmlFor="edit-agenda" className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-              <FileText className="w-4 h-4 text-indigo-500" />
-              Agenda
-            </label>
-            <textarea
-              id="edit-agenda"
-              rows={4}
-              value={formData.agenda}
-              onChange={(e) => setFormData({ ...formData, agenda: e.target.value })}
-              placeholder="Event schedule and timeline"
-              className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 resize-none transition-all"
-              disabled={loading}
-            />
-            <p className="text-xs text-gray-500 mt-1">Enter each agenda item on a new line</p>
-          </div>
-
-          <div>
-            <label htmlFor="edit-tags" className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-              <Tag className="w-4 h-4 text-indigo-500" />
-              Tags
-            </label>
+            {/* Event Name */}
             <div className="space-y-2">
-              <div className="flex flex-wrap gap-2 p-3 min-h-12 border-2 border-gray-200 rounded-xl focus-within:ring-2 focus-within:ring-indigo-400 focus-within:border-indigo-400 transition-all bg-white">
-                {formData.tags.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newTags = formData.tags.filter((_, i) => i !== index)
-                        setFormData({ ...formData, tags: newTags })
-                      }}
-                      disabled={loading}
-                      className="hover:bg-indigo-200 rounded-full p-0.5 transition-colors disabled:opacity-50"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-                <input
-                  id="edit-tags"
-                  type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if ((e.key === 'Enter' || e.key === ',') && tagInput.trim()) {
-                      e.preventDefault()
-                      const trimmedTag = tagInput.trim().replace(/,$/, '')
-                      if (trimmedTag && !formData.tags.includes(trimmedTag)) {
-                        setFormData({ ...formData, tags: [...formData.tags, trimmedTag] })
-                        setTagInput('')
-                      }
-                    }
-                  }}
-                  placeholder={formData.tags.length === 0 ? "Type a tag and press Enter..." : "Add another tag..."}
-                  className="flex-1 min-w-[150px] outline-none text-sm bg-transparent"
+              <label htmlFor="title" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Sparkles className="w-4 h-4 text-indigo-600" />
+                Event Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="title"
+                type="text"
+                value={formData.title}
+                onChange={(e) => form.setValue('title', e.target.value)}
+                required
+                placeholder="Enter event name"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                disabled={loading}
+              />
+            </div>
+
+            {/* Date and Time */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <Calendar className="w-4 h-4 text-indigo-600" />
+                  Date(s) <span className="text-red-500">*</span>
+                </label>
+                <MultiDatePicker
+                  value={formData.dates}
+                  onChange={(dates) => form.setValue('dates', dates)}
+                  disabled={loading || uploading}
+                  required
+                />
+                <p className="text-xs text-gray-500">Select one or multiple dates for the event</p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <Clock className="w-4 h-4 text-indigo-600" />
+                  Time
+                </label>
+                <TimePicker
+                  value={formData.time}
+                  onChange={(value) => form.setValue('time', value)}
                   disabled={loading}
                 />
               </div>
-              <p className="text-xs text-gray-500">Press Enter or comma to add a tag. Tags help categorize your event.</p>
             </div>
-          </div>
 
-          <div>
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-              <ImageIcon className="w-4 h-4 text-indigo-500" />
-              Event Image
-            </label>
-            {formData.image ? (
+            {/* Registration closes on (optional) */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Calendar className="w-4 h-4 text-indigo-600" />
+                Registration closes on
+              </label>
+              <MultiDatePicker
+                value={formData.registrationClosingDate ? [formData.registrationClosingDate] : []}
+                onChange={(dates) =>
+                  form.setValue(
+                    'registrationClosingDate',
+                    dates.length === 0 ? '' : dates[dates.length - 1] ?? '',
+                  )
+                }
+                disabled={loading || uploading}
+              />
+              <p className="text-xs text-gray-500">Optional. Select one date to close registration; leave empty to keep registration open until the event date.</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Lock className="w-4 h-4 text-indigo-600" />
+                Disable registration
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.registrationDisabled}
+                  onChange={(e) => form.setValue('registrationDisabled', e.target.checked)}
+                  disabled={loading}
+                  className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="text-sm text-gray-700">
+                  Close registration now (only you or a Super Admin can change this)
+                </span>
+              </label>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <label htmlFor="description" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <FileText className="w-4 h-4 text-indigo-600" />
+                Description <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                id="description"
+                rows={3}
+                value={formData.description}
+                onChange={(e) => form.setValue('description', e.target.value)}
+                required
+                placeholder="Brief description of the event"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all resize-none"
+                disabled={loading}
+              />
+            </div>
+
+            {/* Full Description */}
+            <div className="space-y-2">
+              <label htmlFor="fullDescription" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <FileText className="w-4 h-4 text-indigo-600" />
+                Full Description
+              </label>
+              <textarea
+                id="fullDescription"
+                rows={4}
+                value={formData.fullDescription}
+                onChange={(e) => form.setValue('fullDescription', e.target.value)}
+                placeholder="Detailed description of the event"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all resize-none"
+                disabled={loading}
+              />
+            </div>
+
+            {/* Location and Venue */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <div className="relative w-full h-48 rounded-xl overflow-hidden border-2 border-gray-200 bg-gray-50">
-                  <Image
-                    src={formData.image}
-                    alt="Event preview"
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
-                  <button
-                    type="button"
-                    onClick={handleRemoveImage}
-                    disabled={loading || uploading}
-                    className="absolute top-2 right-2 p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed z-10"
-                    aria-label="Remove image"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                <label htmlFor="location" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <MapPin className="w-4 h-4 text-indigo-600" />
+                  Location
+                </label>
+                <input
+                  id="location"
+                  type="text"
+                  value={formData.location}
+                  onChange={(e) => form.setValue('location', e.target.value)}
+                  placeholder="Event location"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="venue" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <MapPin className="w-4 h-4 text-indigo-600" />
+                  Venue
+                </label>
+                <input
+                  id="venue"
+                  type="text"
+                  value={formData.venue}
+                  onChange={(e) => form.setValue('venue', e.target.value)}
+                  placeholder="Specific venue name"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            {/* Eligibility */}
+            <div className="space-y-2">
+              <label htmlFor="eligibility" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Users className="w-4 h-4 text-indigo-600" />
+                Eligibility
+              </label>
+              <input
+                id="eligibility"
+                type="text"
+                value={formData.eligibility}
+                onChange={(e) => form.setValue('eligibility', e.target.value)}
+                placeholder="e.g., Ages 10-18, Students in grades 3-12"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                disabled={loading}
+              />
+            </div>
+
+            {/* Categories */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Tag className="w-4 h-4 text-indigo-600" />
+                Event Categories (optional)
+              </label>
+              <div className="space-y-2">
+                {formData.categories.map((category, index) => (
+                  <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                    <input
+                      type="text"
+                      value={category.name}
+                      onChange={(e) => {
+                        const categories = [...form.getValues('categories')]
+                        categories[index] = { ...categories[index], name: e.target.value }
+                        form.setValue('categories', categories)
+                      }}
+                      placeholder="Category name (e.g. Junior, Senior)"
+                      disabled={loading}
+                      className="md:col-span-3 w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        form.setValue(
+                          'categories',
+                          form.getValues('categories').filter((_, i) => i !== index),
+                        )
+                      }}
+                      disabled={loading}
+                      className="md:col-span-1 px-3 py-2.5 border-2 border-red-200 text-red-600 rounded-xl hover:bg-red-50 transition-all"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() =>
+                    form.setValue('categories', [...form.getValues('categories'), { name: '', amount: '' }])
+                  }
+                  disabled={loading}
+                  className="px-4 py-2.5 border-2 border-indigo-200 text-indigo-700 rounded-xl hover:bg-indigo-50 transition-all text-sm font-medium"
+                >
+                  + Add Category
+                </button>
+                <p className="text-xs text-gray-500">
+                  Add category names first. If paid is enabled, amount inputs will appear for each category.
+                </p>
+              </div>
+            </div>
+
+            {/* Paid event */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Banknote className="w-4 h-4 text-indigo-600" />
+                Paid event
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.isPaid}
+                  onChange={(e) => {
+                    const checked = e.target.checked
+                    const cur = form.getValues()
+                    form.setValue('isPaid', checked)
+                    form.setValue('amount', checked ? cur.amount : '')
+                    form.setValue('paymentBkashNumber', '')
+                    form.setValue(
+                      'categories',
+                      cur.categories.map((category) => ({
+                        ...category,
+                        amount: checked ? category.amount : '',
+                      })),
+                    )
+                  }}
+                  disabled={loading}
+                  className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="text-sm text-gray-700">This is a paid event</span>
+              </label>
+              {formData.isPaid && (
+                <div className="mt-2 space-y-3">
+                  {formData.categories.filter((category) => category.name.trim()).length > 0 ? (
+                    <div className="space-y-2">
+                      {formData.categories.map((category, index) => {
+                        if (!category.name.trim()) return null
+                        return (
+                          <div key={`category-amount-${index}`}>
+                            <label className="block text-sm font-medium text-gray-600 mb-1">
+                              {category.name.trim()} Amount (BDT) <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="number"
+                              min={1}
+                              value={category.amount === '' ? '' : category.amount}
+                              onChange={(e) => {
+                                const categories = [...form.getValues('categories')]
+                                categories[index] = {
+                                  ...categories[index],
+                                  amount: e.target.value === '' ? '' : Number(e.target.value),
+                                }
+                                form.setValue('categories', categories)
+                              }}
+                              placeholder={`Amount for ${category.name.trim()}`}
+                              disabled={loading}
+                              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                            />
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div>
+                      <label htmlFor="amount" className="block text-sm font-medium text-gray-600 mb-1">
+                        Base Amount (BDT) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id="amount"
+                        type="number"
+                        min={1}
+                        value={formData.amount === '' ? '' : formData.amount}
+                        onChange={(e) =>
+                          form.setValue('amount', e.target.value === '' ? '' : Number(e.target.value))
+                        }
+                        placeholder="e.g. 500"
+                        disabled={loading}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                      />
+                    </div>
+                  )}
+                  <p className="text-xs text-indigo-600">
+                    Category amount overrides base amount during checkout when categories exist.
+                  </p>
                 </div>
-                <div className="flex gap-2">
+              )}
+            </div>
+
+            {/* Agenda */}
+            <div className="space-y-2">
+              <label htmlFor="agenda" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <FileText className="w-4 h-4 text-indigo-600" />
+                Agenda
+              </label>
+              <textarea
+                id="agenda"
+                rows={4}
+                value={formData.agenda}
+                onChange={(e) => form.setValue('agenda', e.target.value)}
+                placeholder="Event schedule and timeline (one per line)"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all resize-none font-mono text-sm"
+                disabled={loading}
+              />
+              <p className="text-xs text-gray-500">Tip: Use line breaks to separate agenda items</p>
+            </div>
+
+            {/* Tags */}
+            <div className="space-y-2">
+              <label htmlFor="tags" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Tag className="w-4 h-4 text-indigo-600" />
+                Tags
+              </label>
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2 p-3 min-h-12 border-2 border-gray-200 rounded-xl focus-within:ring-2 focus-within:ring-indigo-400 focus-within:border-indigo-400 transition-all bg-white">
+                  {formData.tags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTag(index)}
+                        disabled={loading || uploading}
+                        className="hover:bg-indigo-200 rounded-full p-0.5 transition-colors disabled:opacity-50"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                  <input
+                    id="tags"
+                    type="text"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if ((e.key === 'Enter' || e.key === ',') && tagInput.trim()) {
+                        e.preventDefault()
+                        handleAddTag(tagInput)
+                      }
+                    }}
+                    placeholder={formData.tags.length === 0 ? "Type a tag and press Enter..." : "Add another tag..."}
+                    className="flex-1 min-w-[150px] outline-none text-sm bg-transparent"
+                    disabled={loading || uploading}
+                  />
+                </div>
+                <p className="text-xs text-gray-500">Press Enter or comma to add a tag. Tags help categorize your event.</p>
+              </div>
+            </div>
+
+            {/* Image Upload */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <ImageIcon className="w-4 h-4 text-indigo-600" />
+                Event Image
+              </label>
+              
+              {formData.image ? (
+                <div className="space-y-2">
+                  <div className="relative w-full h-48 rounded-xl overflow-hidden border-2 border-gray-200 bg-gray-50">
+                    <Image
+                      src={formData.image}
+                      alt="Event preview"
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      disabled={loading || uploading}
+                      className="absolute top-2 right-2 p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed z-10"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      ref={fileInputRef}
+                      id="edit-image-upload"
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      disabled={loading || uploading}
+                    />
+                    <label
+                      htmlFor="edit-image-upload"
+                      className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 border-2 rounded-xl font-medium transition-all ${
+                        loading || uploading
+                          ? 'border-gray-200 bg-gray-50 cursor-not-allowed text-gray-400'
+                          : 'border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 cursor-pointer'
+                      }`}
+                    >
+                      <Upload className="w-4 h-4" />
+                      Upload different photo
+                    </label>
+                  </div>
+                  <p className="text-xs text-green-600">Current image will be replaced on save</p>
+                </div>
+              ) : imagePreview ? (
+                <div className="space-y-2">
+                  <div className="relative w-full h-48 rounded-xl overflow-hidden border-2 border-gray-200 bg-gray-50">
+                    <Image
+                      src={imagePreview}
+                      alt="Preview"
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                    {uploading && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <div className="flex flex-col items-center gap-2 text-white">
+                          <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <p className="text-sm font-medium">Uploading...</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {!uploading && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      disabled={loading}
+                      className="w-full px-4 py-2.5 border-2 border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Remove Image
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
                   <input
                     ref={fileInputRef}
-                    id="edit-image-upload"
+                    id="edit-image"
                     type="file"
                     accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
                     onChange={handleFileSelect}
@@ -632,229 +730,173 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
                     disabled={loading || uploading}
                   />
                   <label
-                    htmlFor="edit-image-upload"
-                    className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 border-2 rounded-xl font-medium transition-all ${
+                    htmlFor="edit-image"
+                    className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
                       loading || uploading
-                        ? 'border-gray-200 bg-gray-50 cursor-not-allowed text-gray-400'
-                        : 'border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 cursor-pointer'
+                        ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
+                        : 'border-gray-300 bg-gray-50 hover:border-indigo-400 hover:bg-indigo-50'
                     }`}
                   >
-                    <Upload className="w-4 h-4" />
-                    Upload different photo
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Upload className="w-8 h-8 mb-2 text-gray-400" />
+                      <p className="mb-2 text-sm text-gray-500">
+                        <span className="font-semibold text-indigo-600">Click to upload</span> or drag and drop
+                      </p>
+                      <p className="text-xs text-gray-500">PNG, JPG, WebP, or GIF (MAX. 5MB)</p>
+                    </div>
                   </label>
                 </div>
-                <p className="text-xs text-green-600">Current image will be replaced on save</p>
+              )}
+              <div className="space-y-1">
+                <p className="text-xs text-gray-500">
+                  Upload an image from your device. It will be automatically optimized and converted to AVIF format.
+                </p>
+                <p className="text-xs text-indigo-600 font-medium">
+                  Recommended size: 1200 × 800 pixels (3:2 aspect ratio) for best display quality
+                </p>
               </div>
-            ) : imagePreview ? (
-              <div className="space-y-2">
-                <div className="relative w-full h-48 rounded-xl overflow-hidden border-2 border-gray-200 bg-gray-50">
-                  <Image
-                    src={imagePreview}
-                    alt="Preview"
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
-                  {uploading && (
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                      <div className="flex flex-col items-center gap-2 text-white">
-                        <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <p className="text-sm font-medium">Uploading...</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                {!uploading && (
-                  <button
-                    type="button"
-                    onClick={handleRemoveImage}
-                    disabled={loading}
-                    className="w-full px-4 py-2.5 border-2 border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Remove Image
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <input
-                  ref={fileInputRef}
-                  id="edit-image"
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                  disabled={loading || uploading}
-                />
-                <label
-                  htmlFor="edit-image"
-                  className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
-                    loading || uploading
-                      ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
-                      : 'border-gray-300 bg-gray-50 hover:border-indigo-400 hover:bg-indigo-50'
-                  }`}
-                >
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <Upload className="w-8 h-8 mb-2 text-gray-400" />
-                    <p className="mb-2 text-sm text-gray-500">
-                      <span className="font-semibold text-indigo-600">Click to upload</span> or drag and drop
-                    </p>
-                    <p className="text-xs text-gray-500">PNG, JPG, WebP, or GIF (MAX. 5MB)</p>
-                  </div>
-                </label>
-              </div>
-            )}
-          </div>
+            </div>
 
-          <div className="space-y-3">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-              <Users className="w-4 h-4 text-indigo-500" />
-              Contact Person (optional)
-            </label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Contact person */}
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Users className="w-4 h-4 text-indigo-600" />
+                Contact Person (optional)
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input
+                  type="text"
+                  value={formData.contactPersonName}
+                  onChange={(e) => form.setValue('contactPersonName', e.target.value)}
+                  placeholder="Contact person name"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                  disabled={loading}
+                />
+                <input
+                  type="text"
+                  value={formData.contactPersonDesignation}
+                  onChange={(e) => form.setValue('contactPersonDesignation', e.target.value)}
+                  placeholder="Designation"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                  disabled={loading}
+                />
+              </div>
               <input
                 type="text"
-                value={formData.contactPersonName}
-                onChange={(e) => setFormData({ ...formData, contactPersonName: e.target.value })}
-                placeholder="Contact person name"
-                className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
-                disabled={loading}
-              />
-              <input
-                type="text"
-                value={formData.contactPersonDesignation}
-                onChange={(e) => setFormData({ ...formData, contactPersonDesignation: e.target.value })}
-                placeholder="Designation"
-                className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                value={formData.contactPersonMobileOrEmail}
+                onChange={(e) => form.setValue('contactPersonMobileOrEmail', e.target.value)}
+                placeholder="Mobile number or email"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
                 disabled={loading}
               />
             </div>
-            <input
-              type="text"
-              value={formData.contactPersonMobileOrEmail}
-              onChange={(e) => setFormData({ ...formData, contactPersonMobileOrEmail: e.target.value })}
-              placeholder="Mobile number or email"
-              className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
-              disabled={loading}
-            />
-          </div>
 
-          <div className="space-y-2">
-            <div className="space-y-3 border-2 border-gray-200 rounded-xl p-4">
-              <h4 className="text-sm font-semibold text-gray-700">Default Registration Fields</h4>
-              <p className="text-xs text-gray-500">Name, email, and phone are always required.</p>
+            <div className="space-y-2">
+              <div className="space-y-3 border-2 border-gray-200 rounded-xl p-4">
+                <h4 className="text-sm font-semibold text-gray-700">Default Registration Fields</h4>
+                <p className="text-xs text-gray-500">Name, email, and phone are always required.</p>
 
-              <div className="grid grid-cols-1 gap-2 text-sm">
-                <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
-                  <span>Name</span>
-                  <span className="text-xs font-medium text-gray-500">Always required</span>
-                </div>
-                <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
-                  <span>Email</span>
-                  <span className="text-xs font-medium text-gray-500">Always required</span>
-                </div>
-                <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
-                  <span>Phone</span>
-                  <span className="text-xs font-medium text-gray-500">Always required</span>
-                </div>
+                <div className="grid grid-cols-1 gap-2 text-sm">
+                  <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
+                    <span>Name</span>
+                    <span className="text-xs font-medium text-gray-500">Always required</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
+                    <span>Email</span>
+                    <span className="text-xs font-medium text-gray-500">Always required</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
+                    <span>Phone</span>
+                    <span className="text-xs font-medium text-gray-500">Always required</span>
+                  </div>
 
-                {(['school', 'category', 'information'] as const).map((fieldKey) => (
-                  <div key={fieldKey} className="rounded-lg border border-gray-200 px-3 py-2">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="capitalize">{fieldKey === 'information' ? 'Other Information' : fieldKey}</span>
-                      <label className="inline-flex items-center gap-2 text-xs text-gray-600">
+                  {(['school', 'category', 'information'] as const).map((fieldKey) => (
+                    <div key={fieldKey} className="rounded-lg border border-gray-200 px-3 py-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="capitalize">{fieldKey === 'information' ? 'Other Information' : fieldKey}</span>
+                        <label className="inline-flex items-center gap-2 text-xs text-gray-600">
+                          <input
+                            type="checkbox"
+                            checked={formData.defaultRegistrationFields[fieldKey].enabled}
+                            onChange={(e) => {
+                              const drf = form.getValues('defaultRegistrationFields')
+                              form.setValue('defaultRegistrationFields', {
+                                ...drf,
+                                [fieldKey]: {
+                                  ...drf[fieldKey],
+                                  enabled: e.target.checked,
+                                  required: e.target.checked ? drf[fieldKey].required : false,
+                                },
+                              } as EventDefaultRegistrationFields)
+                            }}
+                            disabled={
+                              loading ||
+                              uploading ||
+                              (fieldKey === 'category' && formData.categories.some((category) => category.name.trim().length > 0))
+                            }
+                          />
+                          Enabled
+                        </label>
+                      </div>
+                      {fieldKey === 'category' && formData.categories.some((category) => category.name.trim().length > 0) && (
+                        <p className="mt-1 text-xs text-gray-500">Category stays enabled when event categories are configured.</p>
+                      )}
+                      <label className="mt-2 inline-flex items-center gap-2 text-xs text-gray-600">
                         <input
                           type="checkbox"
-                          checked={formData.defaultRegistrationFields[fieldKey].enabled}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              defaultRegistrationFields: {
-                                ...formData.defaultRegistrationFields,
-                                [fieldKey]: {
-                                  ...formData.defaultRegistrationFields[fieldKey],
-                                  enabled: e.target.checked,
-                                  required: e.target.checked
-                                    ? formData.defaultRegistrationFields[fieldKey].required
-                                    : false,
-                                },
-                              },
-                            })
-                          }
-                          disabled={
-                            loading ||
-                            uploading ||
-                            (fieldKey === 'category' && formData.categories.some((category) => category.name.trim().length > 0))
-                          }
-                        />
-                        Enabled
-                      </label>
-                    </div>
-                    {fieldKey === 'category' && formData.categories.some((category) => category.name.trim().length > 0) && (
-                      <p className="mt-1 text-xs text-gray-500">Category stays enabled when event categories are configured.</p>
-                    )}
-                    <label className="mt-2 inline-flex items-center gap-2 text-xs text-gray-600">
-                      <input
-                        type="checkbox"
-                        checked={formData.defaultRegistrationFields[fieldKey].required}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            defaultRegistrationFields: {
-                              ...formData.defaultRegistrationFields,
+                          checked={formData.defaultRegistrationFields[fieldKey].required}
+                          onChange={(e) => {
+                            const drf = form.getValues('defaultRegistrationFields')
+                            form.setValue('defaultRegistrationFields', {
+                              ...drf,
                               [fieldKey]: {
-                                ...formData.defaultRegistrationFields[fieldKey],
+                                ...drf[fieldKey],
                                 required: e.target.checked,
                               },
-                            },
-                          })
-                        }
-                        disabled={loading || uploading || !formData.defaultRegistrationFields[fieldKey].enabled}
-                      />
-                      Required
-                    </label>
-                  </div>
-                ))}
+                            } as EventDefaultRegistrationFields)
+                          }}
+                          disabled={loading || uploading || !formData.defaultRegistrationFields[fieldKey].enabled}
+                        />
+                        Required
+                      </label>
+                    </div>
+                  ))}
+                </div>
               </div>
+
+              <CustomFormBuilder
+                fields={formData.customFormFields}
+                onChange={(customFormFields) => form.setValue('customFormFields', customFormFields)}
+                disabled={loading || uploading}
+              />
             </div>
 
-            <CustomFormBuilder
-              fields={formData.customFormFields}
-              onChange={(customFormFields) => setFormData({ ...formData, customFormFields })}
-              disabled={loading || uploading}
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t-2 border-gray-200 sticky bottom-0 bg-white">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={loading || uploading}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={loading || uploading}
-              className="bg-indigo-500 hover:bg-indigo-600 text-white"
-            >
-              {loading ? (
-                <>
-                  <span className="animate-spin">⏳</span>
-                  Updating...
-                </>
-              ) : (
-                <>
-                  <Edit className="w-4 h-4" />
-                  Update Event
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3 pt-4 border-t-2 border-gray-200 sticky bottom-0 bg-white">
+              <Button type="button" variant="outline" onClick={onClose} disabled={loading || uploading}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={loading || uploading}
+                className="bg-indigo-500 hover:bg-indigo-600 text-white shadow-md hover:shadow-lg"
+              >
+                {loading ? (
+                  <>
+                    <span className="animate-spin">⏳</span>
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Edit className="w-4 h-4" />
+                    Update Event
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </div>
       </SheetContent>
     </Sheet>
   )
 }
-
