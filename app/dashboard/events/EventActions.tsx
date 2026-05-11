@@ -9,6 +9,7 @@ import EditEventForm from './EditEventForm'
 import DeleteConfirmation from './DeleteConfirmation'
 import type { Event } from '@/types/event'
 import { hasEventPassed, isRegistrationClosedByDate } from '@/lib/dateUtils'
+import { Button } from '@/components/ui/button'
 
 interface EventActionsProps {
   event: Event
@@ -96,45 +97,57 @@ export default function EventActions({ event, currentUserId, userRole }: EventAc
         {canEdit && (
           <>
             {showRegistrationToggle && (
-              <button
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
                 onClick={handleToggleRegistration}
                 disabled={togglingRegistration}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-50"
+                className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                 title={event.registrationDisabled ? 'Enable registration' : 'Disable registration'}
               >
                 {event.registrationDisabled ? <LockOpen className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
                 {event.registrationDisabled ? 'Enable reg.' : 'Disable reg.'}
-              </button>
+              </Button>
             )}
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => setShowEditForm(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors"
+              className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
               title="Edit event"
             >
               <Edit className="w-4 h-4" />
               Edit
-            </button>
+            </Button>
           </>
         )}
         {canDelete && (
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => setShowDeleteConfirm(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
             title="Delete event"
           >
             <Trash2 className="w-4 h-4" />
             Delete
-          </button>
+          </Button>
         )}
-        <Link
-          href={`/dashboard/events/${event.id}`}
-          prefetch={false}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className="text-gray-600 hover:text-gray-700 hover:bg-gray-50"
           title="View details"
         >
-          View
-          <ExternalLink className="w-4 h-4" />
-        </Link>
+          <Link href={`/dashboard/events/${event.id}`} prefetch={false}>
+            View
+            <ExternalLink className="w-4 h-4" />
+          </Link>
+        </Button>
       </div>
 
       {showEditForm && (

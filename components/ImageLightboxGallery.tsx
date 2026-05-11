@@ -1,10 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 
 type LightboxPortalProps = {
   images: string[]
@@ -14,9 +16,8 @@ type LightboxPortalProps = {
 }
 
 export function LightboxPortal({ images, openIndex, onClose, setOpenIndex }: LightboxPortalProps) {
-  const overlayRef = useRef<HTMLDivElement>(null)
-  const prevFocusRef = useRef<HTMLElement | null>(null)
   const total = images.length
+  const isOpen = openIndex !== null
 
   const go = useCallback(
     (delta: number) => {
@@ -28,95 +29,84 @@ export function LightboxPortal({ images, openIndex, onClose, setOpenIndex }: Lig
     [total, setOpenIndex]
   )
 
+  // Dialog handles Escape and focus trap. We only need ArrowLeft/Right for nav.
   useEffect(() => {
-    if (openIndex === null) return
-    prevFocusRef.current = document.activeElement as HTMLElement | null
-    const prevOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-
+    if (!isOpen) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
       if (e.key === 'ArrowLeft') go(-1)
       if (e.key === 'ArrowRight') go(1)
     }
     window.addEventListener('keydown', onKey)
-    overlayRef.current?.focus()
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isOpen, go])
 
-    return () => {
-      window.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prevOverflow
-      prevFocusRef.current?.focus?.()
-    }
-  }, [openIndex, onClose, go])
-
-  if (openIndex === null || !images[openIndex]) return null
+  if (!isOpen || !images[openIndex]) return null
 
   return (
-    <div
-      ref={overlayRef}
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Image ${openIndex + 1} of ${total}`}
-      tabIndex={-1}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 sm:p-8"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
-    >
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute top-4 right-4 z-[60] rounded-full bg-white/10 p-2 text-white hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
-        aria-label="Close"
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
+      <DialogContent
+        showCloseButton={false}
+        className="max-w-[min(100vw,1400px)]! w-screen h-screen sm:h-[95vh] p-0 border-0 bg-black/95 sm:rounded-none gap-0 grid-rows-[auto_1fr_auto] focus:outline-none"
+        aria-label={`Image ${openIndex + 1} of ${total}`}
       >
-        <X className="w-6 h-6" />
-      </button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className="absolute top-4 right-4 z-50 rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-white"
+          aria-label="Close"
+        >
+          <X className="w-6 h-6" />
+        </Button>
 
-      {total > 1 ? (
-        <>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              go(-1)
-            }}
-            className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-[60] rounded-full bg-white/10 p-2 sm:p-3 text-white hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
-            aria-label="Previous image"
-          >
-            <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8" />
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              go(1)
-            }}
-            className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-[60] rounded-full bg-white/10 p-2 sm:p-3 text-white hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
-            aria-label="Next image"
-          >
-            <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8" />
-          </button>
-        </>
-      ) : null}
+        {total > 1 ? (
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation()
+                go(-1)
+              }}
+              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-50 size-12 rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-white"
+              aria-label="Previous image"
+            >
+              <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation()
+                go(1)
+              }}
+              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-50 size-12 rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-white"
+              aria-label="Next image"
+            >
+              <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8" />
+            </Button>
+          </>
+        ) : null}
 
-      <div
-        className="relative max-h-[85vh] max-w-[min(100%,1200px)] w-full h-[min(85vh,800px)]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element -- large modal uses native img for simplicity */}
-        <img
-          src={images[openIndex]}
-          alt=""
-          className="max-h-full max-w-full w-auto h-auto object-contain mx-auto"
-        />
-      </div>
+        <div className="flex items-center justify-center w-full h-full p-4 sm:p-8">
+          {/* eslint-disable-next-line @next/next/no-img-element -- large modal uses native img for simplicity */}
+          <img
+            src={images[openIndex]}
+            alt=""
+            className="max-h-full max-w-full w-auto h-auto object-contain"
+          />
+        </div>
 
-      {total > 1 ? (
-        <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-sm text-white/80">
-          {openIndex + 1} / {total}
-        </p>
-      ) : null}
-    </div>
+        {total > 1 ? (
+          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-sm text-white/80">
+            {openIndex + 1} / {total}
+          </p>
+        ) : null}
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -125,7 +115,7 @@ type Aspect = 'square' | 'video'
 type Props = {
   /** URLs shown in the grid and navigable in the lightbox for this section */
   images: string[]
-  /** If set and images.length exceeds this, only this many thumbnails are shown plus a “view all” link */
+  /** If set and images.length exceeds this, only this many thumbnails are shown plus a "view all" link */
   maxGridImages?: number
   viewAllHref?: string
   viewAllLabel?: string
@@ -172,14 +162,14 @@ export default function ImageLightboxGallery({
         )}
       >
         {gridImages.map((url, i) => (
-          <button
+          <Button
             key={`${url}-${i}`}
             type="button"
+            variant="ghost"
             onClick={() => setOpenIndex(i)}
             className={cn(
-              'relative rounded-xl overflow-hidden bg-gray-200 border border-gray-200 shadow-sm text-left',
-              'focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2',
-              'hover:opacity-95 transition-opacity group',
+              'relative h-auto p-0 rounded-xl overflow-hidden bg-gray-200 border border-gray-200 shadow-sm text-left',
+              'hover:opacity-95 hover:bg-gray-200 transition-opacity group',
               aspectClass
             )}
             aria-label={`Open image ${i + 1} of ${totalShown}`}
@@ -195,18 +185,19 @@ export default function ImageLightboxGallery({
                   : '(max-width: 640px) 100vw, 50vw'
               }
             />
-          </button>
+          </Button>
         ))}
       </div>
 
       {showLink ? (
-        <Link
-          href={viewAllHref!}
-          prefetch={false}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 transition-colors"
+        <Button
+          asChild
+          className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
         >
-          {viewAllLabel ?? `See all ${images.length} images`}
-        </Link>
+          <Link href={viewAllHref!} prefetch={false}>
+            {viewAllLabel ?? `See all ${images.length} images`}
+          </Link>
+        </Button>
       ) : null}
 
       <LightboxPortal

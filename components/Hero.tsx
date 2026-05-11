@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { ArrowRight, Volume2, VolumeX } from 'lucide-react'
 import FeaturedUpcomingCarousel from '@/components/FeaturedUpcomingCarousel'
 import type { Event } from '@/types/event'
+import { Button } from '@/components/ui/button'
 
 const HERO_VIDEO =
   'https://res.cloudinary.com/digkc0xsk/video/upload/v1771270419/ROBOFESTnew_lj6ak1.mp4'
@@ -87,21 +88,26 @@ export default function Hero({ upcomingEvents = [] }: { upcomingEvents?: Event[]
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start pt-2 sm:pt-4">
-              <Link
-                href="/events"
-                prefetch={false}
-                className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-indigo-500 text-white rounded-lg font-semibold hover:bg-indigo-600 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-sm sm:text-base"
+              <Button
+                asChild
+                size="lg"
+                className="bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg hover:shadow-xl text-sm sm:text-base"
               >
-                Explore Events
-                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
-              </Link>
-              <Link
-                href="/about"
-                prefetch={false}
-                className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-white text-indigo-500 rounded-lg font-semibold border-2 border-indigo-100 hover:border-indigo-200 hover:bg-indigo-50 transition-colors text-sm sm:text-base"
+                <Link href="/events" prefetch={false}>
+                  Explore Events
+                  <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="bg-white text-indigo-500 border-2 border-indigo-100 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 text-sm sm:text-base"
               >
-                Learn More
-              </Link>
+                <Link href="/about" prefetch={false}>
+                  Learn More
+                </Link>
+              </Button>
             </div>
           </div>
 
@@ -141,14 +147,16 @@ export default function Hero({ upcomingEvents = [] }: { upcomingEvents?: Event[]
       </div>
 
       {useVideoBg ? (
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon"
           onClick={() => setMuted((m) => !m)}
-          className="absolute bottom-6 right-6 z-20 p-2.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors border border-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
+          className="absolute bottom-6 right-6 z-20 rounded-full bg-black/50 text-white hover:bg-black/70 hover:text-white border border-white/20"
           aria-label={muted ? 'Unmute video' : 'Mute video'}
         >
           {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-        </button>
+        </Button>
       ) : null}
 
       {/* Bottom wave decoration */}

@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowRight } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 
 type CourseCardProps = {
   title: string
@@ -34,8 +36,8 @@ export default function CourseCard({
   }
 
   return (
-    <Link href={href} prefetch={false}>
-      <div className="group relative bg-white rounded-xl sm:rounded-2xl border-2 border-gray-200 hover:border-indigo-300 overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 h-full flex flex-col transform hover:-translate-y-1 sm:hover:-translate-y-2">
+    <Link href={href} prefetch={false} className="h-full">
+      <Card className="group relative border-2 hover:border-indigo-300 overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 h-full flex flex-col transform hover:-translate-y-1 sm:hover:-translate-y-2 p-0">
         {/* Image Section - shorter on mobile */}
         <div className="relative h-36 sm:h-52 bg-linear-to-br from-indigo-400 via-blue-400 to-purple-400 overflow-hidden">
           {img ? (
@@ -55,17 +57,16 @@ export default function CourseCard({
             <div className="absolute inset-0 bg-linear-to-t from-black/20 via-transparent to-transparent group-hover:from-black/30 transition-all duration-300" />
           )}
           {/* Level Badge */}
-          <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 transform group-hover:scale-110 transition-transform duration-300">
-            <span
-              className={`px-2.5 py-1 sm:px-4 sm:py-2 rounded-full text-xs font-bold shadow-lg border backdrop-blur-sm ${getLevelColor(level)}`}
-            >
-              {level}
-            </span>
-          </div>
+          <Badge
+            variant="outline"
+            className={`absolute top-2 right-2 sm:top-4 sm:right-4 z-10 transform group-hover:scale-110 transition-transform duration-300 px-2.5 py-1 sm:px-4 sm:py-2 text-xs font-bold shadow-lg backdrop-blur-sm ${getLevelColor(level)}`}
+          >
+            {level}
+          </Badge>
         </div>
 
         {/* Content Section - compact on mobile */}
-        <div className="p-4 sm:p-7 flex flex-col flex-1 bg-white">
+        <CardContent className="p-4 sm:p-7 flex flex-col flex-1 bg-white">
           <h3 className="text-base sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3 group-hover:text-indigo-600 transition-colors duration-300 line-clamp-2 leading-tight">
             {title}
           </h3>
@@ -78,8 +79,8 @@ export default function CourseCard({
               <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-2 transition-transform duration-300" />
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </Link>
   )
 }

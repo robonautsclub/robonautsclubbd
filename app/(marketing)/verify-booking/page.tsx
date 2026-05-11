@@ -11,6 +11,10 @@ import { Metadata } from 'next'
 import { SITE_CONFIG } from '@/lib/site-config'
 import CopyButton from './CopyButton'
 import RetryButton from './RetryButton'
+import { Card, CardContent } from '@/components/ui/card'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 
 export const dynamic = 'force-dynamic'
 
@@ -126,39 +130,41 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
           <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-200 rounded-full blur-3xl opacity-30 transform -translate-x-1/2 translate-y-1/2" />
         </div>
 
-        <div className="relative z-10 max-w-md w-full bg-white rounded-2xl shadow-2xl border border-gray-200 p-8 sm:p-10 text-center">
-          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-linear-to-br from-red-100 to-red-200 flex items-center justify-center mx-auto mb-6 shadow-lg">
-            <XCircle className="w-12 h-12 sm:w-14 sm:h-14 text-red-500" />
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">Registration Number Required</h1>
-          <p className="text-gray-600 mb-4 leading-relaxed">
-            Please provide a registration number to verify your registration.
-          </p>
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-6">
-            <p className="text-sm text-blue-900 font-medium mb-2">Where to find your registration number:</p>
-            <ul className="text-sm text-blue-800 space-y-1 text-left">
-              <li className="flex items-center gap-2">
-                <span className="text-blue-500">•</span>
-                In your confirmation email
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-blue-500">•</span>
-                On your PDF confirmation document
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-blue-500">•</span>
-                Format: REG-YYYYMMDD-XXXXX
-              </li>
-            </ul>
-          </div>
-          <Link
-            href="/events"
-            prefetch={false}
-            className="inline-block mt-6 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors shadow-md hover:shadow-lg"
-          >
-            View All Events
-          </Link>
-        </div>
+        <Card className="relative z-10 max-w-md w-full shadow-2xl">
+          <CardContent className="p-8 sm:p-10 text-center">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-linear-to-br from-red-100 to-red-200 flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <XCircle className="w-12 h-12 sm:w-14 sm:h-14 text-red-500" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">Registration Number Required</h1>
+            <p className="text-gray-600 mb-4 leading-relaxed">
+              Please provide a registration number to verify your registration.
+            </p>
+            <Alert className="mt-6 border-blue-200 bg-blue-50 text-left">
+              <AlertTitle className="text-blue-900">Where to find your registration number:</AlertTitle>
+              <AlertDescription>
+                <ul className="text-sm text-blue-800 space-y-1 mt-2">
+                  <li className="flex items-center gap-2">
+                    <span className="text-blue-500">•</span>
+                    In your confirmation email
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-blue-500">•</span>
+                    On your PDF confirmation document
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-blue-500">•</span>
+                    Format: REG-YYYYMMDD-XXXXX
+                  </li>
+                </ul>
+              </AlertDescription>
+            </Alert>
+            <Button asChild className="mt-6 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md hover:shadow-lg">
+              <Link href="/events" prefetch={false}>
+                View All Events
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -195,51 +201,55 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
           <div className="absolute bottom-0 left-0 w-96 h-96 bg-orange-200 rounded-full blur-3xl opacity-30 transform -translate-x-1/2 translate-y-1/2" />
         </div>
 
-        <div className="relative z-10 max-w-lg w-full bg-white rounded-2xl shadow-2xl border border-gray-200 p-8 sm:p-10 text-center">
-          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-linear-to-br from-red-100 to-orange-100 flex items-center justify-center mx-auto mb-6 shadow-lg">
-            <XCircle className="w-12 h-12 sm:w-14 sm:h-14 text-red-500" />
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">Registration Not Found</h1>
-          <p className="text-gray-600 mb-4 leading-relaxed">
-            The registration number you provided could not be found in our database.
-          </p>
-          
-          {/* Registration ID Display */}
-          <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4 mb-6">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Registration Number</p>
-            <p className="text-lg font-mono font-bold text-gray-900 break-all">{registrationId}</p>
-          </div>
+        <Card className="relative z-10 max-w-lg w-full shadow-2xl">
+          <CardContent className="p-8 sm:p-10 text-center">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-linear-to-br from-red-100 to-orange-100 flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <XCircle className="w-12 h-12 sm:w-14 sm:h-14 text-red-500" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">Registration Not Found</h1>
+            <p className="text-gray-600 mb-4 leading-relaxed">
+              The registration number you provided could not be found in our database.
+            </p>
 
-          {/* Help Section */}
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-left">
-            <p className="text-sm font-semibold text-amber-900 mb-2">Please check:</p>
-            <ul className="text-sm text-amber-800 space-y-1.5">
-              <li className="flex items-start gap-2">
-                <span className="text-amber-600 mt-0.5">•</span>
-                <span>The registration number is correct (format: <code className="bg-amber-100 px-1 rounded font-mono">REG-YYYYMMDD-XXXXX</code>)</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-amber-600 mt-0.5">•</span>
-                <span>There are no extra spaces or characters</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-amber-600 mt-0.5">•</span>
-                <span>The registration was completed successfully</span>
-              </li>
-            </ul>
-          </div>
+            {/* Registration ID Display */}
+            <Card className="bg-gray-50 border-2 border-gray-200 mb-6">
+              <CardContent className="p-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Registration Number</p>
+                <p className="text-lg font-mono font-bold text-gray-900 break-all">{registrationId}</p>
+              </CardContent>
+            </Card>
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link
-              href="/events"
-              prefetch={false}
-              className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors shadow-md hover:shadow-lg"
-            >
-              View Events
-            </Link>
-            <RetryButton className="px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-xl border-2 border-gray-300 transition-colors" />
-          </div>
-        </div>
+            {/* Help Section */}
+            <Alert className="mb-6 border-amber-200 bg-amber-50 text-left">
+              <AlertTitle className="text-amber-900">Please check:</AlertTitle>
+              <AlertDescription>
+                <ul className="text-sm text-amber-800 space-y-1.5 mt-2">
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-600 mt-0.5">•</span>
+                    <span>The registration number is correct (format: <code className="bg-amber-100 px-1 rounded font-mono">REG-YYYYMMDD-XXXXX</code>)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-600 mt-0.5">•</span>
+                    <span>There are no extra spaces or characters</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-amber-600 mt-0.5">•</span>
+                    <span>The registration was completed successfully</span>
+                  </li>
+                </ul>
+              </AlertDescription>
+            </Alert>
+
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button asChild className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md hover:shadow-lg">
+                <Link href="/events" prefetch={false}>
+                  View Events
+                </Link>
+              </Button>
+              <RetryButton />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -280,10 +290,10 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
               <p className="text-base sm:text-lg text-green-50 font-medium">
                 Your registration has been successfully verified and confirmed
               </p>
-              <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full">
-                <ShieldCheck className="w-5 h-5 text-white" />
-                <span className="text-sm font-semibold text-white">Valid Registration</span>
-              </div>
+              <Badge className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm rounded-full text-sm font-semibold">
+                <ShieldCheck className="w-5 h-5" />
+                Valid Registration
+              </Badge>
             </div>
           </div>
 
@@ -479,20 +489,16 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
                   </p>
                 </div>
                 <div className="flex gap-3">
-                  <Link
-                    href="/events"
-                    prefetch={false}
-                    className="px-5 py-2.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-xl transition-colors"
-                  >
-                    View Events
-                  </Link>
-                  <Link
-                    href="/"
-                    prefetch={false}
-                    className="px-5 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
-                  >
-                    Back to Home
-                  </Link>
+                  <Button asChild variant="ghost" className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
+                    <Link href="/events" prefetch={false}>
+                      View Events
+                    </Link>
+                  </Button>
+                  <Button asChild variant="ghost" className="text-gray-600 hover:text-gray-700 hover:bg-gray-100">
+                    <Link href="/" prefetch={false}>
+                      Back to Home
+                    </Link>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -501,10 +507,10 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
 
         {/* Trust Badge */}
         <div className="text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-md border border-gray-200">
+          <Badge variant="outline" className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm shadow-md text-xs font-semibold text-gray-700">
             <ShieldCheck className="w-4 h-4 text-green-600" />
-            <span className="text-xs font-semibold text-gray-700">Securely verified by {SITE_CONFIG.name}</span>
-          </div>
+            Securely verified by {SITE_CONFIG.name}
+          </Badge>
         </div>
       </div>
     </div>

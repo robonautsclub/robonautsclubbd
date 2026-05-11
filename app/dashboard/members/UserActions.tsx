@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Edit, Trash2 } from 'lucide-react'
 import EditUserForm from './EditUserForm'
 import DeleteConfirmation from './DeleteConfirmation'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 type User = {
   uid: string
@@ -63,14 +65,17 @@ export default function UserActions({ user, currentUserUid }: UserActionsProps) 
   return (
     <>
       <div className="flex items-center gap-2">
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => setShowEditForm(true)}
           disabled={disableActions}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+          className={cn(
             disableActions
-              ? 'text-gray-400 cursor-not-allowed'
+              ? 'text-gray-400'
               : 'text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50'
-          }`}
+          )}
           title={
             disableActions
               ? isSelf
@@ -81,20 +86,23 @@ export default function UserActions({ user, currentUserUid }: UserActionsProps) 
         >
           <Edit className="w-4 h-4" />
           Edit
-        </button>
-        <button
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => setShowDeleteConfirm(true)}
           disabled={disableActions}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+          className={cn(
             disableActions
-              ? 'text-gray-400 cursor-not-allowed'
+              ? 'text-gray-400'
               : 'text-red-600 hover:text-red-700 hover:bg-red-50'
-          }`}
+          )}
           title={disableActions ? 'Super Admin accounts cannot be deleted' : 'Delete user'}
         >
           <Trash2 className="w-4 h-4" />
           Delete
-        </button>
+        </Button>
       </div>
 
       {showEditForm && (

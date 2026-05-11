@@ -2,6 +2,17 @@
 
 import { Plus, Trash2 } from 'lucide-react'
 import { CUSTOM_FORM_FIELD_TYPES, type EventCustomFormField, type CustomFormFieldType } from '@/types/event'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 type CustomFormBuilderProps = {
   fields: EventCustomFormField[]
@@ -87,15 +98,17 @@ export default function CustomFormBuilder({ fields, onChange, disabled = false }
           <h4 className="text-sm font-semibold text-gray-700">Custom Registration Fields</h4>
           <p className="text-xs text-gray-500">Build event-specific questions like Google Forms.</p>
         </div>
-        <button
+        <Button
           type="button"
+          variant="outline"
+          size="sm"
           onClick={addField}
           disabled={disabled}
-          className="inline-flex items-center gap-2 px-3 py-2 border-2 border-indigo-200 text-indigo-700 rounded-xl hover:bg-indigo-50 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          className="border-indigo-200 text-indigo-700 hover:bg-indigo-50"
         >
           <Plus className="w-4 h-4" />
           Add field
-        </button>
+        </Button>
       </div>
 
       {fields.length === 0 ? (
@@ -107,102 +120,113 @@ export default function CustomFormBuilder({ fields, onChange, disabled = false }
           {fields.map((field, fieldIndex) => (
             <div key={field.id || fieldIndex} className="border-2 border-gray-200 rounded-xl p-3 space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Question label</label>
-                  <input
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-gray-600">Question label</Label>
+                  <Input
                     type="text"
                     value={field.label}
                     onChange={(e) => updateField(fieldIndex, { label: e.target.value })}
                     placeholder="e.g. Guardian name"
                     disabled={disabled}
-                    className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all text-sm"
+                    className="text-sm"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Input type</label>
-                  <select
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-gray-600">Input type</Label>
+                  <Select
                     value={field.type}
-                    onChange={(e) => updateField(fieldIndex, { type: e.target.value as CustomFormFieldType })}
+                    onValueChange={(v) => updateField(fieldIndex, { type: v as CustomFormFieldType })}
                     disabled={disabled}
-                    className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all text-sm"
                   >
-                    {CUSTOM_FORM_FIELD_TYPES.map((type) => (
-                      <option key={type} value={type}>
-                        {FIELD_TYPE_LABELS[type]}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full text-sm">
+                      <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CUSTOM_FORM_FIELD_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {FIELD_TYPE_LABELS[type]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Placeholder (optional)</label>
-                  <input
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:items-end">
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-gray-600">Placeholder (optional)</Label>
+                  <Input
                     type="text"
                     value={field.placeholder ?? ''}
                     onChange={(e) => updateField(fieldIndex, { placeholder: e.target.value })}
                     placeholder="e.g. Enter your answer"
                     disabled={disabled}
-                    className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all text-sm"
+                    className="text-sm"
                   />
                 </div>
-                <label className="inline-flex items-center gap-2 text-sm text-gray-700 mt-6">
-                  <input
-                    type="checkbox"
+                <div className="flex items-center gap-2 pb-2">
+                  <Checkbox
+                    id={`custom-field-required-${field.id}`}
                     checked={field.required}
-                    onChange={(e) => updateField(fieldIndex, { required: e.target.checked })}
+                    onCheckedChange={(v) => updateField(fieldIndex, { required: v === true })}
                     disabled={disabled}
-                    className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                   />
-                  Required
-                </label>
+                  <Label htmlFor={`custom-field-required-${field.id}`} className="text-sm font-normal text-gray-700">
+                    Required
+                  </Label>
+                </div>
               </div>
 
               {requiresOptions(field.type) && (
                 <div className="space-y-2">
-                  <label className="block text-xs font-semibold text-gray-600">Options</label>
+                  <Label className="text-xs font-semibold text-gray-600">Options</Label>
                   {(field.options ?? []).map((option, optionIndex) => (
                     <div key={`${field.id}-option-${optionIndex}`} className="flex items-center gap-2">
-                      <input
+                      <Input
                         type="text"
                         value={option}
                         onChange={(e) => updateOption(fieldIndex, optionIndex, e.target.value)}
                         placeholder={`Option ${optionIndex + 1}`}
                         disabled={disabled}
-                        className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all text-sm"
+                        className="flex-1 text-sm"
                       />
-                      <button
+                      <Button
                         type="button"
+                        variant="outline"
+                        size="sm"
                         onClick={() => removeOption(fieldIndex, optionIndex)}
                         disabled={disabled}
-                        className="px-3 py-2 border-2 border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="shrink-0 border-red-200 text-red-600 hover:bg-red-50"
                       >
                         Remove
-                      </button>
+                      </Button>
                     </div>
                   ))}
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => addOption(fieldIndex)}
                     disabled={disabled}
-                    className="px-3 py-2 border-2 border-indigo-200 text-indigo-700 rounded-lg hover:bg-indigo-50 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="border-indigo-200 text-indigo-700 hover:bg-indigo-50"
                   >
                     + Add option
-                  </button>
+                  </Button>
                 </div>
               )}
 
               <div className="flex justify-end">
-                <button
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => removeField(fieldIndex)}
                   disabled={disabled}
-                  className="inline-flex items-center gap-2 px-3 py-2 border-2 border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="border-red-200 text-red-600 hover:bg-red-50"
                 >
                   <Trash2 className="w-4 h-4" />
                   Remove question
-                </button>
+                </Button>
               </div>
             </div>
           ))}

@@ -7,6 +7,7 @@ import { Edit, Trash2 } from 'lucide-react'
 import EditEventForm from '../EditEventForm'
 import DeleteConfirmation from '../DeleteConfirmation'
 import type { Event } from '@/types/event'
+import { Button } from '@/components/ui/button'
 
 interface EventHeaderActionsProps {
   event: Event
@@ -43,21 +44,25 @@ export default function EventHeaderActions({ event, currentUserId }: EventHeader
   return (
     <>
       <div className="flex items-center gap-2">
-        <button
+        <Button
+          type="button"
+          variant="outline"
           onClick={() => setShowEditForm(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors"
+          className="text-indigo-600 bg-indigo-50 border-indigo-200 hover:bg-indigo-100 hover:text-indigo-600"
         >
           <Edit className="w-4 h-4" />
           Edit Event
-        </button>
+        </Button>
         {canDelete && (
-          <button
+          <Button
+            type="button"
+            variant="outline"
             onClick={() => setShowDeleteConfirm(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+            className="text-red-600 bg-red-50 border-red-200 hover:bg-red-100 hover:text-red-600"
           >
             <Trash2 className="w-4 h-4" />
             Delete Event
-          </button>
+          </Button>
         )}
       </div>
 

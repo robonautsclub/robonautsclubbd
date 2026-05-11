@@ -16,6 +16,9 @@ import {
 import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowRight } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 
 const SectionHeader = ({
   title,
@@ -119,9 +122,9 @@ export default function FeedDeferredFromMission({
             subtitle="Driving innovation in STEM education"
           />
           <div className="grid md:grid-cols-2 gap-4 sm:gap-8">
-            <div className="group bg-white p-4 sm:p-8 md:p-10 rounded-xl sm:rounded-3xl border-2 border-gray-200 hover:border-indigo-200 shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden">
+            <Card className="group border-2 hover:border-indigo-200 shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="relative z-10">
+              <CardContent className="p-4 sm:p-8 md:p-10 relative z-10">
                 <div className="flex items-center gap-2 sm:gap-4 mb-2 sm:mb-6">
                   <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl bg-linear-to-br from-indigo-100 to-indigo-200 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                     <Target className="w-5 h-5 sm:w-7 sm:h-7 text-indigo-500" />
@@ -133,11 +136,11 @@ export default function FeedDeferredFromMission({
                   critical thinking, and innovation. We provide accessible STEM learning opportunities
                   that prepare students for future challenges in technology and engineering.
                 </p>
-              </div>
-            </div>
-            <div className="group bg-white p-4 sm:p-8 md:p-10 rounded-xl sm:rounded-3xl border-2 border-gray-200 hover:border-blue-200 shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden">
+              </CardContent>
+            </Card>
+            <Card className="group border-2 hover:border-blue-200 shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="relative z-10">
+              <CardContent className="p-4 sm:p-8 md:p-10 relative z-10">
                 <div className="flex items-center gap-2 sm:gap-4 mb-2 sm:mb-6">
                   <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl bg-linear-to-br from-blue-100 to-blue-200 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                     <Eye className="w-5 h-5 sm:w-7 sm:h-7 text-blue-500" />
@@ -150,8 +153,8 @@ export default function FeedDeferredFromMission({
                   opportunity and confidence to bring their talents global and make a meaningful mark
                   through STEM and robotics education.
                 </p>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
@@ -164,127 +167,133 @@ export default function FeedDeferredFromMission({
             subtitle="Our teams have previously competed in well-known national and international robotics olympiads, gaining valuable hands-on competition experience that helps us train and mentor current members."
           />
 
-          <div className="bg-white rounded-xl sm:rounded-3xl p-4 sm:p-8 md:p-10 lg:p-12 border-2 border-gray-200 shadow-sm hover:shadow-xl transition-all duration-300">
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8 mb-6 sm:mb-10">
-              {OLYMPIADS.map((olympiad, index) => (
-                <div
-                  key={index}
-                  className="group flex flex-col bg-white rounded-xl sm:rounded-2xl border border-gray-200/90 shadow-md hover:shadow-xl hover:border-indigo-100 transition-all duration-300 overflow-hidden"
-                >
-                  <div
-                    className={`relative flex items-center justify-center min-h-[100px] sm:min-h-[160px] bg-linear-to-br ${olympiad.color} p-4 sm:p-8`}
+          <Card className="border-2 shadow-sm hover:shadow-xl transition-all duration-300">
+            <CardContent className="p-4 sm:p-8 md:p-10 lg:p-12">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8 mb-6 sm:mb-10">
+                {OLYMPIADS.map((olympiad, index) => (
+                  <Card
+                    key={index}
+                    className="group flex flex-col shadow-md hover:shadow-xl hover:border-indigo-100 transition-all duration-300 overflow-hidden p-0"
                   >
-                    <div className="absolute inset-0 bg-black/5 group-hover:bg-black/0 transition-colors duration-300" aria-hidden />
-                    <div className="relative w-20 h-20 sm:w-36 sm:h-36 rounded-xl sm:rounded-2xl bg-white/98 shadow-lg flex items-center justify-center p-2 sm:p-3 ring-2 ring-white/50">
-                      <Image
-                        src={olympiad.logo}
-                        alt={`${olympiad.name} logo`}
-                        width={144}
-                        height={144}
-                        className="object-contain w-full h-full"
-                        quality={90}
-                        sizes="(max-width: 640px) 112px, 144px"
-                      />
-                    </div>
-                  </div>
-                  <div className="p-3 sm:p-6 flex flex-col flex-1 border-t border-gray-100">
-                    <h4 className="text-sm sm:text-lg font-bold text-gray-900 mb-0 sm:mb-2.5">
-                      {olympiad.name}
-                    </h4>
-                    <p className="hidden sm:block text-xs sm:text-sm text-gray-600 leading-relaxed flex-1">
-                      {olympiad.description}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-2 gap-3 sm:gap-6 mb-6 sm:mb-10">
-              <div className="group bg-white p-3 sm:p-6 rounded-lg sm:rounded-2xl border-2 border-gray-200 hover:border-indigo-200 text-center hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
-                <div className="text-2xl sm:text-4xl md:text-5xl font-bold bg-linear-to-r from-indigo-500 to-indigo-600 bg-clip-text text-transparent mb-0 sm:mb-2 group-hover:scale-110 transition-transform duration-300">
-                  50+
-                </div>
-                <div className="hidden sm:block text-xs sm:text-sm text-gray-600 font-medium">
-                  Competition Participants
-                </div>
-              </div>
-              <div className="group bg-white p-3 sm:p-6 rounded-lg sm:rounded-2xl border-2 border-gray-200 hover:border-blue-200 text-center hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
-                <div className="text-2xl sm:text-4xl md:text-5xl font-bold bg-linear-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent mb-0 sm:mb-2 group-hover:scale-110 transition-transform duration-300">
-                  15+
-                </div>
-                <div className="hidden sm:block text-xs sm:text-sm text-gray-600 font-medium">Awards Won</div>
-              </div>
-              <div className="group bg-white p-3 sm:p-6 rounded-lg sm:rounded-2xl border-2 border-gray-200 hover:border-purple-200 text-center col-span-2 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
-                <div className="text-2xl sm:text-4xl md:text-5xl font-bold bg-linear-to-r from-purple-500 to-purple-600 bg-clip-text text-transparent mb-0 sm:mb-2 group-hover:scale-110 transition-transform duration-300">
-                  100%
-                </div>
-                <div className="hidden sm:block text-xs sm:text-sm text-gray-600 font-medium">
-                  Student Satisfaction Rate
-                </div>
-              </div>
-            </div>
-
-            <div className="hidden sm:block mt-8 sm:mt-10 pt-6 sm:pt-8 border-t border-gray-200">
-              <div className="overflow-hidden relative rounded-xl bg-gray-50 p-4 border border-gray-200">
-                <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-24 bg-linear-to-r from-gray-50 to-transparent z-10 pointer-events-none" />
-                <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-24 bg-linear-to-r from-transparent to-gray-50 z-10 pointer-events-none" />
-
-                <div className="flex animate-scroll-left gap-6 sm:gap-8 md:gap-12">
-                  {[
-                    'Bangladesh',
-                    'Thailand',
-                    'Malaysia',
-                    'Singapore',
-                    'China',
-                    'Japan',
-                    'South Korea',
-                    'Qatar',
-                    'Turkey',
-                    'USA',
-                    'Canada',
-                    'Australia',
-                    'England',
-                  ].map((country, index) => (
                     <div
-                      key={`country-1-${index}`}
-                      className="shrink-0 flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-white rounded-lg sm:rounded-xl border border-indigo-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all duration-300"
+                      className={`relative flex items-center justify-center min-h-[100px] sm:min-h-[160px] bg-linear-to-br ${olympiad.color} p-4 sm:p-8`}
                     >
-                      <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500 shrink-0" />
-                      <span className="text-sm sm:text-base font-semibold text-indigo-600 whitespace-nowrap">
-                        {country}
-                      </span>
+                      <div className="absolute inset-0 bg-black/5 group-hover:bg-black/0 transition-colors duration-300" aria-hidden />
+                      <div className="relative w-20 h-20 sm:w-36 sm:h-36 rounded-xl sm:rounded-2xl bg-white/98 shadow-lg flex items-center justify-center p-2 sm:p-3 ring-2 ring-white/50">
+                        <Image
+                          src={olympiad.logo}
+                          alt={`${olympiad.name} logo`}
+                          width={144}
+                          height={144}
+                          className="object-contain w-full h-full"
+                          quality={90}
+                          sizes="(max-width: 640px) 112px, 144px"
+                        />
+                      </div>
                     </div>
-                  ))}
-                  {[
-                    'Bangladesh',
-                    'India',
-                    'Thailand',
-                    'Malaysia',
-                    'Singapore',
-                    'Indonesia',
-                    'Philippines',
-                    'Vietnam',
-                    'China',
-                    'Japan',
-                    'South Korea',
-                    'UAE',
-                    'Qatar',
-                    'Saudi Arabia',
-                    'Turkey',
-                  ].map((country, index) => (
-                    <div
-                      key={`country-2-${index}`}
-                      className="shrink-0 flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-white rounded-lg sm:rounded-xl border border-indigo-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all duration-300"
-                    >
-                      <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500 shrink-0" />
-                      <span className="text-sm sm:text-base font-semibold text-indigo-600 whitespace-nowrap">
-                        {country}
-                      </span>
+                    <CardContent className="p-3 sm:p-6 flex flex-col flex-1 border-t border-gray-100">
+                      <h4 className="text-sm sm:text-lg font-bold text-gray-900 mb-0 sm:mb-2.5">
+                        {olympiad.name}
+                      </h4>
+                      <p className="hidden sm:block text-xs sm:text-sm text-gray-600 leading-relaxed flex-1">
+                        {olympiad.description}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:gap-6 mb-6 sm:mb-10">
+                <Card className="group border-2 hover:border-indigo-200 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
+                  <CardContent className="p-3 sm:p-6 text-center">
+                    <div className="text-2xl sm:text-4xl md:text-5xl font-bold bg-linear-to-r from-indigo-500 to-indigo-600 bg-clip-text text-transparent mb-0 sm:mb-2 group-hover:scale-110 transition-transform duration-300">
+                      50+
                     </div>
-                  ))}
+                    <div className="hidden sm:block text-xs sm:text-sm text-gray-600 font-medium">
+                      Competition Participants
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="group border-2 hover:border-blue-200 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
+                  <CardContent className="p-3 sm:p-6 text-center">
+                    <div className="text-2xl sm:text-4xl md:text-5xl font-bold bg-linear-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent mb-0 sm:mb-2 group-hover:scale-110 transition-transform duration-300">
+                      15+
+                    </div>
+                    <div className="hidden sm:block text-xs sm:text-sm text-gray-600 font-medium">Awards Won</div>
+                  </CardContent>
+                </Card>
+                <Card className="group border-2 hover:border-purple-200 col-span-2 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1">
+                  <CardContent className="p-3 sm:p-6 text-center">
+                    <div className="text-2xl sm:text-4xl md:text-5xl font-bold bg-linear-to-r from-purple-500 to-purple-600 bg-clip-text text-transparent mb-0 sm:mb-2 group-hover:scale-110 transition-transform duration-300">
+                      100%
+                    </div>
+                    <div className="hidden sm:block text-xs sm:text-sm text-gray-600 font-medium">
+                      Student Satisfaction Rate
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="hidden sm:block mt-8 sm:mt-10 pt-6 sm:pt-8 border-t border-gray-200">
+                <div className="overflow-hidden relative rounded-xl bg-gray-50 p-4 border border-gray-200">
+                  <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-24 bg-linear-to-r from-gray-50 to-transparent z-10 pointer-events-none" />
+                  <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-24 bg-linear-to-r from-transparent to-gray-50 z-10 pointer-events-none" />
+
+                  <div className="flex animate-scroll-left gap-6 sm:gap-8 md:gap-12">
+                    {[
+                      'Bangladesh',
+                      'Thailand',
+                      'Malaysia',
+                      'Singapore',
+                      'China',
+                      'Japan',
+                      'South Korea',
+                      'Qatar',
+                      'Turkey',
+                      'USA',
+                      'Canada',
+                      'Australia',
+                      'England',
+                    ].map((country, index) => (
+                      <Badge
+                        key={`country-1-${index}`}
+                        variant="outline"
+                        className="shrink-0 flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-white border-indigo-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all duration-300 text-sm sm:text-base font-semibold text-indigo-600"
+                      >
+                        <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500 shrink-0" />
+                        <span className="whitespace-nowrap">{country}</span>
+                      </Badge>
+                    ))}
+                    {[
+                      'Bangladesh',
+                      'India',
+                      'Thailand',
+                      'Malaysia',
+                      'Singapore',
+                      'Indonesia',
+                      'Philippines',
+                      'Vietnam',
+                      'China',
+                      'Japan',
+                      'South Korea',
+                      'UAE',
+                      'Qatar',
+                      'Saudi Arabia',
+                      'Turkey',
+                    ].map((country, index) => (
+                      <Badge
+                        key={`country-2-${index}`}
+                        variant="outline"
+                        className="shrink-0 flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-white border-indigo-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all duration-300 text-sm sm:text-base font-semibold text-indigo-600"
+                      >
+                        <Globe className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500 shrink-0" />
+                        <span className="whitespace-nowrap">{country}</span>
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
@@ -313,21 +322,24 @@ export default function FeedDeferredFromMission({
             and unlock your potential!
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link
-              href="/events"
-              prefetch={false}
-              className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-all duration-200 shadow-md hover:shadow-lg text-sm sm:text-base"
+            <Button
+              asChild
+              className="bg-indigo-500 text-white hover:bg-indigo-600 shadow-md hover:shadow-lg text-sm sm:text-base"
             >
-              Explore Events
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-            <Link
-              href="/about"
-              prefetch={false}
-              className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-white text-gray-700 rounded-lg font-medium border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 text-sm sm:text-base"
+              <Link href="/events" prefetch={false}>
+                Explore Events
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 text-sm sm:text-base"
             >
-              Learn More About Us
-            </Link>
+              <Link href="/about" prefetch={false}>
+                Learn More About Us
+              </Link>
+            </Button>
           </div>
         </div>
       </section>

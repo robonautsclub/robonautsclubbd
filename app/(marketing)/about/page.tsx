@@ -14,6 +14,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import AboutMap from "./AboutMap";
+import { Card, CardContent } from "@/components/ui/card";
 
 const GOOGLE_MAPS_LINK = "https://maps.app.goo.gl/3kWfm4iG8a3ZdfLF6";
 
@@ -236,40 +237,41 @@ export default function AboutPage() {
               {STATS.map((stat, index) => {
                 const Icon = stat.icon;
                 return (
-                  <div
-                    key={index}
-                    className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-gray-200 shadow-sm text-center hover:shadow-md transition-shadow"
-                  >
-                    <Icon
-                      className={`w-6 h-6 sm:w-8 sm:h-8 ${STAT_ICON_COLORS[index]} mx-auto mb-2 sm:mb-3`}
-                    />
-                    <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{stat.value}</div>
-                    <div className="text-xs sm:text-sm text-gray-600">{stat.label}</div>
-                  </div>
+                  <Card key={index} className="shadow-sm hover:shadow-md transition-shadow">
+                    <CardContent className="p-4 sm:p-6 text-center">
+                      <Icon
+                        className={`w-6 h-6 sm:w-8 sm:h-8 ${STAT_ICON_COLORS[index]} mx-auto mb-2 sm:mb-3`}
+                      />
+                      <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{stat.value}</div>
+                      <div className="text-xs sm:text-sm text-gray-600">{stat.label}</div>
+                    </CardContent>
+                  </Card>
                 );
               })}
             </div>
-            <div className="bg-linear-to-br from-indigo-50 to-blue-50 rounded-xl sm:rounded-2xl p-6 sm:p-8 md:p-12 border border-indigo-100">
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Making a Difference</h3>
-              <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-3">Student Success Stories</h4>
-                  <p className="text-gray-700 text-sm leading-relaxed">
-                    Our students have gone on to win national robotics competitions, secure scholarships,
-                    and pursue careers in engineering and technology. Many have represented Bangladesh in
-                    international robotics olympiads.
-                  </p>
+            <Card className="bg-linear-to-br from-indigo-50 to-blue-50 border-indigo-100">
+              <CardContent className="p-6 sm:p-8 md:p-12">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Making a Difference</h3>
+                <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-3">Student Success Stories</h4>
+                    <p className="text-gray-700 text-sm leading-relaxed">
+                      Our students have gone on to win national robotics competitions, secure scholarships,
+                      and pursue careers in engineering and technology. Many have represented Bangladesh in
+                      international robotics olympiads.
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-3">Community Impact</h4>
+                    <p className="text-gray-700 text-sm leading-relaxed">
+                      We&apos;ve partnered with schools across Dhaka to bring robotics education to underserved
+                      communities, organizing free workshops and providing resources to students who might not
+                      otherwise have access to STEM education.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-3">Community Impact</h4>
-                  <p className="text-gray-700 text-sm leading-relaxed">
-                    We&apos;ve partnered with schools across Dhaka to bring robotics education to underserved
-                    communities, organizing free workshops and providing resources to students who might not
-                    otherwise have access to STEM education.
-                  </p>
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </section>
 
           <section className="mb-12 sm:mb-16 md:mb-20">
@@ -281,16 +283,15 @@ export default function AboutPage() {
               {CORE_VALUES.map((value, index) => {
                 const Icon = value.icon;
                 return (
-                  <div
-                    key={index}
-                    className="p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-gray-200 bg-gray-50 hover:bg-white hover:shadow-md transition-all"
-                  >
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-indigo-100 flex items-center justify-center mb-3 sm:mb-4">
-                      <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-500" />
-                    </div>
-                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">{value.title}</h3>
-                    <p className="text-sm sm:text-base text-gray-600">{value.description}</p>
-                  </div>
+                  <Card key={index} className="bg-gray-50 hover:bg-white hover:shadow-md transition-all">
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-indigo-100 flex items-center justify-center mb-3 sm:mb-4">
+                        <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-500" />
+                      </div>
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">{value.title}</h3>
+                      <p className="text-sm sm:text-base text-gray-600">{value.description}</p>
+                    </CardContent>
+                  </Card>
                 );
               })}
             </div>
@@ -304,13 +305,12 @@ export default function AboutPage() {
               />
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {WHAT_WE_DO_ITEMS.map((item, index) => (
-                  <div
-                    key={index}
-                    className="p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-gray-200 bg-gray-50 hover:bg-white hover:shadow-md transition-all"
-                  >
-                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2">{item.title}</h3>
-                    <p className="text-gray-600 text-xs sm:text-sm leading-relaxed">{item.description}</p>
-                  </div>
+                  <Card key={index} className="bg-gray-50 hover:bg-white hover:shadow-md transition-all">
+                    <CardContent className="p-4 sm:p-6">
+                      <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2">{item.title}</h3>
+                      <p className="text-gray-600 text-xs sm:text-sm leading-relaxed">{item.description}</p>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             </div>
@@ -326,21 +326,20 @@ export default function AboutPage() {
                 {TEAM_MEMBERS.map((member, index) => {
                   const Icon = member.icon;
                   return (
-                    <div
-                      key={index}
-                      className="p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-gray-200 bg-gray-50 hover:bg-white hover:shadow-md transition-all"
-                    >
-                      <div
-                        className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl ${TEAM_BG_COLORS[index]} flex items-center justify-center mb-3 sm:mb-4`}
-                      >
-                        <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${TEAM_ICON_COLORS[index]}`} />
-                      </div>
-                      <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1">{member.name}</h3>
-                      <p className={`text-xs sm:text-sm font-semibold ${TEAM_ICON_COLORS[index]} mb-2`}>
-                        {member.role}
-                      </p>
-                      <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">{member.expertise}</p>
-                    </div>
+                    <Card key={index} className="bg-gray-50 hover:bg-white hover:shadow-md transition-all">
+                      <CardContent className="p-4 sm:p-6">
+                        <div
+                          className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl ${TEAM_BG_COLORS[index]} flex items-center justify-center mb-3 sm:mb-4`}
+                        >
+                          <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${TEAM_ICON_COLORS[index]}`} />
+                        </div>
+                        <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1">{member.name}</h3>
+                        <p className={`text-xs sm:text-sm font-semibold ${TEAM_ICON_COLORS[index]} mb-2`}>
+                          {member.role}
+                        </p>
+                        <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">{member.expertise}</p>
+                      </CardContent>
+                    </Card>
                   );
                 })}
               </div>
@@ -351,65 +350,67 @@ export default function AboutPage() {
             <SectionHeader title="Contact Information" subtitle="Get in touch with us" />
             <div className="grid lg:grid-cols-3 gap-6 sm:gap-8 mb-8 sm:mb-12">
               <div>
-                <div className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-gray-200 shadow-sm">
-                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">Contact Details</h3>
-                  <div className="space-y-3 sm:space-y-4">
-                    <div className="flex items-start gap-3">
-                      <MapPin className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-500 mb-1">Address</p>
-                        <p className="text-gray-700">5B, House #4, Road #7, Sector #3, Uttara</p>
-                        <a
-                          href={GOOGLE_MAPS_LINK}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-indigo-600 hover:text-indigo-800 hover:underline mt-1 inline-block"
-                        >
-                          View on Google Maps
-                        </a>
+                <Card className="shadow-sm">
+                  <CardContent className="p-4 sm:p-6">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">Contact Details</h3>
+                    <div className="space-y-3 sm:space-y-4">
+                      <div className="flex items-start gap-3">
+                        <MapPin className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-500 mb-1">Address</p>
+                          <p className="text-gray-700">5B, House #4, Road #7, Sector #3, Uttara</p>
+                          <a
+                            href={GOOGLE_MAPS_LINK}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-indigo-600 hover:text-indigo-800 hover:underline mt-1 inline-block"
+                          >
+                            View on Google Maps
+                          </a>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <MapPin className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-500 mb-1">Service Area</p>
+                          <p className="text-gray-700">Dhaka, Dhaka Division, Bangladesh</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <Phone className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-500 mb-1">Mobile</p>
+                          <p className="text-gray-700">01824-863366</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <MessageCircle className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-500 mb-1">WhatsApp</p>
+                          <p className="text-gray-700">+880 1824-863366</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <Mail className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-500 mb-1">Email</p>
+                          <a
+                            href={`mailto:${SITE_CONFIG.email}`}
+                            className="text-gray-700 hover:text-indigo-600 transition-colors"
+                          >
+                            {SITE_CONFIG.email}
+                          </a>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <MapPin className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-500 mb-1">Service Area</p>
-                        <p className="text-gray-700">Dhaka, Dhaka Division, Bangladesh</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Phone className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-500 mb-1">Mobile</p>
-                        <p className="text-gray-700">01824-863366</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <MessageCircle className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-500 mb-1">WhatsApp</p>
-                        <p className="text-gray-700">+880 1824-863366</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Mail className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-500 mb-1">Email</p>
-                        <a
-                          href={`mailto:${SITE_CONFIG.email}`}
-                          className="text-gray-700 hover:text-indigo-600 transition-colors"
-                        >
-                          {SITE_CONFIG.email}
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               </div>
 
               <div className="lg:col-span-2">
-                <div className="rounded-xl sm:rounded-2xl overflow-hidden border-2 border-gray-200 shadow-sm bg-white h-64 sm:h-80 lg:h-96">
+                <Card className="overflow-hidden border-2 shadow-sm h-64 sm:h-80 lg:h-96 p-0">
                   <AboutMap />
-                </div>
+                </Card>
               </div>
             </div>
           </section>

@@ -13,9 +13,22 @@ import {
 } from 'lucide-react'
 import type { Course } from '@/types/course'
 import type { Event } from '@/types/event'
+import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const FeedDeferredFromMission = dynamic(() => import('./FeedDeferredFromMission'), {
-  loading: () => <div className="min-h-[48vh] bg-slate-50/80" aria-busy />,
+  loading: () => (
+    <div className="min-h-[48vh] bg-slate-50/80 py-12" aria-busy>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-4">
+        <Skeleton className="h-8 w-1/3 mx-auto" />
+        <Skeleton className="h-4 w-1/2 mx-auto" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-40 w-full" />
+        </div>
+      </div>
+    </div>
+  ),
 })
 
 const SectionHeader = ({
@@ -122,21 +135,23 @@ const Feed = ({ initialCourses = [], initialUpcomingEvents = [] }: FeedProps) =>
             {features.map((feature, index) => {
               const Icon = feature.icon
               return (
-                <div
+                <Card
                   key={index}
-                  className="group p-4 sm:p-8 rounded-xl sm:rounded-2xl border border-gray-200 bg-white hover:bg-linear-to-br hover:from-indigo-50/50 hover:to-blue-50/50 hover:border-indigo-200 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex flex-row sm:flex-col"
+                  className="group hover:bg-linear-to-br hover:from-indigo-50/50 hover:to-blue-50/50 hover:border-indigo-200 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
-                  <div className="shrink-0 w-10 h-10 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl bg-linear-to-br from-indigo-100 to-blue-100 flex items-center justify-center mb-0 sm:mb-5 group-hover:scale-110 group-hover:from-indigo-200 group-hover:to-blue-200 transition-transform duration-300">
-                    <Icon className="w-5 h-5 sm:w-7 sm:h-7 text-indigo-500 group-hover:text-indigo-600 transition-colors" />
-                  </div>
-                  <div className="flex-1 min-w-0 ml-3 sm:ml-0">
-                    <h3 className="text-base sm:text-xl font-bold text-gray-900 mb-0 sm:mb-3 group-hover:text-indigo-600 transition-colors">
-                      {feature.title}
-                    </h3>
-                    <p className="hidden sm:block text-sm sm:text-base text-gray-600 leading-relaxed">{feature.description}</p>
-                  </div>
-                </div>
+                  <CardContent className="p-4 sm:p-8 flex flex-row sm:flex-col">
+                    <div className="shrink-0 w-10 h-10 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl bg-linear-to-br from-indigo-100 to-blue-100 flex items-center justify-center mb-0 sm:mb-5 group-hover:scale-110 group-hover:from-indigo-200 group-hover:to-blue-200 transition-transform duration-300">
+                      <Icon className="w-5 h-5 sm:w-7 sm:h-7 text-indigo-500 group-hover:text-indigo-600 transition-colors" />
+                    </div>
+                    <div className="flex-1 min-w-0 ml-3 sm:ml-0">
+                      <h3 className="text-base sm:text-xl font-bold text-gray-900 mb-0 sm:mb-3 group-hover:text-indigo-600 transition-colors">
+                        {feature.title}
+                      </h3>
+                      <p className="hidden sm:block text-sm sm:text-base text-gray-600 leading-relaxed">{feature.description}</p>
+                    </div>
+                  </CardContent>
+                </Card>
               )
             })}
           </div>

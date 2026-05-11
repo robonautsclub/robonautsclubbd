@@ -5,21 +5,26 @@ import { collection, onSnapshot, doc, query, where } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { Event } from '@/types/event'
 
+type RealtimeBooking = {
+  id: string
+  createdAt?: string | null
+} & Record<string, unknown>
+
 /**
  * Hook to listen to events in real-time from Firestore
  */
 export function useRealtimeEvents(publicAccess: boolean = false) {
+  void publicAccess
+  const dbUnavailable = !db
   const [events, setEvents] = useState<Event[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!dbUnavailable)
   const [error, setError] = useState<string | null>(null)
   const unsubscribeRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    if (!db) {
-      setError('Firebase Firestore is not initialized')
-      setLoading(false)
-      return
-    }
+    if (dbUnavailable) return
+    const firestore = db
+    if (!firestore) return
 
     // Cleanup previous subscription if it exists (React Strict Mode protection)
     if (unsubscribeRef.current) {
@@ -30,7 +35,7 @@ export function useRealtimeEvents(publicAccess: boolean = false) {
     try {
       // Create a query for events collection
       // Get all documents without orderBy (sort in memory to avoid index requirements)
-      const eventsRef = collection(db, 'events')
+      const eventsRef = collection(firestore, 'events')
 
       // Set up real-time listener
       const unsubscribe = onSnapshot(
@@ -90,10 +95,16 @@ export function useRealtimeEvents(publicAccess: boolean = false) {
       }
     } catch (err) {
       console.error('Error setting up events listener:', err)
-      setError('Failed to set up real-time listener')
-      setLoading(false)
+      queueMicrotask(() => {
+        setError('Failed to set up real-time listener')
+        setLoading(false)
+      })
     }
-  }, [])
+  }, [dbUnavailable])
+
+  if (dbUnavailable) {
+    return { events: [], loading: false, error: 'Firebase Firestore is not initialized' }
+  }
 
   return { events, loading, error }
 }
@@ -102,22 +113,18 @@ export function useRealtimeEvents(publicAccess: boolean = false) {
  * Hook to listen to a single event in real-time from Firestore
  */
 export function useRealtimeEvent(eventId: string) {
+  const dbUnavailable = !db
   const [event, setEvent] = useState<Event | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!dbUnavailable && !!eventId)
   const [error, setError] = useState<string | null>(null)
   const unsubscribeRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    if (!db) {
-      setError('Firebase Firestore is not initialized')
-      setLoading(false)
-      return
-    }
+    if (dbUnavailable) return
+    const firestore = db
+    if (!firestore) return
 
-    if (!eventId) {
-      setLoading(false)
-      return
-    }
+    if (!eventId) return
 
     // Cleanup previous subscription if it exists (React Strict Mode protection)
     if (unsubscribeRef.current) {
@@ -126,7 +133,7 @@ export function useRealtimeEvent(eventId: string) {
     }
 
     try {
-      const eventRef = doc(db, 'events', eventId)
+      const eventRef = doc(firestore, 'events', eventId)
 
       // Set up real-time listener for a single event
       const unsubscribe = onSnapshot(
@@ -173,10 +180,19 @@ export function useRealtimeEvent(eventId: string) {
       }
     } catch (err) {
       console.error('Error setting up event listener:', err)
-      setError('Failed to set up real-time listener')
-      setLoading(false)
+      queueMicrotask(() => {
+        setError('Failed to set up real-time listener')
+        setLoading(false)
+      })
     }
-  }, [eventId])
+  }, [eventId, dbUnavailable])
+
+  if (dbUnavailable) {
+    return { event: null, loading: false, error: 'Firebase Firestore is not initialized' }
+  }
+  if (!eventId) {
+    return { event: null, loading: false, error: null }
+  }
 
   return { event, loading, error }
 }
@@ -185,22 +201,18 @@ export function useRealtimeEvent(eventId: string) {
  * Hook to listen to bookings for an event in real-time
  */
 export function useRealtimeBookings(eventId: string) {
-  const [bookings, setBookings] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const dbUnavailable = !db
+  const [bookings, setBookings] = useState<RealtimeBooking[]>([])
+  const [loading, setLoading] = useState(!dbUnavailable && !!eventId)
   const [error, setError] = useState<string | null>(null)
   const unsubscribeRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    if (!db) {
-      setError('Firebase Firestore is not initialized')
-      setLoading(false)
-      return
-    }
+    if (dbUnavailable) return
+    const firestore = db
+    if (!firestore) return
 
-    if (!eventId) {
-      setLoading(false)
-      return
-    }
+    if (!eventId) return
 
     // Cleanup previous subscription if it exists (React Strict Mode protection)
     if (unsubscribeRef.current) {
@@ -209,14 +221,14 @@ export function useRealtimeBookings(eventId: string) {
     }
 
     try {
-      const bookingsRef = collection(db, 'bookings')
+      const bookingsRef = collection(firestore, 'bookings')
       const bookingsQuery = query(bookingsRef, where('eventId', '==', eventId))
 
       // Set up real-time listener for bookings
       const unsubscribe = onSnapshot(
         bookingsQuery,
         (snapshot) => {
-          const bookingsData: any[] = []
+          const bookingsData: RealtimeBooking[] = []
           
           snapshot.forEach((doc) => {
             const data = doc.data()
@@ -275,10 +287,19 @@ export function useRealtimeBookings(eventId: string) {
       }
     } catch (err) {
       console.error('Error setting up bookings listener:', err)
-      setError('Failed to set up real-time listener')
-      setLoading(false)
+      queueMicrotask(() => {
+        setError('Failed to set up real-time listener')
+        setLoading(false)
+      })
     }
-  }, [eventId])
+  }, [eventId, dbUnavailable])
+
+  if (dbUnavailable) {
+    return { bookings: [], loading: false, error: 'Firebase Firestore is not initialized' }
+  }
+  if (!eventId) {
+    return { bookings: [], loading: false, error: null }
+  }
 
   return { bookings, loading, error }
 }

@@ -6,6 +6,7 @@ import { cancelBooking } from '../../actions'
 import { Trash2, FileText, ExternalLink } from 'lucide-react'
 import DeleteConfirmation from '../DeleteConfirmation'
 import type { Booking } from '@/types/booking'
+import { Button } from '@/components/ui/button'
 
 interface BookingActionsProps {
   booking: Booking
@@ -39,25 +40,34 @@ export default function BookingActions({ booking }: BookingActionsProps) {
   return (
     <>
       <div className="flex items-center gap-2">
-        <a
-          href={pdfUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors"
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
           title="Download confirmation PDF"
         >
-          <FileText className="w-4 h-4" />
-          <span className="hidden sm:inline">PDF</span>
-          <ExternalLink className="w-3 h-3 hidden sm:inline" />
-        </a>
-        <button
+          <a
+            href={pdfUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <FileText className="w-4 h-4" />
+            <span className="hidden sm:inline">PDF</span>
+            <ExternalLink className="w-3 h-3 hidden sm:inline" />
+          </a>
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => setShowDeleteConfirm(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+          className="text-red-600 hover:text-red-700 hover:bg-red-50"
           title="Cancel booking"
         >
           <Trash2 className="w-4 h-4" />
           <span className="hidden sm:inline">Cancel</span>
-        </button>
+        </Button>
       </div>
 
       {showDeleteConfirm && (

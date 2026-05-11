@@ -1,4 +1,8 @@
 import Link from 'next/link'
+import { CheckCircle } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 
 type SuccessPageProps = {
   searchParams: Promise<{
@@ -12,25 +16,27 @@ export default async function BkashSuccessPage({ searchParams }: SuccessPageProp
 
   return (
     <main className="min-h-[60vh] flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-2xl rounded-2xl border-2 border-green-200 bg-white p-8 shadow-lg">
-        <h1 className="text-2xl font-bold text-green-700 mb-3">Payment Successful</h1>
-        <p className="text-gray-700 mb-3">
-          Your payment is completed and your event registration is now confirmed.
-        </p>
-        <p className="text-gray-700 mb-6">
-          A confirmation email has been sent to your email address with all details.
-        </p>
-        {bookingId ? (
-          <p className="text-sm text-gray-500 mb-6">Booking ID: {bookingId}</p>
-        ) : null}
-        <Link
-          href="/events"
-          prefetch={false}
-          className="inline-flex items-center rounded-lg bg-indigo-600 px-5 py-3 font-semibold text-white hover:bg-indigo-700"
-        >
-          Back to Events
-        </Link>
-      </div>
+      <Card className="w-full max-w-2xl border-2 border-green-200 shadow-lg">
+        <CardContent className="p-8">
+          <h1 className="text-2xl font-bold text-green-700 mb-3">Payment Successful</h1>
+          <Alert className="mb-4 border-green-200 bg-green-50">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            <AlertTitle className="text-green-900">Registration confirmed</AlertTitle>
+            <AlertDescription className="text-green-800">
+              Your payment is completed and your event registration is now confirmed. A confirmation email
+              has been sent to your email address with all details.
+            </AlertDescription>
+          </Alert>
+          {bookingId ? (
+            <p className="text-sm text-gray-500 mb-6">Booking ID: {bookingId}</p>
+          ) : null}
+          <Button asChild className="bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Link href="/events" prefetch={false}>
+              Back to Events
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
     </main>
   )
 }

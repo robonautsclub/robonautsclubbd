@@ -3,6 +3,7 @@
 import { Download } from 'lucide-react'
 import { useTransition } from 'react'
 import { Booking } from '@/types/booking'
+import { Button } from '@/components/ui/button'
 
 interface ExportBookingsButtonProps {
   bookings: Booking[]
@@ -190,24 +191,26 @@ export default function ExportBookingsButton({ bookings, eventTitle }: ExportBoo
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button
+      <Button
+        type="button"
         onClick={exportToExcel}
         disabled={isPending}
-        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+        className="bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md"
         title="Download registrations as Excel file"
       >
         <Download className="w-4 h-4" />
         {isPending ? 'Exporting...' : 'Export to Excel'}
-      </button>
-      <button
+      </Button>
+      <Button
+        type="button"
         onClick={exportToPdf}
         disabled={isPending}
-        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+        className="bg-red-600 hover:bg-red-700 text-white shadow-sm hover:shadow-md"
         title="Download registrations as PDF file"
       >
         <Download className="w-4 h-4" />
         {isPending ? 'Exporting...' : 'Export as PDF'}
-      </button>
+      </Button>
     </div>
   )
 }

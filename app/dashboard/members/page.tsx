@@ -2,6 +2,10 @@ import { requireSuperAdmin } from '@/lib/auth'
 import { Users, Shield, UserCheck, UserX } from 'lucide-react'
 import CreateUserForm from './CreateUserForm'
 import UserActions from './UserActions'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 // Force dynamic rendering since this page uses cookies for authentication
 export const dynamic = 'force-dynamic'
@@ -72,54 +76,62 @@ export default async function MembersPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs sm:text-sm text-gray-600 mb-1">Total Users</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900">{users.length}</p>
+        <Card className="shadow-sm">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">Total Users</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{users.length}</p>
+              </div>
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
+              </div>
             </div>
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
-              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
+          </CardContent>
+        </Card>
+        <Card className="shadow-sm">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">Super Admins</p>
+                <p className="text-xl sm:text-2xl font-bold text-purple-600">{superAdmins.length}</p>
+              </div>
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
+              </div>
             </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs sm:text-sm text-gray-600 mb-1">Super Admins</p>
-              <p className="text-xl sm:text-2xl font-bold text-purple-600">{superAdmins.length}</p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-sm">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">Admins</p>
+                <p className="text-xl sm:text-2xl font-bold text-blue-600">{admins.length}</p>
+              </div>
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+              </div>
             </div>
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-              <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
+          </CardContent>
+        </Card>
+        <Card className="shadow-sm">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">Active</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-600">{activeUsers.length}</p>
+              </div>
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+              </div>
             </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs sm:text-sm text-gray-600 mb-1">Admins</p>
-              <p className="text-xl sm:text-2xl font-bold text-blue-600">{admins.length}</p>
-            </div>
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-              <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs sm:text-sm text-gray-600 mb-1">Active</p>
-              <p className="text-xl sm:text-2xl font-bold text-green-600">{activeUsers.length}</p>
-            </div>
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-green-100 flex items-center justify-center">
-              <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Users Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <Card className="shadow-sm overflow-hidden p-0">
         <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-200 bg-linear-to-r from-indigo-50 to-blue-50">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-indigo-500 flex items-center justify-center">
@@ -142,39 +154,39 @@ export default async function MembersPage() {
               <CreateUserForm />
             </div>
           ) : (
-            <table className="w-full min-w-[800px]">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider">
+            <Table className="min-w-[800px]">
+              <TableHeader className="bg-gray-50">
+                <TableRow>
+                  <TableHead className="px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider">
                     User
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider">
                     Role
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider">
                     Status
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider">
                     Email Verified
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-4 sm:px-6 py-3 text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider">
                     Last Sign In
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-right text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                  </TableHead>
+                  <TableHead className="px-4 sm:px-6 py-3 text-right text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wider">
                     Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="bg-white">
                 {users.map((user) => (
-                  <tr key={user.uid} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                  <TableRow key={user.uid} className="hover:bg-gray-50">
+                    <TableCell className="px-4 sm:px-6 py-4">
                       <div className="flex items-center">
-                        <div className="shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                          <span className="text-indigo-600 font-semibold text-sm">
+                        <Avatar className="h-10 w-10 bg-indigo-100">
+                          <AvatarFallback className="bg-indigo-100 text-indigo-600 font-semibold text-sm">
                             {user.displayName?.[0]?.toUpperCase() || user.email[0]?.toUpperCase() || 'U'}
-                          </span>
-                        </div>
+                          </AvatarFallback>
+                        </Avatar>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
                             {user.displayName || 'No name'}
@@ -182,65 +194,68 @@ export default async function MembersPage() {
                           <div className="text-sm text-gray-500">{user.email}</div>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    </TableCell>
+                    <TableCell className="px-4 sm:px-6 py-4">
+                      <Badge
+                        variant="secondary"
+                        className={
                           user.role === 'superAdmin'
-                            ? 'bg-purple-100 text-purple-800'
-                            : 'bg-blue-100 text-blue-800'
-                        }`}
+                            ? 'bg-purple-100 text-purple-800 hover:bg-purple-100'
+                            : 'bg-blue-100 text-blue-800 hover:bg-blue-100'
+                        }
                       >
                         {user.role === 'superAdmin' ? 'Super Admin' : 'Admin'}
-                      </span>
-                    </td>
-                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="px-4 sm:px-6 py-4">
+                      <Badge
+                        variant="secondary"
+                        className={
                           user.disabled
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-green-100 text-green-800'
-                        }`}
+                            ? 'bg-red-100 text-red-800 hover:bg-red-100'
+                            : 'bg-green-100 text-green-800 hover:bg-green-100'
+                        }
                       >
                         {user.disabled ? (
                           <>
-                            <UserX className="w-3 h-3 mr-1" />
+                            <UserX className="w-3 h-3" />
                             Disabled
                           </>
                         ) : (
                           <>
-                            <UserCheck className="w-3 h-3 mr-1" />
+                            <UserCheck className="w-3 h-3" />
                             Active
                           </>
                         )}
-                      </span>
-                    </td>
-                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="px-4 sm:px-6 py-4">
+                      <Badge
+                        variant="secondary"
+                        className={
                           user.emailVerified
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}
+                            ? 'bg-green-100 text-green-800 hover:bg-green-100'
+                            : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100'
+                        }
                       >
                         {user.emailVerified ? 'Verified' : 'Unverified'}
-                      </span>
-                    </td>
-                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="px-4 sm:px-6 py-4 text-sm text-gray-500">
                       {user.lastSignIn
                         ? new Date(user.lastSignIn).toLocaleDateString()
                         : 'Never'}
-                    </td>
-                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    </TableCell>
+                    <TableCell className="px-4 sm:px-6 py-4 text-right text-sm font-medium">
                       <UserActions user={user} currentUserUid={session.uid} />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           )}
         </div>
-      </div>
+      </Card>
     </div>
   )
 }
