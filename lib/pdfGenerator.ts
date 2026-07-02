@@ -6,6 +6,7 @@ import type { Event } from '@/types/event'
 import { SITE_CONFIG } from './site-config'
 import { formatEventDates, getFirstEventDate, parseEventDates } from './dateUtils'
 import { sanitizeEventForPDF, sanitizeBookingDetailsForPDF, sanitizeTextForPDF } from './textSanitizer'
+import { PDFKIT_FONT_DATA } from './pdfkitFontData'
 import { join, dirname, basename } from 'path'
 import { existsSync, readdirSync, readFileSync } from 'fs'
 
@@ -24,6 +25,44 @@ interface GeneratePDFProps {
   event: Event
   bookingDetails: BookingDetails
   verificationUrl: string // Should include bookingId parameter
+}
+
+/**
+ * Look up an embedded PDFKit .afm font by filename.
+ */
+function getEmbeddedFontData(fileName: string): Buffer | null {
+  if (PDFKIT_FONT_DATA[fileName]) {
+    return PDFKIT_FONT_DATA[fileName]
+  }
+  const normalized = fileName.endsWith('.afm') ? fileName : `${fileName}.afm`
+  return PDFKIT_FONT_DATA[normalized] ?? null
+}
+
+/**
+ * Resolve a PDFKit font read to an in-memory buffer or filesystem path.
+ */
+function resolveFontRead(pathStr: string, fontPath: string | null): Buffer | null {
+  const fileName = pathStr.split(/[\/\\]/).pop() || ''
+  if (fileName.endsWith('.afm')) {
+    const embedded = getEmbeddedFontData(fileName)
+    if (embedded) return embedded
+    if (fontPath) {
+      const correctPath = join(fontPath, fileName)
+      if (existsSync(correctPath)) {
+        return readFileSync(correctPath)
+      }
+    }
+  }
+  if (fileName.includes('Times-Roman') || fileName.includes('TimesRoman')) {
+    return getEmbeddedFontData('Times-Roman.afm')
+  }
+  if (fileName.includes('Helvetica-Bold')) {
+    return getEmbeddedFontData('Helvetica-Bold.afm')
+  }
+  if (fileName.includes('Helvetica')) {
+    return getEmbeddedFontData('Helvetica.afm')
+  }
+  return null
 }
 
 /**
@@ -192,10 +231,11 @@ type ReadFileSyncFn = (path: string | Buffer | number, options?: string) => Buff
  * Returns the original function and the patched function setup status
  * This is the most reliable way to handle font loading in serverless environments
  */
-function setupPDFKitFonts(): { originalReadFileSync: ReadFileSyncFn; fontPath: string | null } | null {
+function setupPDFKitFonts(): { originalReadFileSync: ReadFileSyncFn } | null {
   try {
     const fontPath = resolvePDFKitFontPath()
-    if (!fontPath) {
+    const hasEmbeddedFonts = Object.keys(PDFKIT_FONT_DATA).length > 0
+    if (!fontPath && !hasEmbeddedFonts) {
       return null
     }
 
@@ -216,27 +256,13 @@ function setupPDFKitFonts(): { originalReadFileSync: ReadFileSyncFn; fontPath: s
         (pathStr.includes('data') || pathStr.includes('.afm') || pathStr.includes('js'))
       
       if (isPDFKitFontRequest) {
-        // Extract just the filename
-        const fileName = pathStr.split(/[\/\\]/).pop() || ''
-        if (fileName.endsWith('.afm')) {
-          // Try to find the font file in our resolved path
-          const correctPath = join(fontPath, fileName)
-          if (existsSync(correctPath)) {
-            return originalReadFileSync(correctPath, ...args)
+        const fontData = resolveFontRead(pathStr, fontPath)
+        if (fontData) {
+          const encoding = args[0]
+          if (encoding === 'utf8' || encoding === 'utf-8') {
+            return fontData.toString('utf8')
           }
-        }
-        // Handle font name references (without .afm extension)
-        if (fileName.includes('Times-Roman') || fileName.includes('TimesRoman')) {
-          const timesRomanPath = join(fontPath, 'Times-Roman.afm')
-          if (existsSync(timesRomanPath)) {
-            return originalReadFileSync(timesRomanPath, ...args)
-          }
-        }
-        if (fileName.includes('Helvetica')) {
-          const helveticaPath = join(fontPath, 'Helvetica.afm')
-          if (existsSync(helveticaPath)) {
-            return originalReadFileSync(helveticaPath, ...args)
-          }
+          return fontData
         }
       }
       
@@ -244,30 +270,22 @@ function setupPDFKitFonts(): { originalReadFileSync: ReadFileSyncFn; fontPath: s
       try {
         return originalReadFileSync(path, ...args)
       } catch (error: unknown) {
-        // If the original path fails and it's a PDFKit font file, try our resolved path
+        // If the original path fails and it's a PDFKit font file, try embedded/fs fallback
         const nodeError = error as { code?: string }
         if (nodeError.code === 'ENOENT' && isPDFKitFontRequest) {
-          const fileName = pathStr.split(/[\/\\]/).pop() || ''
-          if (fileName.endsWith('.afm')) {
-            const correctPath = join(fontPath, fileName)
-            if (existsSync(correctPath)) {
-              return originalReadFileSync(correctPath, ...args)
+          const fontData = resolveFontRead(pathStr, fontPath)
+          if (fontData) {
+            const encoding = args[0]
+            if (encoding === 'utf8' || encoding === 'utf-8') {
+              return fontData.toString('utf8')
             }
-          }
-          // Try Times-Roman first, then Helvetica as fallback
-          const timesRomanPath = join(fontPath, 'Times-Roman.afm')
-          if (existsSync(timesRomanPath)) {
-            return originalReadFileSync(timesRomanPath, ...args)
-          }
-          const helveticaPath = join(fontPath, 'Helvetica.afm')
-          if (existsSync(helveticaPath)) {
-            return originalReadFileSync(helveticaPath, ...args)
+            return fontData
           }
         }
         throw error
       }
     }
-    return { originalReadFileSync, fontPath }
+    return { originalReadFileSync }
   } catch (error) {
     // Log error but don't throw - return null to allow fallback behavior
     // Error logging is intentional for debugging font loading issues
@@ -277,6 +295,36 @@ function setupPDFKitFonts(): { originalReadFileSync: ReadFileSyncFn; fontPath: s
     }
     return null
   }
+}
+
+/**
+ * Load site logo for PDF header. Tries local filesystem first, then fetches from site URL.
+ */
+async function loadLogoBuffer(verificationUrl: string): Promise<Buffer | null> {
+  const logoFileName = basename(SITE_CONFIG.assets.logo)
+
+  try {
+    const logoPath = join(process.cwd(), 'public', logoFileName)
+    if (existsSync(logoPath)) {
+      return readFileSync(logoPath)
+    }
+  } catch {
+    // Continue to fetch fallback
+  }
+
+  try {
+    const baseUrl = verificationUrl.replace(/\/verify-booking.*$/, '')
+    const logoUrl = `${baseUrl}${SITE_CONFIG.assets.logo}`
+    const response = await fetch(logoUrl)
+    if (response.ok) {
+      const arrayBuffer = await response.arrayBuffer()
+      return Buffer.from(arrayBuffer)
+    }
+  } catch {
+    // Logo optional; continue without it
+  }
+
+  return null
 }
 
 /**
@@ -296,7 +344,7 @@ export async function generateBookingConfirmationPDF({
     // Dynamic require needed for monkey-patching in serverless environments
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const fs = require('fs')
-    let fontPatch: { originalReadFileSync: ReadFileSyncFn; fontPath: string | null } | null = null
+    let fontPatch: { originalReadFileSync: ReadFileSyncFn } | null = null
     
     try {
       // Setup fonts before creating PDFDocument
@@ -354,16 +402,8 @@ export async function generateBookingConfirmationPDF({
         reject(error)
       })
       
-      // Load logo from public folder (optional)
-      let logoBuffer: Buffer | null = null
-      try {
-        const logoPath = join(process.cwd(), 'public', basename(SITE_CONFIG.assets.logo))
-        if (existsSync(logoPath)) {
-          logoBuffer = readFileSync(logoPath)
-        }
-      } catch {
-        // Logo optional; continue without it
-      }
+      // Load logo (optional) — filesystem in dev, fetch in serverless
+      const logoBuffer = await loadLogoBuffer(verificationUrl)
 
       // Dynamically import QR code generator only when needed
       const { generateQRCodeBuffer } = await import('./qrCode')

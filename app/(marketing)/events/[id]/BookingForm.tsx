@@ -142,7 +142,7 @@ export default function BookingForm({ event, schools }: { event: Event; schools:
           </p>
           {submissionWarning ? (
             <Alert className="mt-4 border-amber-200 bg-amber-50 text-left">
-              <AlertTitle className="text-amber-900">Heads up — confirmation email not delivered</AlertTitle>
+              <AlertTitle className="text-amber-900">Heads up</AlertTitle>
               <AlertDescription className="text-amber-800">{submissionWarning}</AlertDescription>
             </Alert>
           ) : (
