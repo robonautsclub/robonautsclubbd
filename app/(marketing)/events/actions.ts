@@ -6,6 +6,7 @@ import { adminDb } from '@/lib/firebase-admin'
 import { Event } from '@/types/event'
 import { Course } from '@/types/course'
 import { sendBookingConfirmationEmail } from '@/lib/email'
+import { uploadPDFToStorage } from '@/lib/pdfStorage'
 import { generateRegistrationId } from '@/lib/registrationId'
 import { isRegistrationOpen } from '@/lib/dateUtils'
 import {
@@ -356,13 +357,34 @@ async function createBookingRecordAndSendEmail(
     },
   })
 
-  // Persist email delivery state on the booking so the registration is preserved even if email fails.
+  // Persist email delivery state and PDF metadata on the booking.
   // Admins can later resend the confirmation; users don't lose their spot due to a transient Brevo issue.
   try {
+    const pdfUpdate: Record<string, unknown> = {}
+
+    if (emailResult.pdfBuffer && emailResult.pdfBuffer.length > 0) {
+      const uploadedPdfUrl = await uploadPDFToStorage(
+        emailResult.pdfBuffer,
+        formData.eventId,
+        bookingId
+      )
+      if (uploadedPdfUrl) {
+        pdfUpdate.pdfUrl = uploadedPdfUrl
+      }
+      pdfUpdate.pdfGenerated = true
+      pdfUpdate.pdfGeneratedAt = new Date()
+    } else {
+      pdfUpdate.pdfGenerated = false
+      if (emailResult.pdfError) {
+        pdfUpdate.pdfError = emailResult.pdfError
+      }
+    }
+
     if (emailResult.success) {
       await bookingRef.update({
         emailSent: true,
         emailSentAt: new Date(),
+        ...pdfUpdate,
       })
     } else {
       console.error(
@@ -373,10 +395,11 @@ async function createBookingRecordAndSendEmail(
         emailSent: false,
         emailError: emailResult.error || 'Unknown email service error',
         emailFailedAt: new Date(),
+        ...pdfUpdate,
       })
     }
   } catch (updateError) {
-    console.error(`[booking] Failed to update email status for booking ${bookingId}:`, updateError)
+    console.error(`[booking] Failed to update email/PDF status for booking ${bookingId}:`, updateError)
   }
 
   revalidatePath(`/dashboard/events/${formData.eventId}`)
@@ -389,6 +412,14 @@ async function createBookingRecordAndSendEmail(
       success: true,
       bookingId,
       warning: `Your registration was saved (ID: ${registrationId}), but we couldn't send the confirmation email. Please contact support — our team has been notified. Details: ${emailResult.error || 'Unknown error'}`,
+    }
+  }
+
+  if (!emailResult.pdfAttached) {
+    return {
+      success: true,
+      bookingId,
+      warning: `Your registration was confirmed (ID: ${registrationId}), but we couldn't generate the confirmation PDF. Please contact support if you need your registration document.`,
     }
   }
 

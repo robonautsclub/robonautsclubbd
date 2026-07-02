@@ -21,6 +21,9 @@ interface BookingConfirmationEmailProps {
 interface EmailResult {
   success: boolean
   error?: string
+  pdfAttached?: boolean
+  pdfError?: string
+  pdfBuffer?: Buffer | null
 }
 
 
@@ -97,6 +100,7 @@ export async function sendBookingConfirmationEmail({
     const verificationUrl = `${baseUrl}/verify-booking?registrationId=${encodeURIComponent(registrationId)}`
     
     let pdfBuffer: Buffer | null = null
+    let pdfError: string | undefined
 
     try {
       pdfBuffer = await generateBookingConfirmationPDF({
@@ -113,10 +117,12 @@ export async function sendBookingConfirmationEmail({
       console.log(
         `[email] PDF generated for registration ${registrationId}: ${pdfBuffer?.length ?? 0} bytes`
       )
-    } catch (pdfError) {
+    } catch (pdfGenError) {
+      pdfError =
+        pdfGenError instanceof Error ? pdfGenError.message : 'Unknown PDF generation error'
       console.error(
         `[email] Error generating PDF for registration ${registrationId}:`,
-        pdfError instanceof Error ? pdfError.stack || pdfError.message : pdfError
+        pdfGenError instanceof Error ? pdfGenError.stack || pdfGenError.message : pdfGenError
       )
       // Continue without PDF attachment if generation fails — email is more important than the attachment.
     }
@@ -444,6 +450,7 @@ export async function sendBookingConfirmationEmail({
 
     // Attach PDF if generated successfully. Brevo's SendSmtpEmail.attachment is
     // Array<{ url? | content?, name? }> where `content` must be base64-encoded.
+    let pdfAttached = false
     if (pdfBuffer && pdfBuffer.length > 0) {
       try {
         const base64Content = pdfBuffer.toString('base64')
@@ -453,10 +460,14 @@ export async function sendBookingConfirmationEmail({
             content: base64Content,
           },
         ]
+        pdfAttached = true
         console.log(
           `[email] PDF attached to email for registration ${registrationId}: ${pdfBuffer.length} bytes (${base64Content.length} base64 chars)`
         )
       } catch (attachmentError) {
+        const attachMsg =
+          attachmentError instanceof Error ? attachmentError.message : 'Failed to prepare PDF attachment'
+        pdfError = pdfError ? `${pdfError}; ${attachMsg}` : attachMsg
         console.error(
           `[email] Error preparing PDF attachment for registration ${registrationId}:`,
           attachmentError instanceof Error ? attachmentError.message : attachmentError
@@ -467,6 +478,13 @@ export async function sendBookingConfirmationEmail({
         `[email] No PDF attachment for registration ${registrationId} (buffer is ${pdfBuffer === null ? 'null' : 'empty'}). Email will be sent without attachment.`
       )
     }
+
+    const withPdfMeta = (result: EmailResult): EmailResult => ({
+      ...result,
+      pdfAttached,
+      pdfError,
+      pdfBuffer: pdfBuffer && pdfBuffer.length > 0 ? pdfBuffer : null,
+    })
 
     try {
       const data = await apiInstance.sendTransacEmail(sendSmtpEmail)
@@ -482,7 +500,7 @@ export async function sendBookingConfirmationEmail({
         console.log(
           `[email] Brevo accepted registration ${registrationId} (status ${httpStatus ?? 'unknown'}, messageId ${body.messageId})`
         )
-        return { success: true }
+        return withPdfMeta({ success: true })
       }
 
       // Some Brevo error responses come back without throwing (e.g. 2xx with code field).
@@ -500,7 +518,7 @@ export async function sendBookingConfirmationEmail({
         console.warn(
           `[email] Brevo returned ${httpStatus} but no messageId for registration ${registrationId}. Treating as success but please verify in Brevo dashboard.`
         )
-        return { success: true }
+        return withPdfMeta({ success: true })
       }
 
       console.error('[email] Unexpected Brevo response shape:', {
