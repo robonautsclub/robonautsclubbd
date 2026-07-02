@@ -4,6 +4,9 @@ export type Booking = {
   eventId: string // Reference to event document
   registrationId: string // Unique registration ID (format: REG-YYYYMMDD-XXXXX)
   pdfUrl?: string // Cloudinary URL to stored PDF confirmation document
+  pdfGenerated?: boolean
+  pdfGeneratedAt?: Date | string
+  pdfError?: string
   name: string
   school: string
   email: string
