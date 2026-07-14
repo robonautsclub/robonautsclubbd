@@ -346,7 +346,7 @@ export default function AboutPage() {
             </div>
           </section>
 
-          <section className="mb-12 sm:mb-16 md:mb-20">
+          <section id="contact" className="mb-12 sm:mb-16 md:mb-20 scroll-mt-24">
             <SectionHeader title="Contact Information" subtitle="Get in touch with us" />
             <div className="grid lg:grid-cols-3 gap-6 sm:gap-8 mb-8 sm:mb-12">
               <div>
