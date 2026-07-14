@@ -42,6 +42,7 @@ export const SITE_CONFIG = {
     { title: "Home", href: "/" },
     { title: "Events", href: "/events" },
     { title: "News", href: "/news" },
+    { title: "Robofest", href: "/robofest" },
     { title: "Gallery", href: "/gallery" },
     { title: "About us", href: "/about" },
   ],
