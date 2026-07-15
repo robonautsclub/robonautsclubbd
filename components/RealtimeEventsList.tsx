@@ -47,22 +47,22 @@ function getEventDateInBST(dateString: string): Date {
 function isEventGoingOn(event: Event): boolean {
   const bstNow = getBSTTime()
   const eventDates = parseEventDates(event.date)
-  
+
   if (eventDates.length === 0) return false
-  
+
   // Check if today is within the event date range
   const sortedDates = [...eventDates].sort()
   const firstEventDate = getEventDateInBST(sortedDates[0])
   const lastEventDate = getEventDateInBST(sortedDates[sortedDates.length - 1])
-  
+
   const daysFromStart = differenceInDays(bstNow, firstEventDate)
   const daysFromEnd = differenceInDays(bstNow, lastEventDate)
-  
+
   // Check if today is within the event date range (inclusive)
   const isWithinRange = daysFromStart >= 0 && daysFromEnd <= 0
-  
+
   if (!isWithinRange) return false
-  
+
   // Find which event date matches today
   let matchedEventDate: string | null = null
   for (const eventDateStr of sortedDates) {
@@ -73,33 +73,33 @@ function isEventGoingOn(event: Event): boolean {
       break
     }
   }
-  
+
   // If no exact match but we're within range, use the first date
   if (!matchedEventDate) {
     matchedEventDate = sortedDates[0]
   }
-  
+
   // If event has a time, check if current time is past the event start time
   if (event.time && matchedEventDate) {
     try {
       // Parse time string (e.g., "10:00 AM", "2:30 PM", "14:00")
       const timeStr = event.time.trim()
-      
+
       // Handle formats like "10:00 AM" or "2:30 PM"
       const is12Hour = /AM|PM/i.test(timeStr)
       let eventHours = 0
       let eventMinutes = 0
-      
+
       if (is12Hour) {
         const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i)
         if (match) {
           let hours = parseInt(match[1])
           const minutes = parseInt(match[2])
           const period = match[3].toUpperCase()
-          
+
           if (period === 'PM' && hours !== 12) hours += 12
           if (period === 'AM' && hours === 12) hours = 0
-          
+
           eventHours = hours
           eventMinutes = minutes
         } else {
@@ -117,24 +117,24 @@ function isEventGoingOn(event: Event): boolean {
           return true
         }
       }
-      
+
       // Get the matched event date in BST and create datetime
       const eventDateBST = getEventDateInBST(matchedEventDate)
       const eventDateTime = new Date(eventDateBST)
       eventDateTime.setHours(eventHours, eventMinutes, 0, 0)
-      
+
       // Check if current time is past or equal to event start time
       // Assume event runs for 8 hours (full day event) - adjust as needed
       const eventEndTime = new Date(eventDateTime)
       eventEndTime.setHours(eventEndTime.getHours() + 8)
-      
+
       return bstNow >= eventDateTime && bstNow <= eventEndTime
     } catch {
       // If time parsing fails, assume event is going on if it's today
       return true
     }
   }
-  
+
   // If no time specified, assume event is going on all day if it's today
   return true
 }
@@ -154,7 +154,7 @@ const EventCard = memo(({ event }: { event: Event }) => {
   const isUpcoming = isEventUpcoming(event.date)
   const status = isUpcoming ? 'Upcoming' : 'Completed'
   const imageSrc = event.image && !imageError ? event.image : FALLBACK_IMAGE
-  
+
   // Calculate time until event in Bangladesh Standard Time
   let timeDisplay: string | null = null
   if (firstDate && isUpcoming) {
@@ -164,17 +164,17 @@ const EventCard = memo(({ event }: { event: Event }) => {
     } else {
       const bstNow = getBSTTime()
       // Parse the event date string and convert to BST
-      const eventDateStr = Array.isArray(event.date) 
-        ? event.date[0] 
+      const eventDateStr = Array.isArray(event.date)
+        ? event.date[0]
         : typeof event.date === 'string' && event.date.includes(',')
         ? event.date.split(',')[0].trim()
         : event.date || ''
-      
+
       if (eventDateStr) {
         const eventDateBST = getEventDateInBST(eventDateStr)
         const hoursUntil = differenceInHours(eventDateBST, bstNow)
         const daysUntil = differenceInDays(eventDateBST, bstNow)
-        
+
         if (daysUntil === 0) {
           // Same day but event hasn't started yet
           if (hoursUntil >= 0) {
@@ -259,10 +259,12 @@ const EventCard = memo(({ event }: { event: Event }) => {
             )}
           </div>
 
-          {/* Description */}
+          {/*
           <p className="text-gray-700 text-xs sm:text-sm mb-3 sm:mb-4 flex-1 line-clamp-3">
             {event.description}
           </p>
+          */}
+
 
           {/* Tags */}
           {event.tags && event.tags.length > 0 && (
@@ -337,7 +339,7 @@ export default function RealtimeEventsList({ initialEvents = [] }: RealtimeEvent
     return [...displayEvents].sort((a, b) => {
       const dateA = getFirstEventDate(a.date)
       const dateB = getFirstEventDate(b.date)
-      
+
       if (!dateA && !dateB) return 0
       if (!dateA) return 1
       if (!dateB) return -1
@@ -418,4 +420,3 @@ export default function RealtimeEventsList({ initialEvents = [] }: RealtimeEvent
     </>
   )
 }
-

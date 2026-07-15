@@ -16,13 +16,13 @@ import {
 import AboutMap from "./AboutMap";
 import { Card, CardContent } from "@/components/ui/card";
 
-const GOOGLE_MAPS_LINK = "https://maps.app.goo.gl/3kWfm4iG8a3ZdfLF6";
+const GOOGLE_MAPS_LINK = "https://maps.app.goo.gl/yhRBigbxoJNpqMbg9";
 
 const STATS = [
-  { icon: Users, value: "500+", label: "Active Members" },
-  { icon: Trophy, value: "50+", label: "Events Hosted" },
-  { icon: Award, value: "15+", label: "Competition Awards" },
-  { icon: Target, value: "100+", label: "Projects Completed" },
+  { icon: Users, value: "200+", label: "Active Members" },
+  { icon: Trophy, value: "10+", label: "Events Hosted" },
+  { icon: Award, value: "10+", label: "Competition Awards" },
+  { icon: Target, value: "15+", label: "Projects Completed" },
 ];
 
 const STAT_ICON_COLORS = [
@@ -85,20 +85,20 @@ const WHAT_WE_DO_ITEMS = [
 
 const TEAM_MEMBERS = [
   {
-    name: "Dr. Ahmed Rahman",
-    role: "Lead Robotics Instructor",
+    name: "Md Shakib Hasan",
+    role: "Robotics Instructor",
     expertise: "Robotics Engineering, Competition Strategy",
     icon: GraduationCap,
   },
   {
-    name: "Fatima Khan",
-    role: "STEM Education Specialist",
+    name: "Md Naziur Rahman Nayeem",
+    role: "Robotics Instructor",
     expertise: "Curriculum Development, Student Mentorship",
-    icon: Lightbulb,
+    icon: GraduationCap,
   },
   {
-    name: "Mohammad Hassan",
-    role: "Programming & AI Mentor",
+    name: "Mohammad Salah Akram Fuad",
+    role: "Programming & Web Development Instructor",
     expertise: "Python, Machine Learning, Arduino",
     icon: Target,
   },
