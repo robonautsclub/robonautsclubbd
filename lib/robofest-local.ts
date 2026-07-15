@@ -6,7 +6,7 @@
 export const ROBOFEST_LOCAL = {
   statusBadge: "Local Round · September 2026",
   headline: "Robofest Local Round · Bangladesh",
-  lead: "Compete in Dhaka and Chittagong for a path to the Robofest World Championship at Lawrence Technological University, USA.",
+  lead: "Compete in Dhaka and Chittagong for a path to the Robofest World Championship",
   dateLabel: "4–12 September 2026",
   timeLabel: null as string | null,
   venueLabel: "Dhaka & Chittagong · TBA",
