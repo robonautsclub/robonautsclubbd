@@ -4,7 +4,7 @@ import {
   getRobofestCategoryImage,
   getRobofestContent,
 } from "@/lib/robofest-content";
-import { SITE_CONFIG } from "@/lib/site-config";
+import { ROBOFEST_HOW_IT_WORKS, ROBOFEST_LOCAL } from "@/lib/robofest-local";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
@@ -21,10 +21,6 @@ function MaterialIcon({
       {name}
     </span>
   );
-}
-
-function venueIsTba(venueLabel: string): boolean {
-  return /tba|to be announced/i.test(venueLabel);
 }
 
 function CircuitBackdrop({ className = "" }: { className?: string }) {
@@ -121,183 +117,118 @@ export default async function RobofestLocalRoundPage() {
             </span>
           </div>
 
-          <p className="text-sm sm:text-base md:text-lg font-bold uppercase tracking-[0.28em] text-cyan-700 mb-3">
-            {SITE_CONFIG.name}
+          <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.28em] text-cyan-700 mb-3">
+            {ROBOFEST_LOCAL.presentsLabel}
           </p>
 
           <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold mb-5 sm:mb-6 tracking-tight px-2 text-slate-900">
-            {content.headline}
+            {ROBOFEST_LOCAL.headline}
           </h1>
 
-          <p className="text-base sm:text-lg md:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed px-2 mb-8 sm:mb-10">
-            {content.lead}
+          <p className="text-base sm:text-lg md:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed px-2">
+            {ROBOFEST_LOCAL.lead}
           </p>
+        </div>
+      </section>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 px-2">
-            <Button
-              asChild
-              size="lg"
-              className="bg-cyan-600 text-white hover:bg-cyan-700 shadow-md shadow-cyan-600/20 w-full sm:w-auto font-semibold"
-            >
-              <a href="#categories" className="inline-flex items-center gap-1.5">
-                Enter a category
-                <MaterialIcon name="arrow_forward" className="text-lg" />
-              </a>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="border-slate-300 bg-white/80 text-slate-800 hover:bg-white hover:text-slate-900 w-full sm:w-auto backdrop-blur-sm"
-            >
-              <Link href={content.contactHref}>Contact &amp; info</Link>
-            </Button>
+      <section className="relative z-10 px-4 sm:px-6 -mt-6 sm:-mt-8 mb-2">
+        <div className="max-w-7xl mx-auto rounded-2xl border border-slate-200/80 bg-white shadow-lg shadow-slate-200/50 overflow-hidden">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+            <div className="p-4 sm:p-5 text-left">
+              <div className="flex items-center gap-2 text-cyan-700 mb-2">
+                <MaterialIcon name="calendar_month" className="text-xl" />
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Date
+                </span>
+              </div>
+              <ul className="space-y-1">
+                {ROBOFEST_LOCAL.dateLines.map((line) => (
+                  <li key={line} className="text-sm font-semibold text-slate-900">
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="p-4 sm:p-5 text-left">
+              <div className="flex items-center gap-2 text-cyan-700 mb-2">
+                <MaterialIcon name="location_on" className="text-xl" />
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Venue
+                </span>
+              </div>
+              <ul className="space-y-1">
+                {ROBOFEST_LOCAL.venueLines.map((line) => (
+                  <li key={line} className="text-sm font-semibold text-slate-900">
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="p-4 sm:p-5 text-left">
+              <div className="flex items-center gap-2 text-cyan-700 mb-2">
+                <MaterialIcon name="apartment" className="text-xl" />
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Host
+                </span>
+              </div>
+              <p className="text-sm font-semibold text-slate-900">
+                {content.hostName || ROBOFEST_LOCAL.hostName}
+              </p>
+            </div>
+
+            <div className="p-4 sm:p-5 text-left">
+              <div className="flex items-center gap-2 text-cyan-700 mb-2">
+                <MaterialIcon name="call" className="text-xl" />
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Contact
+                </span>
+              </div>
+              <p className="text-sm text-slate-800 mb-2">
+                <span className="font-medium text-slate-500">E-Mail:</span>{" "}
+                <a
+                  href={`mailto:${ROBOFEST_LOCAL.contactEmail}`}
+                  className="font-semibold text-cyan-700 hover:text-cyan-800 break-all"
+                >
+                  {ROBOFEST_LOCAL.contactEmail}
+                </a>
+              </p>
+              <ul className="space-y-2">
+                {ROBOFEST_LOCAL.contactLines.map((line) => (
+                  <li key={line.phone} className="text-sm text-slate-800">
+                    <span className="font-semibold text-slate-900">
+                      {line.label}:
+                    </span>{" "}
+                    <a
+                      href={`tel:${line.phone.replace(/\s/g, "")}`}
+                      className="font-semibold text-cyan-700 hover:text-cyan-800"
+                    >
+                      {line.phone}
+                    </a>
+                    <span className="block text-xs text-slate-500">
+                      ({line.note})
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       </section>
 
       <main className="flex-1 relative">
-        <section className="relative py-14 sm:py-20 px-4 sm:px-6 overflow-hidden bg-slate-50">
-          <CircuitBackdrop />
-          <div className="relative max-w-7xl mx-auto">
-            <SectionHeading
-              eyebrow="Mission timeline"
-              title="Round schedule"
-              description="Two Bangladesh launch sites—pick your city, build your robot, and race toward the world stage."
-            />
-
-            <div className="grid md:grid-cols-2 gap-5 sm:gap-6">
-              {content.rounds.map((round, index) => (
-                <article
-                  key={round.city}
-                  className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition-all duration-500 hover:-translate-y-1 hover:border-cyan-300 hover:shadow-lg"
-                >
-                  <div className="relative aspect-video overflow-hidden bg-slate-200">
-                    <Image
-                      src={round.image}
-                      alt=""
-                      fill
-                      className="object-cover transition-transform duration-700 group-hover:scale-105"
-                      sizes="(max-width: 768px) 100vw, 50vw"
-                    />
-                    <div className="absolute inset-0 bg-linear-to-t from-slate-900/70 via-slate-900/20 to-transparent" />
-                    <div className="absolute top-3 left-3">
-                      <span className="rounded-md border border-white/30 bg-black/40 px-2 py-1 font-mono text-[11px] text-cyan-100 backdrop-blur-sm">
-                        NODE-{String(index + 1).padStart(2, "0")}
-                      </span>
-                    </div>
-                    <span className="absolute bottom-3 left-3 rounded-full bg-white px-3 py-1 text-xs font-semibold tracking-wide text-cyan-800 uppercase shadow-sm">
-                      {round.city}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-1 flex-col p-5 sm:p-6">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-700 mb-2">
-                      {round.city} operations
-                    </p>
-                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight leading-snug mb-3">
-                      {round.title}
-                    </h3>
-                    <p className="text-sm text-slate-600 leading-relaxed mb-5">
-                      Deploy your autonomous robot in {round.city}. Local-round
-                      wins feed the path to the Robofest World Championship.
-                    </p>
-
-                    <ul className="space-y-3.5 flex-1">
-                      {(
-                        [
-                          {
-                            icon: "calendar_month",
-                            label: "Dates",
-                            value: round.dates,
-                          },
-                          {
-                            icon: "location_on",
-                            label: "Venue",
-                            value: round.venueLabel,
-                            detail: venueIsTba(round.venueLabel)
-                              ? "Exact venue locks in before competition day"
-                              : undefined,
-                          },
-                          {
-                            icon: "apartment",
-                            label: "Host",
-                            value: content.hostName,
-                          },
-                        ] as const
-                      ).map((row) => (
-                        <li key={row.label} className="flex items-start gap-3">
-                          <div className="w-9 h-9 rounded-lg border border-cyan-100 bg-cyan-50 text-cyan-700 flex items-center justify-center shrink-0">
-                            <MaterialIcon name={row.icon} className="text-xl" />
-                          </div>
-                          <div>
-                            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
-                              {row.label}
-                            </p>
-                            <p className="text-sm font-semibold text-slate-900">
-                              {row.value}
-                            </p>
-                            {"detail" in row && row.detail ? (
-                              <p className="text-xs text-slate-500 mt-0.5">
-                                {row.detail}
-                              </p>
-                            ) : null}
-                          </div>
-                        </li>
-                      ))}
-                      <li className="flex items-start gap-3">
-                        <div className="w-9 h-9 rounded-lg border border-cyan-100 bg-cyan-50 text-cyan-700 flex items-center justify-center shrink-0">
-                          <MaterialIcon name="call" className="text-xl" />
-                        </div>
-                        <div>
-                          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
-                            Contact
-                          </p>
-                          <Link
-                            href={content.contactHref}
-                            className="text-sm font-semibold text-cyan-700 hover:text-cyan-800"
-                          >
-                            About · Contact
-                          </Link>
-                          <p className="text-xs text-slate-500 mt-0.5">
-                            Info &amp; registration help
-                          </p>
-                        </div>
-                      </li>
-                    </ul>
-
-                    <div className="mt-6">
-                      <Button
-                        asChild
-                        className="w-full bg-cyan-600 text-white hover:bg-cyan-700 font-semibold"
-                      >
-                        <a
-                          href="#categories"
-                          className="inline-flex items-center gap-1.5"
-                        >
-                          Browse categories &amp; register
-                          <MaterialIcon name="arrow_forward" className="text-base" />
-                        </a>
-                      </Button>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
         <section className="relative py-14 sm:py-20 px-4 sm:px-6 overflow-hidden border-y border-slate-200 bg-white">
           <CircuitBackdrop className="opacity-60" />
           <div className="relative max-w-7xl mx-auto">
             <SectionHeading
               eyebrow="Protocol"
-              title="How the local round works"
-              description="Official Robofest by Lawrence Technological University—build autonomous systems here in Bangladesh, then aim for the world championship."
+              title="How the Local Round Works"
+              description="Compete in RoboFest Bangladesh 2026 through Robotics, Programming & Innovation Challenges with Top Performers getting closer to the World Stage."
             />
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-              {content.howItWorks.map((step, index) => (
+              {ROBOFEST_HOW_IT_WORKS.map((step, index) => (
                 <div
                   key={step.title}
                   className="group relative rounded-2xl border border-slate-200 bg-slate-50/80 p-5 sm:p-6 transition-all duration-300 hover:border-cyan-300 hover:bg-cyan-50/50 hover:shadow-md"

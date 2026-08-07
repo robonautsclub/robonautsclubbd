@@ -5,34 +5,50 @@
 
 export const ROBOFEST_LOCAL = {
   statusBadge: "Local Round · September 2026",
-  headline: "Robofest Local Round · Bangladesh",
-  lead: "Compete in Dhaka and Chittagong for a path to the Robofest World Championship",
-  dateLabel: "4–12 September 2026",
+  presentsLabel: "Robonauts Ltd Presents",
+  headline: "RoboFest Bangladesh 2026",
+  lead: "Compete in Dhaka & Chittagong for a Path to the RoboFest World Championship 2027 in South Korea.",
+  dateLabel: "11 September (CTG) · 18 September (DHK)",
   timeLabel: null as string | null,
-  venueLabel: "Dhaka & Chittagong · TBA",
+  venueLabel: "Chittagong · TBA · Dhaka · TBA",
   venueDetail: "Exact venues to be announced",
   hostName: "Robonauts Ltd",
   officialSite: "https://www.robofest.net/",
   categoriesUrl: "https://www.robofest.net/index.php/current-competitions/overview",
   contactHref: "/about#contact",
+  contactEmail: "events@robonautsltd.com",
+  contactLines: [
+    {
+      label: "Contact - 01",
+      phone: "+880 1897-666864",
+      note: "Competitions Related",
+    },
+    {
+      label: "Contact - 02",
+      phone: "+880 1954-954047",
+      note: "Registrations Related",
+    },
+  ],
+  dateLines: ["11 September (CTG)", "18 September (DHK)"],
+  venueLines: ["Chittagong - TBA", "Dhaka - TBA"],
   placeholders: {
     schedule: "/olympiads/robofest.png",
     roundAccent: "/olympiads/robofest.png",
   },
   rounds: [
     {
-      city: "Dhaka",
-      title: "ROBOFEST BANGLADESH ROUND 2026 | DHAKA",
-      dates: "4–5 September 2026",
-      venueLabel: "Venue to be announced",
-      image: "/robofest/dhaka.jpg",
-    },
-    {
       city: "Chittagong",
       title: "ROBOFEST BANGLADESH ROUND 2026 | CHITTAGONG",
-      dates: "11–12 September 2026",
-      venueLabel: "Venue to be announced",
+      dates: "11 September 2026",
+      venueLabel: "Chittagong - TBA",
       image: "/roboclass.jpg",
+    },
+    {
+      city: "Dhaka",
+      title: "ROBOFEST BANGLADESH ROUND 2026 | DHAKA",
+      dates: "18 September 2026",
+      venueLabel: "Dhaka - TBA",
+      image: "/robofest/dhaka.jpg",
     },
   ],
 } as const;
@@ -141,27 +157,27 @@ export function getRobofestCategoryHref(slug: RobofestCategorySlug): string {
 export const ROBOFEST_HOW_IT_WORKS = [
   {
     icon: "group",
-    title: "Form a team",
+    title: "Form Your Team",
     description:
-      "Students in grades 4–12 join Junior or Senior divisions and pick a competition category.",
+      "Students in Grades 05 - 12 compete under Explorer (Grades 05 - 08) or Innovators (Grades 09 - 12) and form a Team of up to 4 Members.",
   },
   {
     icon: "smart_toy",
-    title: "Build & program",
+    title: "Choose Your Competition",
     description:
-      "Design fully autonomous robots—no remote control during matches. Any approved kit and language welcome.",
+      "Select from BottleSumo, Line-Following Bot, BuildAthon, or Robo-Exhibition, based on your Team's Interests & Skills.",
   },
   {
     icon: "flag",
-    title: "Compete in Bangladesh",
+    title: "Compete in the Local Round",
     description:
-      "Join the local rounds in Dhaka or Chittagong, hosted by Robonauts, and showcase your robot on home turf.",
+      "Compete in Dhaka or Chattogram under the Rules & Judging Format of your Selected Competition.",
   },
   {
     icon: "public",
-    title: "Aim for the World Championship",
+    title: "Path to the World Stage",
     description:
-      "Top qualifying teams earn a path to the Robofest World Championship at Lawrence Technological University, USA.",
+      "Outstanding Teams may earn the opportunity to represent Bangladesh at the Robofest World Championship 2027 in Seoul, South Korea.",
   },
 ] as const;
 
