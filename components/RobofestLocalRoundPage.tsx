@@ -5,7 +5,6 @@ import {
   getRobofestContent,
 } from "@/lib/robofest-content";
 import { SITE_CONFIG } from "@/lib/site-config";
-import ListingHeroSection from "@/components/ListingHeroSection";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
@@ -79,43 +78,58 @@ export default async function RobofestLocalRoundPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
-      <ListingHeroSection overlay="dark" imageSrc="/robofest/robofest.jpg">
-        <div className="absolute inset-0 z-[2] pointer-events-none" aria-hidden>
-          <div
-            className="absolute inset-0 opacity-25"
-            style={{
-              backgroundImage: `
-                linear-gradient(rgba(255,255,255,0.14) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.14) 1px, transparent 1px)
-              `,
-              backgroundSize: "32px 32px",
-              maskImage:
-                "radial-gradient(ellipse at center, black 20%, transparent 75%)",
-            }}
-          />
-          <div className="absolute inset-0 bg-linear-to-b from-slate-900/50 via-slate-900/45 to-slate-50" />
-        </div>
+      <section className="relative overflow-hidden px-4 sm:px-6 pt-16 sm:pt-20 md:pt-24 pb-14 sm:pb-20">
+        <div className="absolute inset-0 bg-linear-to-b from-sky-100 via-cyan-50 to-slate-50" aria-hidden />
+        <div
+          className="absolute inset-0 opacity-50"
+          style={{
+            backgroundImage: `
+              linear-gradient(rgba(8,145,178,0.08) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(8,145,178,0.08) 1px, transparent 1px)
+            `,
+            backgroundSize: "36px 36px",
+            maskImage:
+              "radial-gradient(ellipse 80% 70% at 50% 30%, black 15%, transparent 75%)",
+          }}
+          aria-hidden
+        />
+        <div
+          className="absolute -top-32 left-1/2 h-[28rem] w-[42rem] -translate-x-1/2 rounded-full bg-cyan-300/35 blur-3xl"
+          aria-hidden
+        />
+        <div
+          className="absolute top-24 -left-24 h-72 w-72 rounded-full bg-sky-300/30 blur-3xl"
+          aria-hidden
+        />
+        <div
+          className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-teal-200/40 blur-3xl"
+          aria-hidden
+        />
+        <div
+          className="absolute inset-x-0 bottom-0 h-24 bg-linear-to-t from-slate-50 to-transparent"
+          aria-hidden
+        />
 
-        <div className="max-w-7xl mx-auto relative z-10 text-center animate-fade-in-up pb-4">
-          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/30 bg-white/15 backdrop-blur-md mb-5 sm:mb-7">
+        <div className="relative z-10 max-w-7xl mx-auto text-center animate-fade-in-up">
+          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-cyan-200/80 bg-white/70 backdrop-blur-md shadow-sm mb-5 sm:mb-7">
             <MaterialIcon
               name="precision_manufacturing"
-              className="text-base sm:text-lg text-cyan-100"
+              className="text-base sm:text-lg text-cyan-700"
             />
-            <span className="text-xs sm:text-sm font-medium text-white tracking-wide">
+            <span className="text-xs sm:text-sm font-medium text-slate-700 tracking-wide">
               {content.statusBadge}
             </span>
           </div>
 
-          <p className="text-xs sm:text-sm font-semibold uppercase tracking-[0.28em] text-cyan-100 mb-3">
+          <p className="text-sm sm:text-base md:text-lg font-bold uppercase tracking-[0.28em] text-cyan-700 mb-3">
             {SITE_CONFIG.name}
           </p>
 
-          <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold mb-5 sm:mb-6 tracking-tight px-2 text-white">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold mb-5 sm:mb-6 tracking-tight px-2 text-slate-900">
             {content.headline}
           </h1>
 
-          <p className="text-base sm:text-lg md:text-xl text-slate-100 max-w-3xl mx-auto leading-relaxed px-2 mb-8 sm:mb-10">
+          <p className="text-base sm:text-lg md:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed px-2 mb-8 sm:mb-10">
             {content.lead}
           </p>
 
@@ -123,7 +137,7 @@ export default async function RobofestLocalRoundPage() {
             <Button
               asChild
               size="lg"
-              className="bg-cyan-500 text-white hover:bg-cyan-600 shadow-md w-full sm:w-auto font-semibold"
+              className="bg-cyan-600 text-white hover:bg-cyan-700 shadow-md shadow-cyan-600/20 w-full sm:w-auto font-semibold"
             >
               <a href="#categories" className="inline-flex items-center gap-1.5">
                 Enter a category
@@ -134,15 +148,15 @@ export default async function RobofestLocalRoundPage() {
               asChild
               size="lg"
               variant="outline"
-              className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white w-full sm:w-auto backdrop-blur-sm"
+              className="border-slate-300 bg-white/80 text-slate-800 hover:bg-white hover:text-slate-900 w-full sm:w-auto backdrop-blur-sm"
             >
               <Link href={content.contactHref}>Contact &amp; info</Link>
             </Button>
           </div>
         </div>
-      </ListingHeroSection>
+      </section>
 
-      <main className="flex-1 relative -mt-2">
+      <main className="flex-1 relative">
         <section className="relative py-14 sm:py-20 px-4 sm:px-6 overflow-hidden bg-slate-50">
           <CircuitBackdrop />
           <div className="relative max-w-7xl mx-auto">
