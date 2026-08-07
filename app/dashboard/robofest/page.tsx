@@ -15,13 +15,7 @@ export default async function RobofestDashboardPage() {
   ])
 
   return (
-    <div className="max-w-7xl space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">Robofest</h2>
-        <p className="text-sm text-gray-500 mt-1">
-          Manage local-round content, fees, and category registrations.
-        </p>
-      </div>
+    <div className="w-full min-w-0 max-w-none">
       <RobofestDashboardClient
         initialContent={content}
         registrations={registrations}
