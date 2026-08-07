@@ -4,5 +4,7 @@ export {
   SCHOOL_DIRECTORY_COLLECTION,
   SCHOOL_NOT_FOUND_OPTION,
   type SchoolDirectoryEntry,
+  type SchoolDirectorySource,
+  type SchoolDirectoryStatus,
   type SchoolDirectoryWriteInput,
 } from './schoolDirectoryShared'

@@ -8,6 +8,10 @@ import {
 } from "@/lib/bkash";
 import { adminDb } from "@/lib/firebase-admin";
 import {
+  createPendingSchoolIfNeeded,
+  resolveSchoolFromSelection,
+} from "@/lib/pendingSchool";
+import {
   getRobofestCategoryByName,
   getRobofestContentFresh,
   resolveRobofestFee,
@@ -19,7 +23,16 @@ import {
   type RobofestRegistrationFormData,
 } from "@/lib/robofest-registration";
 
-export type RobofestRegistrationInput = RobofestRegistrationFormData;
+export type RobofestRegistrationInput = {
+  category: string;
+  name: string;
+  email: string;
+  phone: string;
+  schoolSelection: string;
+  customSchool?: string;
+  roundCity: string;
+  notes?: string;
+};
 
 export type RobofestRegistrationResult = {
   success: boolean;
@@ -36,6 +49,8 @@ type PendingRobofestRegistration = {
   category: string;
   name: string;
   school: string;
+  schoolIsCustom: boolean;
+  pendingSchoolId?: string;
   email: string;
   phone: string;
   roundCity: string;
@@ -47,27 +62,23 @@ type PendingRobofestRegistration = {
   updatedAt: Date;
 };
 
-function validateCommonFields(formData: RobofestRegistrationInput): {
-  ok: true;
-  data: {
-    category: string;
-    name: string;
-    email: string;
-    phone: string;
-    school: string;
-    roundCity: string;
-    notes: string;
-  };
-} | { ok: false; error: string } {
+async function validateAndResolveSchool(formData: RobofestRegistrationInput): Promise<
+  | {
+      ok: true;
+      data: RobofestRegistrationFormData;
+    }
+  | { ok: false; error: string }
+> {
   const category = formData.category?.trim() ?? "";
   const name = formData.name?.trim() ?? "";
   const email = formData.email?.trim().toLowerCase() ?? "";
   const phone = formData.phone?.trim().replace(/\s/g, "") ?? "";
-  const school = formData.school?.trim() ?? "";
+  const schoolSelection = formData.schoolSelection?.trim() ?? "";
+  const customSchool = formData.customSchool?.trim() ?? "";
   const roundCity = formData.roundCity?.trim() ?? "";
   const notes = formData.notes?.trim() ?? "";
 
-  if (!category || !name || !email || !phone || !school || !roundCity) {
+  if (!category || !name || !email || !phone || !schoolSelection || !roundCity) {
     return { ok: false, error: "All required fields must be filled." };
   }
 
@@ -83,9 +94,39 @@ function validateCommonFields(formData: RobofestRegistrationInput): {
     };
   }
 
+  const resolved = resolveSchoolFromSelection(schoolSelection, customSchool);
+  if (!resolved.school) {
+    return { ok: false, error: "Please select or enter your school." };
+  }
+
+  let school = resolved.school;
+  let schoolIsCustom = resolved.isCustom;
+  let pendingSchoolId: string | undefined;
+
+  if (resolved.isCustom) {
+    const pending = await createPendingSchoolIfNeeded(resolved.school, {
+      requestedByName: name,
+      requestedByEmail: email,
+      source: "robofest",
+    });
+    school = pending.school;
+    schoolIsCustom = pending.schoolIsCustom;
+    pendingSchoolId = pending.pendingSchoolId;
+  }
+
   return {
     ok: true,
-    data: { category, name, email, phone, school, roundCity, notes },
+    data: {
+      category,
+      name,
+      email,
+      phone,
+      school,
+      schoolIsCustom,
+      pendingSchoolId,
+      roundCity,
+      notes,
+    },
   };
 }
 
@@ -101,7 +142,7 @@ export async function submitRobofestRegistration(
       };
     }
 
-    const validated = validateCommonFields(formData);
+    const validated = await validateAndResolveSchool(formData);
     if (!validated.ok) return { success: false, error: validated.error };
 
     const content = await getRobofestContentFresh();
@@ -149,7 +190,7 @@ export async function initiateRobofestPaidCheckout(
       };
     }
 
-    const validated = validateCommonFields(formData);
+    const validated = await validateAndResolveSchool(formData);
     if (!validated.ok) return { success: false, error: validated.error };
 
     const content = await getRobofestContentFresh();
@@ -199,10 +240,12 @@ export async function initiateRobofestPaidCheckout(
       category: category.name,
       name: validated.data.name,
       school: validated.data.school,
+      schoolIsCustom: Boolean(validated.data.schoolIsCustom),
+      pendingSchoolId: validated.data.pendingSchoolId,
       email: validated.data.email,
       phone: validated.data.phone,
       roundCity: validated.data.roundCity,
-      notes: validated.data.notes,
+      notes: validated.data.notes ?? "",
       amount: fee.amount,
       status: "pending",
       createdAt: now,
@@ -322,6 +365,8 @@ export async function finalizeRobofestPaidRegistration(paymentId: string): Promi
         email: pending.email,
         phone: pending.phone,
         school: pending.school,
+        schoolIsCustom: pending.schoolIsCustom,
+        pendingSchoolId: pending.pendingSchoolId,
         roundCity: pending.roundCity,
         notes: pending.notes,
       },

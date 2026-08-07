@@ -336,7 +336,17 @@ export default function RobofestDashboardClient({
                       </TableCell>
                       <TableCell>
                         <div className="font-medium">{r.name}</div>
-                        <div className="text-xs text-gray-500">{r.school}</div>
+                        <div className="text-xs text-gray-500 flex items-center gap-1.5 flex-wrap">
+                          <span>{r.school}</span>
+                          {r.schoolIsCustom ? (
+                            <Badge
+                              variant="secondary"
+                              className="bg-amber-100 text-amber-800 hover:bg-amber-100 text-[10px] px-1.5 py-0"
+                            >
+                              Custom school
+                            </Badge>
+                          ) : null}
+                        </div>
                       </TableCell>
                       <TableCell>{r.category}</TableCell>
                       <TableCell>{r.roundCity}</TableCell>

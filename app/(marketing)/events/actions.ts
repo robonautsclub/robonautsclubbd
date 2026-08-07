@@ -204,7 +204,8 @@ export const getPublicEnglishMediumSchools = cache(async (): Promise<string[]> =
             const data = doc.data()
             const name = typeof data.name === 'string' ? data.name.trim() : ''
             const isActive = typeof data.isActive === 'boolean' ? data.isActive : true
-            if (!name || !isActive) return ''
+            const status = data.status === 'pending' ? 'pending' : 'approved'
+            if (!name || !isActive || status !== 'approved') return ''
             return name
           })
           .filter((name): name is string => Boolean(name))

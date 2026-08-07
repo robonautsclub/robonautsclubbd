@@ -78,6 +78,7 @@ export const ROBOFEST_CATEGORIES = [
     ],
     whoShouldJoin:
       "Teams that enjoy design thinking and building something original rather than purely scoring points in a fixed game.",
+    rulesPdf: "/robofest/BuildAthon%20Competition.pdf",
   },
   {
     slug: "line-following-bot",
@@ -98,6 +99,7 @@ export const ROBOFEST_CATEGORIES = [
     ],
     whoShouldJoin:
       "Teams who want a pure autonomous-control challenge and enjoy systematic tuning and testing.",
+    rulesPdf: "/robofest/Line-Following%20Bot%20Competition.pdf",
   },
   {
     slug: "robo-exhibition",
@@ -118,6 +120,7 @@ export const ROBOFEST_CATEGORIES = [
     ],
     whoShouldJoin:
       "Teams with a distinctive project idea who want to share it rather than compete only on speed or wins.",
+    rulesPdf: "/robofest/Robo-Exhibition%20Competition.pdf",
   },
 ] as const;
 

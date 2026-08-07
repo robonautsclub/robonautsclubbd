@@ -49,6 +49,14 @@ export const ROBOFEST_CATEGORY_IMAGE_FALLBACKS: Record<string, string> = {
   "robo-exhibition": "/olympiads/robofest.png",
 };
 
+/** Fallback rules PDF paths when CMS content is missing rulesPdf. */
+export const ROBOFEST_CATEGORY_RULES_PDF_FALLBACKS: Record<string, string> = {
+  bottlesumo: "/robofest/BottleSumo%20Competition.pdf",
+  buildathon: "/robofest/BuildAthon%20Competition.pdf",
+  "line-following-bot": "/robofest/Line-Following%20Bot%20Competition.pdf",
+  "robo-exhibition": "/robofest/Robo-Exhibition%20Competition.pdf",
+};
+
 export function getRobofestCategoryImage(
   category: Pick<RobofestCategoryContent, "slug" | "image">,
 ): string {
@@ -57,6 +65,13 @@ export function getRobofestCategoryImage(
     ROBOFEST_CATEGORY_IMAGE_FALLBACKS[category.slug] ||
     "/olympiads/robofest.png"
   );
+}
+
+export function getRobofestCategoryRulesPdf(
+  category: Pick<RobofestCategoryContent, "slug" | "rulesPdf">,
+): string | undefined {
+  if (category.rulesPdf?.trim()) return category.rulesPdf.trim();
+  return ROBOFEST_CATEGORY_RULES_PDF_FALLBACKS[category.slug];
 }
 
 export type RobofestHowItWorksStep = {
@@ -104,6 +119,8 @@ export type RobofestRegistration = {
   email: string;
   phone: string;
   school: string;
+  schoolIsCustom?: boolean;
+  pendingSchoolId?: string;
   roundCity: string;
   notes: string;
   status: RobofestRegistrationStatus;
@@ -222,7 +239,12 @@ function normalizeCategory(
     about: asString(raw.about, fallback?.about ?? ""),
     highlights,
     whoShouldJoin: asString(raw.whoShouldJoin, fallback?.whoShouldJoin ?? ""),
-    rulesPdf: raw.rulesPdf ? asString(raw.rulesPdf) : fallback?.rulesPdf,
+    rulesPdf: raw.rulesPdf
+      ? asString(raw.rulesPdf)
+      : fallback?.rulesPdf ||
+        ROBOFEST_CATEGORY_RULES_PDF_FALLBACKS[
+          asString(raw.slug, fallback?.slug ?? "")
+        ],
     active: asBool(raw.active, fallback?.active ?? true),
     amount,
   };
@@ -324,6 +346,11 @@ export function mapRobofestRegistrationDoc(
     email: asString(data.email),
     phone: asString(data.phone),
     school: asString(data.school),
+    schoolIsCustom:
+      typeof data.schoolIsCustom === "boolean" ? data.schoolIsCustom : undefined,
+    pendingSchoolId: data.pendingSchoolId
+      ? asString(data.pendingSchoolId)
+      : undefined,
     roundCity: asString(data.roundCity),
     notes: asString(data.notes),
     status,

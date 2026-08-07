@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getPublicEnglishMediumSchools } from "@/app/(marketing)/events/actions";
 import {
   getActiveRobofestCategories,
   getRobofestCategoryFromContent,
@@ -58,11 +59,14 @@ export default async function RobofestCategoryRoute({ params }: PageProps) {
     notFound();
   }
 
+  const schools = await getPublicEnglishMediumSchools();
+
   return (
     <RobofestCategoryPage
       category={category}
       content={content}
       fee={fee}
+      schools={schools}
     />
   );
 }

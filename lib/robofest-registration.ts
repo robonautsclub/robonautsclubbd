@@ -21,6 +21,8 @@ export type RobofestRegistrationFormData = {
   email: string;
   phone: string;
   school: string;
+  schoolIsCustom?: boolean;
+  pendingSchoolId?: string;
   roundCity: string;
   notes?: string;
 };
@@ -106,6 +108,8 @@ export async function createRobofestRegistrationAndSendEmail(
   const email = formData.email.trim().toLowerCase();
   const phone = formData.phone.trim().replace(/\s/g, "");
   const school = formData.school.trim();
+  const schoolIsCustom = Boolean(formData.schoolIsCustom);
+  const pendingSchoolId = formData.pendingSchoolId?.trim() || undefined;
   const category = formData.category.trim();
   const roundCity = formData.roundCity.trim();
   const notes = formData.notes?.trim() ?? "";
@@ -129,6 +133,7 @@ export async function createRobofestRegistrationAndSendEmail(
     email,
     phone,
     school,
+    schoolIsCustom,
     roundCity,
     notes,
     registrationId,
@@ -136,6 +141,10 @@ export async function createRobofestRegistrationAndSendEmail(
     paymentStatus: isPaid ? "paid" : "n/a",
     createdAt: FieldValue.serverTimestamp(),
   };
+
+  if (pendingSchoolId) {
+    registrationData.pendingSchoolId = pendingSchoolId;
+  }
 
   if (paymentMeta) {
     registrationData.paymentGateway = "bkash";

@@ -3,6 +3,10 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import type { RobofestRoundContent } from "@/lib/robofest-content";
 import {
+  PRIVATE_CANDIDATE_OPTION,
+  SCHOOL_NOT_FOUND_OPTION,
+} from "@/lib/schoolDirectory";
+import {
   initiateRobofestPaidCheckout,
   submitRobofestRegistration,
 } from "@/app/(marketing)/robofest/actions";
@@ -15,30 +19,37 @@ type FormState = {
   name: string;
   email: string;
   phone: string;
-  school: string;
+  schoolSelection: string;
+  customSchool: string;
   roundCity: string;
   notes: string;
 };
 
+const emptyForm = (roundCity: string): FormState => ({
+  name: "",
+  email: "",
+  phone: "",
+  schoolSelection: "",
+  customSchool: "",
+  roundCity,
+  notes: "",
+});
+
 export default function RobofestCategoryRegistrationForm({
   category,
   rounds,
+  schools,
   isPaid,
   amount,
 }: {
   category: string;
   rounds: RobofestRoundContent[];
+  schools: string[];
   isPaid: boolean;
   amount: number;
 }) {
-  const [form, setForm] = useState<FormState>({
-    name: "",
-    email: "",
-    phone: "",
-    school: "",
-    roundCity: rounds[0]?.city ?? "Dhaka",
-    notes: "",
-  });
+  const defaultRound = rounds[0]?.city ?? "Dhaka";
+  const [form, setForm] = useState<FormState>(() => emptyForm(defaultRound));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [registrationId, setRegistrationId] = useState<string | null>(null);
@@ -69,7 +80,8 @@ export default function RobofestCategoryRegistrationForm({
       name: form.name,
       email: form.email,
       phone: form.phone,
-      school: form.school,
+      schoolSelection: form.schoolSelection,
+      customSchool: form.customSchool,
       roundCity: form.roundCity,
       notes: form.notes,
     };
@@ -94,14 +106,7 @@ export default function RobofestCategoryRegistrationForm({
       setRegistrationId(result.registrationId ?? null);
       if (result.warning) setWarning(result.warning);
       setIsSubmitted(true);
-      setForm({
-        name: "",
-        email: "",
-        phone: "",
-        school: "",
-        roundCity: rounds[0]?.city ?? "Dhaka",
-        notes: "",
-      });
+      setForm(emptyForm(rounds[0]?.city ?? "Dhaka"));
     } catch {
       setError("Failed to submit registration. Please try again.");
     } finally {
@@ -230,14 +235,49 @@ export default function RobofestCategoryRegistrationForm({
         >
           School / institution
         </label>
-        <Input
+        <select
           id={fieldId("school")}
-          value={form.school}
-          onChange={updateField("school")}
-          placeholder="Your school or institution"
+          value={form.schoolSelection}
+          onChange={updateField("schoolSelection")}
           required
-        />
+          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        >
+          <option value="">Select school</option>
+          <option value={PRIVATE_CANDIDATE_OPTION}>
+            {PRIVATE_CANDIDATE_OPTION}
+          </option>
+          {schools.map((school) => (
+            <option key={school} value={school}>
+              {school}
+            </option>
+          ))}
+          <option value={SCHOOL_NOT_FOUND_OPTION}>
+            School not found (type manually)
+          </option>
+        </select>
       </div>
+
+      {form.schoolSelection === SCHOOL_NOT_FOUND_OPTION ? (
+        <div className="space-y-1.5">
+          <label
+            htmlFor={fieldId("custom-school")}
+            className="text-sm font-medium text-gray-700"
+          >
+            Enter school name
+          </label>
+          <Input
+            id={fieldId("custom-school")}
+            value={form.customSchool}
+            onChange={updateField("customSchool")}
+            placeholder="Your school or institution"
+            required
+            autoComplete="organization"
+          />
+          <p className="text-xs text-gray-500">
+            We’ll review new school names before adding them to the directory.
+          </p>
+        </div>
+      ) : null}
 
       <div className="space-y-1.5">
         <label
