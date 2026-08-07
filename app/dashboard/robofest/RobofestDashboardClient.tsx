@@ -580,6 +580,7 @@ export default function RobofestDashboardClient({
                       'slug',
                       'name',
                       'icon',
+                      'image',
                       'skillLevel',
                       'format',
                       'rulesPdf',

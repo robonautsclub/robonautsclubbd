@@ -29,6 +29,7 @@ export type RobofestCategoryContent = {
   slug: string;
   name: string;
   icon: string;
+  image?: string;
   description: string;
   skillLevel: string;
   format: string;
@@ -39,6 +40,24 @@ export type RobofestCategoryContent = {
   active: boolean;
   amount?: number | null;
 };
+
+/** Fallback cover art when CMS content has no image yet. */
+export const ROBOFEST_CATEGORY_IMAGE_FALLBACKS: Record<string, string> = {
+  bottlesumo: "/robofest/robofest.jpg",
+  buildathon: "/roboclass.jpg",
+  "line-following-bot": "/feed/robotics.jpg",
+  "robo-exhibition": "/olympiads/robofest.png",
+};
+
+export function getRobofestCategoryImage(
+  category: Pick<RobofestCategoryContent, "slug" | "image">,
+): string {
+  if (category.image?.trim()) return category.image.trim();
+  return (
+    ROBOFEST_CATEGORY_IMAGE_FALLBACKS[category.slug] ||
+    "/olympiads/robofest.png"
+  );
+}
 
 export type RobofestHowItWorksStep = {
   icon: string;
@@ -107,6 +126,7 @@ function seedCategories(): RobofestCategoryContent[] {
     slug: category.slug,
     name: category.name,
     icon: category.icon,
+    image: "image" in category ? category.image : undefined,
     description: category.description,
     skillLevel: category.skillLevel,
     format: category.format,
@@ -192,6 +212,10 @@ function normalizeCategory(
     slug: asString(raw.slug, fallback?.slug ?? ""),
     name: asString(raw.name, fallback?.name ?? ""),
     icon: asString(raw.icon, fallback?.icon ?? "smart_toy"),
+    image: raw.image
+      ? asString(raw.image)
+      : fallback?.image ||
+        ROBOFEST_CATEGORY_IMAGE_FALLBACKS[asString(raw.slug, fallback?.slug ?? "")],
     description: asString(raw.description, fallback?.description ?? ""),
     skillLevel: asString(raw.skillLevel, fallback?.skillLevel ?? ""),
     format: asString(raw.format, fallback?.format ?? ""),

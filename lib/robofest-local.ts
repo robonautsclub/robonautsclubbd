@@ -42,6 +42,7 @@ export const ROBOFEST_CATEGORIES = [
     slug: "bottlesumo",
     name: "BottleSumo",
     icon: "sports_kabaddi",
+    image: "/robofest/robofest.jpg",
     description:
       "Push bottles off a rectangular table in time trials, then face rivals head-to-head—no remote control.",
     skillLevel: "Beginner to intermediate",
@@ -62,6 +63,7 @@ export const ROBOFEST_CATEGORIES = [
     slug: "buildathon",
     name: "Buildathon",
     icon: "construction",
+    image: "/roboclass.jpg",
     description:
       "Design, build, and present a robotics project under buildathon-style constraints.",
     skillLevel: "Intermediate",
@@ -81,6 +83,7 @@ export const ROBOFEST_CATEGORIES = [
     slug: "line-following-bot",
     name: "Line Following Bot",
     icon: "timeline",
+    image: "/feed/robotics.jpg",
     description:
       "Program an autonomous robot to follow a line course accurately and quickly.",
     skillLevel: "Beginner to advanced",
@@ -100,6 +103,7 @@ export const ROBOFEST_CATEGORIES = [
     slug: "robo-exhibition",
     name: "Robo Exhibition",
     icon: "lightbulb",
+    image: "/olympiads/robofest.png",
     description:
       "Showcase an intelligent, creative robotics project to judges and visitors.",
     skillLevel: "All levels",
