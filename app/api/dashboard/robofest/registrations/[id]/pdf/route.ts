@@ -42,6 +42,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
     )
   }
 
+  const ageCategory =
+    registration.ageCategory === 'innovators' ? 'innovators' : 'explorer'
+
   const content = await getRobofestContentFresh()
   const event = buildRobofestEventForPdfEmail(content, {
     category: registration.category,
@@ -49,8 +52,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
     email: registration.email,
     phone: registration.phone,
     school: registration.school,
+    ageCategory,
     teamSize: registration.teamSize || registration.teamMembers?.length || 1,
     teamMembers: registration.teamMembers || [],
+    campusAmbassadorId: registration.campusAmbassadorId,
+    campusAmbassadorName: registration.campusAmbassadorName,
+    campusAmbassadorSchool: registration.campusAmbassadorSchool,
     roundCity: registration.roundCity,
     notes: registration.notes,
   })
@@ -59,15 +66,29 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const verificationUrl = `${baseUrl}/verify-booking?registrationId=${encodeURIComponent(registration.registrationId)}`
 
   const infoParts = [
-    `Category: ${registration.category}`,
-    `Preferred round: ${registration.roundCity}`,
+    `Competition: ${registration.category}`,
+    `Division: ${registration.roundCity}`,
+    `Age category: ${ageCategory}`,
     `Team size: ${registration.teamSize || registration.teamMembers?.length || 1}`,
   ]
   if (registration.teamMembers?.length) {
     infoParts.push(
       `Members: ${registration.teamMembers
-        .map((m) => `${m.name} <${m.email}> (${m.grade})`)
+        .map((m) =>
+          [m.name, m.email && `<${m.email}>`, m.phone, m.school, m.grade]
+            .filter(Boolean)
+            .join(' · '),
+        )
         .join('; ')}`,
+    )
+  }
+  if (registration.campusAmbassadorName) {
+    infoParts.push(
+      `Campus ambassador: ${registration.campusAmbassadorName}${
+        registration.campusAmbassadorSchool
+          ? ` · ${registration.campusAmbassadorSchool}`
+          : ''
+      }`,
     )
   }
   if (registration.notes) infoParts.push(`Notes: ${registration.notes}`)

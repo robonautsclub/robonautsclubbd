@@ -115,6 +115,11 @@ export type RobofestPaymentStatus = "unpaid" | "paid" | "n/a";
 export type RobofestTeamMember = {
   name: string;
   email: string;
+  phone?: string;
+  school?: string;
+  schoolIsCustom?: boolean;
+  pendingSchoolId?: string;
+  branch?: string;
   grade: string;
 };
 
@@ -127,8 +132,12 @@ export type RobofestRegistration = {
   school: string;
   schoolIsCustom?: boolean;
   pendingSchoolId?: string;
+  ageCategory?: string;
   teamSize?: number;
   teamMembers?: RobofestTeamMember[];
+  campusAmbassadorId?: string;
+  campusAmbassadorName?: string;
+  campusAmbassadorSchool?: string;
   roundCity: string;
   notes: string;
   status: RobofestRegistrationStatus;
@@ -348,20 +357,33 @@ export function mapRobofestRegistrationDoc(
       : undefined;
 
   const teamMembers = Array.isArray(data.teamMembers)
-    ? data.teamMembers
-        .map((raw) => {
+    ? (data.teamMembers
+        .map((raw): RobofestTeamMember | null => {
           if (!raw || typeof raw !== "object") return null;
           const member = raw as Record<string, unknown>;
           const name = asString(member.name).trim();
           const email = asString(member.email).trim().toLowerCase();
           const grade = asString(member.grade).trim();
+          const phone = asString(member.phone).trim();
+          const school = asString(member.school).trim();
+          const branch = asString(member.branch).trim();
           if (!name && !email && !grade) return null;
-          return { name, email, grade };
+          return {
+            name,
+            email,
+            grade,
+            ...(phone ? { phone } : {}),
+            ...(school ? { school } : {}),
+            ...(typeof member.schoolIsCustom === "boolean"
+              ? { schoolIsCustom: member.schoolIsCustom }
+              : {}),
+            ...(member.pendingSchoolId
+              ? { pendingSchoolId: asString(member.pendingSchoolId) }
+              : {}),
+            ...(branch ? { branch } : {}),
+          };
         })
-        .filter(
-          (member): member is { name: string; email: string; grade: string } =>
-            Boolean(member),
-        )
+        .filter((member): member is RobofestTeamMember => member != null) as RobofestTeamMember[])
     : undefined;
 
   const teamSizeRaw =
@@ -381,11 +403,21 @@ export function mapRobofestRegistrationDoc(
     pendingSchoolId: data.pendingSchoolId
       ? asString(data.pendingSchoolId)
       : undefined,
+    ageCategory: data.ageCategory ? asString(data.ageCategory) : undefined,
     teamSize:
       typeof teamSizeRaw === "number" && teamSizeRaw > 0
         ? teamSizeRaw
         : undefined,
     teamMembers,
+    campusAmbassadorId: data.campusAmbassadorId
+      ? asString(data.campusAmbassadorId)
+      : undefined,
+    campusAmbassadorName: data.campusAmbassadorName
+      ? asString(data.campusAmbassadorName)
+      : undefined,
+    campusAmbassadorSchool: data.campusAmbassadorSchool
+      ? asString(data.campusAmbassadorSchool)
+      : undefined,
     roundCity: asString(data.roundCity),
     notes: asString(data.notes),
     status,

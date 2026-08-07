@@ -12,8 +12,13 @@ import {
   ROBOFEST_REGISTRATIONS_COLLECTION,
   type RobofestContent,
   type RobofestRegistration,
+  type RobofestTeamMember,
   mapRobofestRegistrationDoc,
 } from "@/lib/robofest-content";
+import {
+  formatAgeCategoryLabel,
+  type RobofestAgeCategory,
+} from "@/lib/robofest-registration-options";
 
 export type RobofestRegistrationFormData = {
   category: string;
@@ -23,8 +28,12 @@ export type RobofestRegistrationFormData = {
   school: string;
   schoolIsCustom?: boolean;
   pendingSchoolId?: string;
+  ageCategory: RobofestAgeCategory;
   teamSize: number;
-  teamMembers: Array<{ name: string; email: string; grade: string }>;
+  teamMembers: RobofestTeamMember[];
+  campusAmbassadorId?: string;
+  campusAmbassadorName?: string;
+  campusAmbassadorSchool?: string;
   roundCity: string;
   notes?: string;
 };
@@ -36,6 +45,60 @@ export type RobofestRegistrationWriteResult = {
   registrationDocId?: string;
   registrationId?: string;
 };
+
+function formatMemberLine(member: RobofestTeamMember): string {
+  const parts = [
+    member.name,
+    member.email ? `<${member.email}>` : "",
+    member.phone || "",
+    member.school || "",
+    member.branch ? `Branch: ${member.branch}` : "",
+    member.grade || "",
+  ].filter(Boolean);
+  return parts.join(" · ");
+}
+
+function buildRegistrationInfoParts(
+  data: Pick<
+    RobofestRegistrationFormData,
+    | "category"
+    | "roundCity"
+    | "ageCategory"
+    | "teamSize"
+    | "teamMembers"
+    | "campusAmbassadorName"
+    | "campusAmbassadorSchool"
+    | "notes"
+  > & {
+    amountPaid?: number;
+    trxId?: string;
+  },
+): string[] {
+  const infoParts = [
+    `Competition: ${data.category}`,
+    `Division: ${data.roundCity}`,
+    `Age category: ${formatAgeCategoryLabel(data.ageCategory)}`,
+    `Team size: ${data.teamSize}`,
+  ];
+  if (data.teamMembers.length > 0) {
+    infoParts.push(
+      `Members: ${data.teamMembers.map((m) => formatMemberLine(m)).join("; ")}`,
+    );
+  }
+  if (data.campusAmbassadorName) {
+    infoParts.push(
+      `Campus ambassador: ${data.campusAmbassadorName}${
+        data.campusAmbassadorSchool ? ` · ${data.campusAmbassadorSchool}` : ""
+      }`,
+    );
+  }
+  if (data.notes) infoParts.push(`Notes: ${data.notes}`);
+  if (data.amountPaid != null) {
+    infoParts.push(`Amount paid: BDT ${data.amountPaid}`);
+  }
+  if (data.trxId) infoParts.push(`Trx ID: ${data.trxId}`);
+  return infoParts;
+}
 
 function getBaseUrl(): string {
   let baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
@@ -63,7 +126,7 @@ export function buildRobofestEventForPdfEmail(
     time: content.timeLabel ?? undefined,
     location: content.venueLabel,
     venue: `${form.roundCity} · ${content.venueLabel}`,
-    description: `${form.category} — preferred round: ${form.roundCity}`,
+    description: `${form.category} — ${formatAgeCategoryLabel(form.ageCategory)} · ${form.roundCity} Division`,
     fullDescription: content.lead,
     eligibility: "Robofest Bangladesh local round participants",
     createdAt: now,
@@ -118,12 +181,18 @@ export async function createRobofestRegistrationAndSendEmail(
   const teamMembers = (formData.teamMembers || []).map((member) => ({
     name: member.name.trim(),
     email: member.email.trim().toLowerCase(),
+    phone: member.phone?.trim().replace(/\s/g, "") || undefined,
+    school: member.school?.trim() || undefined,
+    schoolIsCustom: Boolean(member.schoolIsCustom),
+    pendingSchoolId: member.pendingSchoolId?.trim() || undefined,
+    branch: member.branch?.trim() || undefined,
     grade: member.grade.trim(),
   }));
   const teamSize =
     typeof formData.teamSize === "number" && formData.teamSize > 0
       ? formData.teamSize
       : teamMembers.length;
+  const ageCategory = formData.ageCategory;
 
   const duplicate = await hasExistingRobofestRegistration(category, email);
   if (duplicate) {
@@ -145,6 +214,7 @@ export async function createRobofestRegistrationAndSendEmail(
     phone,
     school,
     schoolIsCustom,
+    ageCategory,
     teamSize,
     teamMembers,
     roundCity,
@@ -157,6 +227,12 @@ export async function createRobofestRegistrationAndSendEmail(
 
   if (pendingSchoolId) {
     registrationData.pendingSchoolId = pendingSchoolId;
+  }
+  if (formData.campusAmbassadorId) {
+    registrationData.campusAmbassadorId = formData.campusAmbassadorId;
+    registrationData.campusAmbassadorName = formData.campusAmbassadorName || "";
+    registrationData.campusAmbassadorSchool =
+      formData.campusAmbassadorSchool || "";
   }
 
   if (paymentMeta) {
@@ -175,29 +251,28 @@ export async function createRobofestRegistrationAndSendEmail(
     email,
     phone,
     school,
+    ageCategory,
     teamSize,
     teamMembers,
+    campusAmbassadorId: formData.campusAmbassadorId,
+    campusAmbassadorName: formData.campusAmbassadorName,
+    campusAmbassadorSchool: formData.campusAmbassadorSchool,
     roundCity,
     notes,
   });
 
-  const infoParts = [
-    `Category: ${category}`,
-    `Preferred round: ${roundCity}`,
-    `Team size: ${teamSize}`,
-  ];
-  if (teamMembers.length > 0) {
-    infoParts.push(
-      `Members: ${teamMembers
-        .map((m) => `${m.name} <${m.email}> (${m.grade})`)
-        .join("; ")}`,
-    );
-  }
-  if (notes) infoParts.push(`Notes: ${notes}`);
-  if (paymentMeta) {
-    infoParts.push(`Amount paid: BDT ${paymentMeta.amountPaid}`);
-    infoParts.push(`Trx ID: ${paymentMeta.trxId}`);
-  }
+  const infoParts = buildRegistrationInfoParts({
+    category,
+    roundCity,
+    ageCategory,
+    teamSize,
+    teamMembers,
+    campusAmbassadorName: formData.campusAmbassadorName,
+    campusAmbassadorSchool: formData.campusAmbassadorSchool,
+    notes,
+    amountPaid: paymentMeta?.amountPaid,
+    trxId: paymentMeta?.trxId,
+  });
 
   const emailResult = await sendBookingConfirmationEmail({
     to: email,
@@ -289,37 +364,37 @@ export async function resendRobofestConfirmationEmail(
     return { success: false, error: "Registration ID missing." };
   }
 
+  const ageCategory =
+    registration.ageCategory === "innovators" ? "innovators" : "explorer";
+
   const event = buildRobofestEventForPdfEmail(content, {
     category: registration.category,
     name: registration.name,
     email: registration.email,
     phone: registration.phone,
     school: registration.school,
+    ageCategory,
     teamSize: registration.teamSize || registration.teamMembers?.length || 1,
     teamMembers: registration.teamMembers || [],
+    campusAmbassadorId: registration.campusAmbassadorId,
+    campusAmbassadorName: registration.campusAmbassadorName,
+    campusAmbassadorSchool: registration.campusAmbassadorSchool,
     roundCity: registration.roundCity,
     notes: registration.notes,
   });
 
-  const infoParts = [
-    `Category: ${registration.category}`,
-    `Preferred round: ${registration.roundCity}`,
-    `Team size: ${registration.teamSize || registration.teamMembers?.length || 1}`,
-  ];
-  if (registration.teamMembers?.length) {
-    infoParts.push(
-      `Members: ${registration.teamMembers
-        .map((m) => `${m.name} <${m.email}> (${m.grade})`)
-        .join("; ")}`,
-    );
-  }
-  if (registration.notes) infoParts.push(`Notes: ${registration.notes}`);
-  if (registration.amountPaid != null) {
-    infoParts.push(`Amount paid: BDT ${registration.amountPaid}`);
-  }
-  if (registration.trxId) {
-    infoParts.push(`Trx ID: ${registration.trxId}`);
-  }
+  const infoParts = buildRegistrationInfoParts({
+    category: registration.category,
+    roundCity: registration.roundCity,
+    ageCategory,
+    teamSize: registration.teamSize || registration.teamMembers?.length || 1,
+    teamMembers: registration.teamMembers || [],
+    campusAmbassadorName: registration.campusAmbassadorName,
+    campusAmbassadorSchool: registration.campusAmbassadorSchool,
+    notes: registration.notes,
+    amountPaid: registration.amountPaid,
+    trxId: registration.trxId,
+  });
 
   const emailResult = await sendBookingConfirmationEmail({
     to: registration.email,

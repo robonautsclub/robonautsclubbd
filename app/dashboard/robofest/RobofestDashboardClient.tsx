@@ -9,6 +9,7 @@ import type {
   RobofestRegistration,
   RobofestRegistrationStatus,
 } from '@/lib/robofest-content'
+import { formatAgeCategoryLabel } from '@/lib/robofest-registration-options'
 import {
   resendRobofestRegistrationEmail,
   resetRobofestContentToDefaults,
@@ -35,52 +36,72 @@ type Props = {
   registrations: RobofestRegistration[]
 }
 
-function formatTeamMembers(r: RobofestRegistration): string {
-  if (!r.teamMembers?.length) return ''
-  return r.teamMembers
-    .map((m) => `${m.name} <${m.email}> (${m.grade})`)
-    .join('; ')
-}
-
 function exportCsv(rows: RobofestRegistration[]) {
+  const memberHeaders = [1, 2, 3, 4].flatMap((n) => [
+    `Member ${n} Name`,
+    `Member ${n} Email`,
+    `Member ${n} Phone`,
+    `Member ${n} School`,
+    `Member ${n} Branch`,
+    `Member ${n} Grade`,
+  ])
   const headers = [
     'Registration ID',
-    'Name',
-    'Email',
-    'Phone',
-    'School',
+    'Team Name',
+    'Contact Email',
+    'Contact Phone',
+    'Contact School',
+    'Age Category',
     'Team Size',
-    'Members',
-    'Category',
-    'Round',
+    'Campus Ambassador',
+    'Ambassador School',
+    'Division',
+    'Competition',
     'Status',
     'Payment',
     'Amount Paid',
     'Trx ID',
     'Created At',
     'Notes',
+    ...memberHeaders,
   ]
-  const lines = rows.map((r) =>
-    [
+  const lines = rows.map((r) => {
+    const memberCells = [0, 1, 2, 3].flatMap((i) => {
+      const m = r.teamMembers?.[i]
+      return [
+        m?.name || '',
+        m?.email || '',
+        m?.phone || '',
+        m?.school || '',
+        m?.branch || '',
+        m?.grade || '',
+      ]
+    })
+    return [
       r.registrationId || '',
       r.name,
       r.email,
       r.phone,
       r.school,
+      r.ageCategory
+        ? formatAgeCategoryLabel(r.ageCategory)
+        : '',
       r.teamSize ?? r.teamMembers?.length ?? '',
-      formatTeamMembers(r),
-      r.category,
+      r.campusAmbassadorName || '',
+      r.campusAmbassadorSchool || '',
       r.roundCity,
+      r.category,
       r.status,
       r.paymentStatus || '',
       r.amountPaid ?? '',
       r.trxId || '',
       r.createdAt || '',
       r.notes || '',
+      ...memberCells,
     ]
       .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
-      .join(','),
-  )
+      .join(',')
+  })
   const blob = new Blob([[headers.join(','), ...lines].join('\n')], {
     type: 'text/csv;charset=utf-8;',
   })
@@ -104,6 +125,7 @@ export default function RobofestDashboardClient({
 
   const [categoryFilter, setCategoryFilter] = useState('')
   const [roundFilter, setRoundFilter] = useState('')
+  const [ageCategoryFilter, setAgeCategoryFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [nameFilter, setNameFilter] = useState('')
 
@@ -112,26 +134,59 @@ export default function RobofestDashboardClient({
     return registrations.filter((r) => {
       if (categoryFilter && r.category !== categoryFilter) return false
       if (roundFilter && r.roundCity !== roundFilter) return false
+      if (ageCategoryFilter && r.ageCategory !== ageCategoryFilter) return false
       if (statusFilter && r.status !== statusFilter) return false
-      if (name && !r.name.toLowerCase().includes(name) && !r.email.toLowerCase().includes(name)) {
-        return false
+      if (name) {
+        const haystack = [
+          r.name,
+          r.email,
+          r.phone,
+          r.school,
+          r.campusAmbassadorName,
+          ...(r.teamMembers || []).flatMap((m) => [
+            m.name,
+            m.email,
+            m.phone,
+            m.school,
+          ]),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+        if (!haystack.includes(name)) return false
       }
       return true
     })
-  }, [registrations, categoryFilter, roundFilter, statusFilter, nameFilter])
+  }, [
+    registrations,
+    categoryFilter,
+    roundFilter,
+    ageCategoryFilter,
+    statusFilter,
+    nameFilter,
+  ])
 
   const stats = useMemo(() => {
     const byCategory = new Map<string, number>()
+    const byAge = new Map<string, number>()
     let paidTotal = 0
     let paidCount = 0
     for (const r of registrations) {
       byCategory.set(r.category, (byCategory.get(r.category) || 0) + 1)
+      if (r.ageCategory) {
+        byAge.set(r.ageCategory, (byAge.get(r.ageCategory) || 0) + 1)
+      }
       if (r.paymentStatus === 'paid' && typeof r.amountPaid === 'number') {
         paidTotal += r.amountPaid
         paidCount += 1
       }
     }
-    return { byCategory: Array.from(byCategory.entries()), paidTotal, paidCount }
+    return {
+      byCategory: Array.from(byCategory.entries()),
+      byAge: Array.from(byAge.entries()),
+      paidTotal,
+      paidCount,
+    }
   }, [registrations])
 
   const categoryNames = useMemo(
@@ -238,7 +293,7 @@ export default function RobofestDashboardClient({
           </Card>
           <Card>
             <CardContent className="p-4">
-              <p className="text-xs text-gray-500 uppercase mb-1">By category</p>
+              <p className="text-xs text-gray-500 uppercase mb-1">By competition</p>
               <ul className="text-sm text-gray-700 space-y-0.5 max-h-20 overflow-auto">
                 {stats.byCategory.map(([name, count]) => (
                   <li key={name} className="flex justify-between gap-2">
@@ -247,6 +302,16 @@ export default function RobofestDashboardClient({
                   </li>
                 ))}
               </ul>
+              {stats.byAge.length > 0 ? (
+                <ul className="text-xs text-gray-500 space-y-0.5 mt-2 border-t border-gray-100 pt-2">
+                  {stats.byAge.map(([name, count]) => (
+                    <li key={name} className="flex justify-between gap-2">
+                      <span className="truncate">{formatAgeCategoryLabel(name)}</span>
+                      <span className="font-semibold text-gray-700">{count}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </CardContent>
           </Card>
         </div>
@@ -258,12 +323,12 @@ export default function RobofestDashboardClient({
               <Input
                 value={nameFilter}
                 onChange={(e) => setNameFilter(e.target.value)}
-                placeholder="Name or email"
-                className="w-48"
+                placeholder="Team, member, email, CA…"
+                className="w-56"
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-gray-500">Category</label>
+              <label className="text-xs text-gray-500">Competition</label>
               <select
                 className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
                 value={categoryFilter}
@@ -278,7 +343,7 @@ export default function RobofestDashboardClient({
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-gray-500">Round</label>
+              <label className="text-xs text-gray-500">Division</label>
               <select
                 className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
                 value={roundFilter}
@@ -290,6 +355,18 @@ export default function RobofestDashboardClient({
                     {city}
                   </option>
                 ))}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500">Age category</label>
+              <select
+                className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+                value={ageCategoryFilter}
+                onChange={(e) => setAgeCategoryFilter(e.target.value)}
+              >
+                <option value="">All</option>
+                <option value="explorer">Explorer (Grades 05 – 08)</option>
+                <option value="innovators">Innovators (Grades 09 – 12)</option>
               </select>
             </div>
             <div className="space-y-1">
@@ -322,9 +399,10 @@ export default function RobofestDashboardClient({
               <TableHeader>
                 <TableRow>
                   <TableHead>Reg ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Round</TableHead>
+                  <TableHead>Team</TableHead>
+                  <TableHead>Competition</TableHead>
+                  <TableHead>Division</TableHead>
+                  <TableHead>Members</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Payment</TableHead>
@@ -335,7 +413,7 @@ export default function RobofestDashboardClient({
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center text-gray-500 py-8">
+                    <TableCell colSpan={10} className="text-center text-gray-500 py-8">
                       No registrations found.
                     </TableCell>
                   </TableRow>
@@ -345,10 +423,10 @@ export default function RobofestDashboardClient({
                       <TableCell className="font-mono text-xs">
                         {r.registrationId || '—'}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="min-w-[180px]">
                         <div className="font-medium">{r.name}</div>
-                        <div className="text-xs text-gray-500 flex items-center gap-1.5 flex-wrap">
-                          <span>{r.school}</span>
+                        <div className="text-xs text-gray-500 flex items-center gap-1.5 flex-wrap mt-0.5">
+                          <span>{r.school || '—'}</span>
                           {r.schoolIsCustom ? (
                             <Badge
                               variant="secondary"
@@ -358,27 +436,49 @@ export default function RobofestDashboardClient({
                             </Badge>
                           ) : null}
                         </div>
-                        {(r.teamSize || r.teamMembers?.length) ? (
-                          <div className="mt-1.5 space-y-0.5">
-                            <Badge
-                              variant="secondary"
-                              className="bg-sky-50 text-sky-800 hover:bg-sky-50 text-[10px] px-1.5 py-0"
-                            >
-                              {r.teamSize || r.teamMembers?.length} member
-                              {(r.teamSize || r.teamMembers?.length) === 1 ? '' : 's'}
-                            </Badge>
-                            {r.teamMembers?.length ? (
-                              <div className="text-[11px] text-gray-500 leading-snug">
-                                {r.teamMembers
-                                  .map((m) => `${m.name} (${m.grade})`)
-                                  .join(' · ')}
-                              </div>
-                            ) : null}
+                        {r.ageCategory ? (
+                          <Badge
+                            variant="secondary"
+                            className="mt-1.5 bg-violet-50 text-violet-800 hover:bg-violet-50 text-[10px] px-1.5 py-0"
+                          >
+                            {formatAgeCategoryLabel(r.ageCategory)}
+                          </Badge>
+                        ) : null}
+                        {r.campusAmbassadorName ? (
+                          <div className="text-[11px] text-gray-500 mt-1">
+                            CA: {r.campusAmbassadorName}
+                            {r.campusAmbassadorSchool
+                              ? ` · ${r.campusAmbassadorSchool}`
+                              : ''}
                           </div>
                         ) : null}
                       </TableCell>
                       <TableCell>{r.category}</TableCell>
                       <TableCell>{r.roundCity}</TableCell>
+                      <TableCell className="min-w-[220px] text-xs">
+                        <div className="font-medium text-gray-800 mb-1">
+                          {r.teamSize || r.teamMembers?.length || 0} member
+                          {(r.teamSize || r.teamMembers?.length) === 1 ? '' : 's'}
+                        </div>
+                        {r.teamMembers?.length ? (
+                          <ul className="space-y-1.5 text-gray-600">
+                            {r.teamMembers.map((m, i) => (
+                              <li key={`${r.id}-m-${i}`} className="leading-snug">
+                                <span className="font-medium text-gray-800">
+                                  {String(i + 1).padStart(2, '0')}. {m.name}
+                                </span>
+                                <div className="text-[11px] text-gray-500">
+                                  {[m.grade, m.school, m.branch, m.phone, m.email]
+                                    .filter(Boolean)
+                                    .join(' · ')}
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-xs">
                         <div>{r.email}</div>
                         <div className="text-gray-500">{r.phone}</div>

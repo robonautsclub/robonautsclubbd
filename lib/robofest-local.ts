@@ -15,6 +15,9 @@ export const ROBOFEST_LOCAL = {
   hostName: "Robonauts Ltd",
   officialSite: "https://www.robofest.net/",
   categoriesUrl: "https://www.robofest.net/index.php/current-competitions/overview",
+  generalRulesPdf: "/robofest/General%20Rules%20%26%20Regulations.pdf",
+  instagramUrl:
+    "https://www.instagram.com/robonautsltd?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==",
   contactHref: "/about#contact",
   contactEmail: "events@robonautsltd.com",
   contactLines: [

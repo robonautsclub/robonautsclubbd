@@ -10,6 +10,7 @@ import {
   type SchoolDirectoryStatus,
   type SchoolDirectoryWriteInput,
 } from '@/lib/schoolDirectory'
+import { getRobofestCampusAmbassadorSchools } from '@/lib/robofest-campus-ambassadors'
 import { normalizeSchoolName } from '@/lib/pendingSchool'
 
 const PUBLIC_SCHOOLS_TAG = 'public-schools'
@@ -242,10 +243,15 @@ export async function seedEnglishMediumSchools(): Promise<{ success: boolean; me
       .filter((name): name is string => typeof name === 'string')
   )
 
+  const seedSchools: Array<{ name: string; city?: string }> = [
+    ...BANGLADESH_ENGLISH_MEDIUM_SCHOOLS,
+    ...getRobofestCampusAmbassadorSchools().map((name) => ({ name })),
+  ]
+
   let created = 0
   const batch = adminDb.batch()
   const now = new Date()
-  for (const school of BANGLADESH_ENGLISH_MEDIUM_SCHOOLS) {
+  for (const school of seedSchools) {
     const normalized = normalizeSchoolName(school.name)
     const lower = normalized.toLowerCase()
     if (!normalized || existingNames.has(lower)) continue
@@ -253,7 +259,7 @@ export async function seedEnglishMediumSchools(): Promise<{ success: boolean; me
     batch.set(ref, {
       name: normalized,
       nameLower: lower,
-      city: school.city,
+      ...(school.city ? { city: school.city } : {}),
       country: 'bangladesh',
       medium: 'english',
       isActive: true,
