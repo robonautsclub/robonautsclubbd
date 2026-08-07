@@ -1,14 +1,14 @@
 import Link from "next/link";
+import Image from "next/image";
 import type {
   RobofestCategoryContent,
   RobofestContent,
 } from "@/lib/robofest-content";
-import { getRobofestCategoryRulesPdf } from "@/lib/robofest-content";
+import {
+  getRobofestCategoryImage,
+  getRobofestCategoryRulesPdf,
+} from "@/lib/robofest-content";
 import { getRobofestCategoryRules } from "@/lib/robofest-category-rules";
-import type {
-  RobofestCategoryRulesPackage,
-  RobofestRulesSection,
-} from "@/lib/robofest-rules-types";
 import RobofestCategoryRegistrationForm from "@/components/RobofestCategoryRegistrationForm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -52,217 +52,36 @@ function RulesDownloadButton({
   );
 }
 
-function RuleBulletBlock({
-  title,
-  items,
-}: {
-  title: string;
-  items: readonly string[];
-}) {
-  return (
-    <div>
-      <h3 className="text-base font-semibold text-gray-900 mb-3">{title}</h3>
-      <ul className="space-y-2">
-        {items.map((item) => (
-          <li
-            key={item}
-            className="flex items-start gap-2 text-sm text-gray-600 leading-relaxed"
-          >
-            <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
-            {item}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function RulesSectionBlock({ section }: { section: RobofestRulesSection }) {
-  if (section.kind === "namedList") {
-    return (
-      <div>
-        <h3 className="text-base font-semibold text-gray-900 mb-3">
-          {section.title}
-        </h3>
-        <ul className="space-y-3">
-          {section.items.map((item) => (
-            <li
-              key={item.name}
-              className="text-sm text-gray-600 leading-relaxed"
-            >
-              <span className="font-semibold text-gray-900">{item.name}:</span>{" "}
-              {item.detail}
-            </li>
-          ))}
-        </ul>
-      </div>
-    );
-  }
-
-  if (section.kind === "definitions") {
-    return (
-      <div>
-        <h3 className="text-base font-semibold text-gray-900 mb-3">
-          {section.title}
-        </h3>
-        <dl className="space-y-3">
-          {section.items.map((item) => (
-            <div key={item.term}>
-              <dt className="text-sm font-semibold text-gray-900">{item.term}</dt>
-              <dd className="text-sm text-gray-600 leading-relaxed mt-0.5">
-                {item.meaning}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-    );
-  }
-
-  if (section.kind === "bullets") {
-    return <RuleBulletBlock title={section.title} items={section.items} />;
-  }
-
-  if (section.kind === "table") {
-    return (
-      <div>
-        <h3 className="text-base font-semibold text-gray-900 mb-3">
-          {section.title}
-        </h3>
-        <div className="overflow-x-auto -mx-1 px-1">
-          <table className="w-full min-w-md text-sm text-left border-collapse">
-            <thead>
-              <tr className="border-b border-gray-200">
-                {section.columns.map((col) => (
-                  <th
-                    key={col}
-                    className="py-2 pr-3 font-semibold text-gray-900 whitespace-nowrap"
-                  >
-                    {col}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {section.rows.map((row) => (
-                <tr key={row.join("|")} className="border-b border-gray-100 align-top">
-                  {row.map((cell, idx) => (
-                    <td
-                      key={`${row[0]}-${idx}`}
-                      className={`py-2.5 pr-3 ${
-                        idx === 0
-                          ? "font-medium text-gray-800"
-                          : "text-gray-600"
-                      }`}
-                    >
-                      {cell}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {section.notes?.length ? (
-          <ul className="mt-4 space-y-2">
-            {section.notes.map((note) => (
-              <li
-                key={note}
-                className="flex items-start gap-2 text-sm text-gray-600 leading-relaxed"
-              >
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
-                {note}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <h3 className="text-base font-semibold text-gray-900 mb-3">
-        {section.title}
-      </h3>
-      <ul className="space-y-4">
-        {section.items.map((item) => (
-          <li key={item.q}>
-            <p className="text-sm font-semibold text-gray-900">{item.q}</p>
-            <p className="text-sm text-gray-600 leading-relaxed mt-1">{item.a}</p>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function CategoryRulesSection({
-  rules,
+function OfficialRulesCta({
   pdfHref,
+  filename,
   categoryName,
+  summary,
 }: {
-  rules: RobofestCategoryRulesPackage;
   pdfHref: string;
+  filename: string;
   categoryName: string;
+  summary?: string;
 }) {
-  const downloadLabel = `Download ${categoryName} rules (PDF)`;
-
   return (
-    <section className="space-y-8 rounded-2xl border border-gray-100 bg-white p-5 sm:p-6 shadow-sm">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-indigo-500 mb-1">
-            Ref: {rules.ref} · Date: {rules.date}
-          </p>
+    <section className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-5 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="min-w-0">
           <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-            Rules &amp; guidelines
+            Official rules
           </h2>
-          <p className="text-sm text-gray-500 mt-1">{rules.summary}</p>
+          <p className="text-sm text-gray-600 mt-1 leading-relaxed">
+            {summary?.trim() ||
+              "Full competition rules, specs, and scoring are in the official PDF."}
+          </p>
+          <p className="text-xs text-gray-500 mt-2">
+            On-page highlights only—download the PDF for complete details.
+          </p>
         </div>
         <RulesDownloadButton
           href={pdfHref}
-          filename={rules.downloadFilename}
-          label="Download rules (PDF)"
-        />
-      </div>
-
-      {rules.sections.map((section) => (
-        <RulesSectionBlock
-          key={`${section.kind}-${section.title}`}
-          section={section}
-        />
-      ))}
-
-      <div className="rounded-xl bg-gray-50 border border-gray-100 p-4">
-        <h3 className="text-sm font-semibold text-gray-900 mb-1">Contact</h3>
-        <p className="text-sm text-gray-600">
-          {rules.contact.name}
-          <br />
-          {rules.contact.role}
-        </p>
-        <p className="text-sm text-gray-600 mt-2">
-          <a
-            href={`mailto:${rules.contact.email}`}
-            className="text-indigo-600 hover:underline"
-          >
-            {rules.contact.email}
-          </a>
-          <span className="mx-2 text-gray-300">·</span>
-          <a
-            href={`tel:${rules.contact.phone.replace(/\s/g, "")}`}
-            className="text-indigo-600 hover:underline"
-          >
-            {rules.contact.phone}
-          </a>
-        </p>
-      </div>
-
-      <div className="pt-1">
-        <RulesDownloadButton
-          href={pdfHref}
-          filename={rules.downloadFilename}
-          label={downloadLabel}
+          filename={filename}
+          label={`Download ${categoryName} rules (PDF)`}
         />
       </div>
     </section>
@@ -282,40 +101,67 @@ export default function RobofestCategoryPage({
 }) {
   const rulesPdf = getRobofestCategoryRulesPdf(category);
   const rules = getRobofestCategoryRules(category.slug);
-  const showRules = Boolean(rulesPdf && rules);
+  const heroImage = getRobofestCategoryImage(category);
+  const downloadFilename =
+    rules?.downloadFilename ?? `${category.slug}-rules.pdf`;
+  const showPdf = Boolean(rulesPdf);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <div className="bg-linear-to-br from-indigo-600 via-blue-600 to-cyan-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+      <header className="relative isolate overflow-hidden text-white">
+        <Image
+          src={heroImage}
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-center"
+        />
+        <div
+          className="absolute inset-0 bg-linear-to-br from-indigo-950/85 via-blue-900/75 to-cyan-900/65"
+          aria-hidden
+        />
+        <div
+          className="absolute inset-0 opacity-30"
+          style={{
+            backgroundImage: `
+              linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px)
+            `,
+            backgroundSize: "28px 28px",
+          }}
+          aria-hidden
+        />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-14 md:py-16">
           <Link
             href="/robofest"
-            className="inline-flex items-center gap-1 text-sm text-indigo-100 hover:text-white mb-4 sm:mb-6"
+            className="inline-flex items-center gap-1 text-sm text-white/80 hover:text-white mb-5 sm:mb-7 transition-colors"
           >
             <MaterialIcon name="arrow_back" className="text-base" />
             All categories
           </Link>
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-white/15 backdrop-blur-sm ring-1 ring-white/20 flex items-center justify-center shrink-0">
               <MaterialIcon
                 name={category.icon}
                 className="text-2xl sm:text-3xl text-cyan-100"
               />
             </div>
             <div>
-              <p className="text-xs sm:text-sm font-medium text-indigo-100 mb-1">
+              <p className="text-xs sm:text-sm font-medium text-cyan-100/90 mb-1">
                 Robofest Local Round · Bangladesh
               </p>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight drop-shadow-sm">
                 {category.name}
               </h1>
-              <p className="text-sm sm:text-base text-blue-100 mt-2 max-w-2xl leading-relaxed">
+              <p className="text-sm sm:text-base text-white/85 mt-2 max-w-2xl leading-relaxed">
                 {category.description}
               </p>
             </div>
           </div>
         </div>
-      </div>
+      </header>
 
       <main className="flex-1 py-8 sm:py-12 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto grid lg:grid-cols-5 gap-8 lg:gap-10 items-start">
@@ -391,11 +237,12 @@ export default function RobofestCategoryPage({
               </div>
             </section>
 
-            {showRules && rules && rulesPdf ? (
-              <CategoryRulesSection
-                rules={rules}
+            {showPdf && rulesPdf ? (
+              <OfficialRulesCta
                 pdfHref={rulesPdf}
+                filename={downloadFilename}
                 categoryName={category.name}
+                summary={rules?.summary}
               />
             ) : null}
 
@@ -403,10 +250,10 @@ export default function RobofestCategoryPage({
               <Button asChild variant="outline">
                 <Link href="/robofest">Back to Robofest</Link>
               </Button>
-              {showRules && rules && rulesPdf ? (
+              {showPdf && rulesPdf ? (
                 <RulesDownloadButton
                   href={rulesPdf}
-                  filename={rules.downloadFilename}
+                  filename={downloadFilename}
                   label={`Download ${category.name} rules (PDF)`}
                 />
               ) : null}

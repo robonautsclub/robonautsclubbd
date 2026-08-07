@@ -44,19 +44,19 @@ export const ROBOFEST_CATEGORIES = [
     icon: "sports_kabaddi",
     image: "/robofest/robofest.jpg",
     description:
-      "Push bottles off a rectangular table in time trials, then face rivals head-to-head—no remote control.",
+      "Autonomous bottle-pushing: time trials, then head-to-head—no remotes.",
     skillLevel: "Beginner to intermediate",
     format: "Time trial + single elimination",
     about:
-      "BottleSumo is a two-round autonomous challenge on an open rectangular table (~75 × 150–180 cm). Teams first push five sand-filled bottles off the table in a timed trial that seeds the bracket, then compete head-to-head (best of 3) with no bottles. Explorer and Innovator divisions set different size, weight, and motor limits.",
+      "Push bottles off the table in a timed seed round, then fight head-to-head. Fully autonomous only.",
     highlights: [
-      "Robots must wait 3 seconds after start before moving—same program and start method every game.",
-      "Every robot needs at least one edge/line sensor and one object-detection sensor.",
-      "Explorer (≤2.5 kg, 20 cm box, 2 motors) and Innovator (≤3.0 kg, 30 cm box, 4 motors) categories.",
-      "Time-trial seeding, then single-elimination matches decided by pushing the opponent off and surviving 3 seconds.",
+      "Time-trial seeding, then single-elimination matches.",
+      "Explorer and Innovator size/weight/motor limits.",
+      "Edge and object sensors required; 3-second start delay.",
+      "Win by pushing the opponent off and surviving on the table.",
     ],
     whoShouldJoin:
-      "Student teams who design, build, and program their own autonomous robot—especially those ready to iterate between time trials and bracket matches.",
+      "Teams building and programming their own autonomous sumo-style robot.",
     rulesPdf: "/robofest/BottleSumo%20Competition.pdf",
   },
   {
@@ -65,19 +65,19 @@ export const ROBOFEST_CATEGORIES = [
     icon: "construction",
     image: "/roboclass.jpg",
     description:
-      "Design, build, and present a robotics project under buildathon-style constraints.",
+      "Design, build, and present a robotics project under buildathon constraints.",
     skillLevel: "Intermediate",
     format: "Project build + presentation",
     about:
-      "Buildathon challenges teams to design, assemble, and present a robotics project under time and theme constraints. Judges look for creativity, engineering process, and how well your team explains the work.",
+      "Build a working robotics prototype under theme and time pressure, then pitch it to judges.",
     highlights: [
-      "Form a team idea, build a working prototype, and present to judges.",
-      "Balanced focus on hardware, software, and storytelling.",
-      "Encourages collaboration, planning, and rapid problem-solving.",
-      "Showcase originality—solutions do not need to fit a fixed arena game.",
+      "Prototype + live presentation to judges.",
+      "Scored on engineering, creativity, and clarity.",
+      "Hardware, software, and storytelling all count.",
+      "No fixed arena game—your idea leads.",
     ],
     whoShouldJoin:
-      "Teams that enjoy design thinking and building something original rather than purely scoring points in a fixed game.",
+      "Teams who want to invent and present an original robotics build.",
     rulesPdf: "/robofest/BuildAthon%20Competition.pdf",
   },
   {
@@ -86,19 +86,19 @@ export const ROBOFEST_CATEGORIES = [
     icon: "timeline",
     image: "/feed/robotics.jpg",
     description:
-      "Program an autonomous robot to follow a line course accurately and quickly.",
+      "Race an autonomous bot along a marked line—accuracy and speed win.",
     skillLevel: "Beginner to advanced",
     format: "Timed autonomous course",
     about:
-      "Line Following Bot tests how precisely and quickly your autonomous robot can track a marked course. Success depends on sensor placement, PID (or similar) control, and reliable calibration under real conditions.",
+      "Program your robot to track a line course as fast and clean as possible. Sensors and control tuning decide the podium.",
     highlights: [
-      "Run on a defined line path; optimize for accuracy and speed.",
-      "Strong learning outcomes in sensors, control loops, and tuning.",
-      "Scalable difficulty—beginners finish the course; advanced teams chase best times.",
-      "Minimal game rules overhead: focus on robot performance.",
+      "Timed runs on a defined line path.",
+      "Focus on sensors, control loops, and calibration.",
+      "Beginners finish; advanced teams chase best times.",
+      "Simple game rules—performance is everything.",
     ],
     whoShouldJoin:
-      "Teams who want a pure autonomous-control challenge and enjoy systematic tuning and testing.",
+      "Teams who love autonomous control, tuning, and racing the clock.",
     rulesPdf: "/robofest/Line-Following%20Bot%20Competition.pdf",
   },
   {
@@ -107,19 +107,19 @@ export const ROBOFEST_CATEGORIES = [
     icon: "lightbulb",
     image: "/olympiads/robofest.png",
     description:
-      "Showcase an intelligent, creative robotics project to judges and visitors.",
+      "Showcase an intelligent robotics project to judges and visitors.",
     skillLevel: "All levels",
     format: "Project showcase + demo",
     about:
-      "Robo Exhibition gives you creative freedom to present any intelligent robotics project. Demonstrate capability, impact, and craftsmanship to judges and visitors—from assistive devices to artful autonomous systems.",
+      "Bring any intelligent robotics project, demo it live, and explain the impact. Judged on innovation and presentation.",
     highlights: [
-      "Free choice of theme within intelligent, autonomous robotics.",
-      "Judged on innovation, demonstration quality, and clarity of explanation.",
+      "Free theme within intelligent, autonomous robotics.",
+      "Live demo plus clear explanation to judges.",
+      "Scored on innovation, craft, and communication.",
       "Ideal for research-style or long-horizon school projects.",
-      "Practice real-world presentation skills alongside engineering.",
     ],
     whoShouldJoin:
-      "Teams with a distinctive project idea who want to share it rather than compete only on speed or wins.",
+      "Teams with a distinctive project ready to show, not only race or fight.",
     rulesPdf: "/robofest/Robo-Exhibition%20Competition.pdf",
   },
 ] as const;
