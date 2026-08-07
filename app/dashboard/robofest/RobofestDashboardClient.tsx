@@ -314,7 +314,13 @@ export default function RobofestDashboardClient({
         alert(result.error || 'Failed to resend email')
         return
       }
-      alert('Confirmation email resent.')
+      const n = result.recipientCount ?? 0
+      const times = result.emailSendCount ?? 0
+      alert(
+        n > 0
+          ? `Confirmation email sent to ${n} team member${n === 1 ? '' : 's'} (send #${times}).`
+          : 'Confirmation email resent.',
+      )
       router.refresh()
     })
   }
@@ -365,66 +371,171 @@ export default function RobofestDashboardClient({
           ) : null}
         </div>
 
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-          <Card className="border-gray-200/80 shadow-sm">
-            <CardContent className="p-3 sm:p-4">
-              <p className="text-[11px] sm:text-xs text-gray-500 uppercase tracking-wide">
-                {filtersActive ? 'Matching' : 'Total'}
-              </p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">
-                {stats.total}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="border-gray-200/80 shadow-sm">
-            <CardContent className="p-3 sm:p-4">
-              <p className="text-[11px] sm:text-xs text-gray-500 uppercase tracking-wide">
-                Paid
-              </p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">
-                {stats.paidCount}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="border-gray-200/80 shadow-sm">
-            <CardContent className="p-3 sm:p-4">
-              <p className="text-[11px] sm:text-xs text-gray-500 uppercase tracking-wide">
-                Collected (BDT)
-              </p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">
-                {stats.paidTotal}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="border-gray-200/80 shadow-sm col-span-2 xl:col-span-1">
-            <CardContent className="p-3 sm:p-4">
-              <p className="text-[11px] sm:text-xs text-gray-500 uppercase tracking-wide mb-1">
-                By competition
-              </p>
-              <ul className="text-sm text-gray-700 space-y-0.5 max-h-20 overflow-auto">
-                {stats.byCategory.length === 0 ? (
-                  <li className="text-gray-400">No data</li>
-                ) : (
-                  stats.byCategory.map(([name, count]) => (
-                    <li key={name} className="flex justify-between gap-2">
-                      <span className="truncate">{name}</span>
-                      <span className="font-semibold">{count}</span>
-                    </li>
-                  ))
-                )}
-              </ul>
-              {stats.byAge.length > 0 ? (
-                <ul className="text-xs text-gray-500 space-y-0.5 mt-2 border-t border-gray-100 pt-2">
-                  {stats.byAge.map(([name, count]) => (
-                    <li key={name} className="flex justify-between gap-2">
-                      <span className="truncate">
-                        {formatAgeCategoryLabel(name)}
-                      </span>
-                      <span className="font-semibold text-gray-700">{count}</span>
-                    </li>
-                  ))}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+          <div className="lg:col-span-3 grid grid-cols-2 gap-3">
+            <Card className="border-gray-200/80 shadow-sm">
+              <CardContent className="p-3.5 sm:p-4">
+                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
+                  {filtersActive ? 'Matching' : 'Total'}
+                </p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1 tabular-nums">
+                  {stats.total}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="border-gray-200/80 shadow-sm">
+              <CardContent className="p-3.5 sm:p-4">
+                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
+                  Paid
+                </p>
+                <p className="text-2xl sm:text-3xl font-bold text-emerald-700 mt-1 tabular-nums">
+                  {stats.paidCount}
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5 tabular-nums">
+                  BDT {stats.paidTotal.toLocaleString()}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="lg:col-span-5 border-gray-200/80 shadow-sm overflow-hidden">
+            <CardContent className="p-3.5 sm:p-4">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
+                  By competition
+                </p>
+                <span className="text-[11px] text-gray-400">
+                  {stats.byCategory.length}{' '}
+                  {stats.byCategory.length === 1 ? 'event' : 'events'}
+                </span>
+              </div>
+              {stats.byCategory.length === 0 ? (
+                <p className="text-sm text-gray-400 py-2">No registrations yet</p>
+              ) : (
+                <ul className="space-y-2.5">
+                  {stats.byCategory
+                    .slice()
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([name, count]) => {
+                      const pct =
+                        stats.total > 0
+                          ? Math.round((count / stats.total) * 100)
+                          : 0
+                      return (
+                        <li key={name}>
+                          <div className="flex items-center justify-between gap-3 text-sm mb-1">
+                            <span className="font-medium text-gray-800 truncate">
+                              {name}
+                            </span>
+                            <span className="shrink-0 tabular-nums text-gray-600">
+                              <span className="font-semibold text-gray-900">
+                                {count}
+                              </span>
+                              <span className="text-gray-400 text-xs ml-1">
+                                {pct}%
+                              </span>
+                            </span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-indigo-500/80 transition-[width] duration-300"
+                              style={{ width: `${Math.max(pct, 4)}%` }}
+                            />
+                          </div>
+                        </li>
+                      )
+                    })}
                 </ul>
-              ) : null}
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="lg:col-span-4 border-gray-200/80 shadow-sm overflow-hidden">
+            <CardContent className="p-3.5 sm:p-4">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
+                  By age category
+                </p>
+              </div>
+              {stats.byAge.length === 0 ? (
+                <p className="text-sm text-gray-400 py-2">No age data yet</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
+                  {(['explorer', 'innovators'] as const).map((ageKey) => {
+                    const count =
+                      stats.byAge.find(([key]) => key === ageKey)?.[1] ?? 0
+                    const pct =
+                      stats.total > 0
+                        ? Math.round((count / stats.total) * 100)
+                        : 0
+                    const isExplorer = ageKey === 'explorer'
+                    return (
+                      <div
+                        key={ageKey}
+                        className={cn(
+                          'rounded-xl border px-3 py-2.5',
+                          isExplorer
+                            ? 'border-violet-100 bg-violet-50/70'
+                            : 'border-sky-100 bg-sky-50/70',
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p
+                              className={cn(
+                                'text-sm font-semibold',
+                                isExplorer ? 'text-violet-900' : 'text-sky-900',
+                              )}
+                            >
+                              {isExplorer ? 'Explorer' : 'Innovators'}
+                            </p>
+                            <p
+                              className={cn(
+                                'text-[11px] mt-0.5',
+                                isExplorer ? 'text-violet-600' : 'text-sky-600',
+                              )}
+                            >
+                              {isExplorer
+                                ? 'Grades 05 – 08'
+                                : 'Grades 09 – 12'}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p
+                              className={cn(
+                                'text-xl font-bold tabular-nums leading-none',
+                                isExplorer ? 'text-violet-800' : 'text-sky-800',
+                              )}
+                            >
+                              {count}
+                            </p>
+                            <p className="text-[11px] text-gray-500 mt-0.5">
+                              {pct}%
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {stats.byAge
+                    .filter(
+                      ([key]) => key !== 'explorer' && key !== 'innovators',
+                    )
+                    .map(([name, count]) => (
+                      <div
+                        key={name}
+                        className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5 flex items-center justify-between gap-2"
+                      >
+                        <p className="text-sm font-medium text-gray-800 truncate">
+                          {formatAgeCategoryLabel(name)}
+                        </p>
+                        <p className="text-lg font-bold tabular-nums text-gray-900">
+                          {count}
+                        </p>
+                      </div>
+                    ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -689,9 +800,19 @@ export default function RobofestDashboardClient({
                               variant="outline"
                               disabled={pending || !r.registrationId}
                               onClick={() => resendEmail(r.id)}
-                              title="Resend email"
+                              title={
+                                (r.emailSendCount ?? 0) > 0
+                                  ? `Email sent ${r.emailSendCount} time${r.emailSendCount === 1 ? '' : 's'} — click to resend to all team members`
+                                  : 'Send confirmation email to all team members'
+                              }
+                              className="relative gap-1"
                             >
                               <Mail className="w-3.5 h-3.5" />
+                              {(r.emailSendCount ?? 0) > 0 ? (
+                                <span className="inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold leading-none text-white">
+                                  {r.emailSendCount}
+                                </span>
+                              ) : null}
                             </Button>
                             <Button asChild size="sm" variant="outline">
                               <a

@@ -184,7 +184,12 @@ export async function updateRobofestRegistrationStatus(
 
 export async function resendRobofestRegistrationEmail(
   id: string,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{
+  success: boolean
+  error?: string
+  recipientCount?: number
+  emailSendCount?: number
+}> {
   await requireAuth()
   const registration = await getRobofestRegistrationById(id)
   if (!registration) {

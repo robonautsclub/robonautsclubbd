@@ -162,6 +162,8 @@ export type RobofestRegistration = {
   amountPaid?: number;
   paidAt?: string | null;
   emailSent?: boolean;
+  /** How many times confirmation email was successfully sent (batch to all members counts as 1). */
+  emailSendCount?: number;
   pdfUrl?: string | null;
   pdfGenerated?: boolean;
   adminNotes?: string;
@@ -483,6 +485,15 @@ export function mapRobofestRegistrationDoc(
       data.amountPaid == null ? undefined : asNumber(data.amountPaid),
     paidAt: toIso(data.paidAt),
     emailSent: typeof data.emailSent === "boolean" ? data.emailSent : undefined,
+    emailSendCount: (() => {
+      const raw = data.emailSendCount;
+      if (typeof raw === "number" && Number.isFinite(raw) && raw >= 0) {
+        return Math.floor(raw);
+      }
+      // Legacy docs: treat a successful send as count 1
+      if (data.emailSent === true) return 1;
+      return undefined;
+    })(),
     pdfUrl: data.pdfUrl ? asString(data.pdfUrl) : null,
     pdfGenerated:
       typeof data.pdfGenerated === "boolean" ? data.pdfGenerated : undefined,

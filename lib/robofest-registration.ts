@@ -322,6 +322,9 @@ export async function createRobofestRegistrationAndSendEmail(
       await regRef.update({
         emailSent: true,
         emailSentAt: new Date(),
+        emailSendCount: 1,
+        emailRecipientCount: recipients.length,
+        emailError: FieldValue.delete(),
         ...pdfUpdate,
       });
     } else {
@@ -367,7 +370,12 @@ export async function createRobofestRegistrationAndSendEmail(
 export async function resendRobofestConfirmationEmail(
   registration: RobofestRegistration,
   content: RobofestContent,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{
+  success: boolean;
+  error?: string;
+  recipientCount?: number;
+  emailSendCount?: number;
+}> {
   if (!adminDb) {
     return { success: false, error: "Database unavailable." };
   }
@@ -444,12 +452,20 @@ export async function resendRobofestConfirmationEmail(
   }
 
   if (emailResult.success) {
+    const nextCount = (registration.emailSendCount ?? 0) + 1;
     await ref.update({
       emailSent: true,
       emailSentAt: new Date(),
+      emailSendCount: nextCount,
+      emailRecipientCount: recipients.length,
+      emailError: FieldValue.delete(),
       ...pdfUpdate,
     });
-    return { success: true };
+    return {
+      success: true,
+      recipientCount: recipients.length,
+      emailSendCount: nextCount,
+    };
   }
 
   await ref.update({
