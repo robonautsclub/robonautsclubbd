@@ -112,6 +112,12 @@ export type RobofestRegistrationStatus =
 
 export type RobofestPaymentStatus = "unpaid" | "paid" | "n/a";
 
+export type RobofestTeamMember = {
+  name: string;
+  email: string;
+  grade: string;
+};
+
 export type RobofestRegistration = {
   id: string;
   category: string;
@@ -121,6 +127,8 @@ export type RobofestRegistration = {
   school: string;
   schoolIsCustom?: boolean;
   pendingSchoolId?: string;
+  teamSize?: number;
+  teamMembers?: RobofestTeamMember[];
   roundCity: string;
   notes: string;
   status: RobofestRegistrationStatus;
@@ -339,6 +347,28 @@ export function mapRobofestRegistrationDoc(
       ? paymentRaw
       : undefined;
 
+  const teamMembers = Array.isArray(data.teamMembers)
+    ? data.teamMembers
+        .map((raw) => {
+          if (!raw || typeof raw !== "object") return null;
+          const member = raw as Record<string, unknown>;
+          const name = asString(member.name).trim();
+          const email = asString(member.email).trim().toLowerCase();
+          const grade = asString(member.grade).trim();
+          if (!name && !email && !grade) return null;
+          return { name, email, grade };
+        })
+        .filter(
+          (member): member is { name: string; email: string; grade: string } =>
+            Boolean(member),
+        )
+    : undefined;
+
+  const teamSizeRaw =
+    typeof data.teamSize === "number"
+      ? data.teamSize
+      : teamMembers?.length || undefined;
+
   return {
     id,
     category: asString(data.category),
@@ -351,6 +381,11 @@ export function mapRobofestRegistrationDoc(
     pendingSchoolId: data.pendingSchoolId
       ? asString(data.pendingSchoolId)
       : undefined,
+    teamSize:
+      typeof teamSizeRaw === "number" && teamSizeRaw > 0
+        ? teamSizeRaw
+        : undefined,
+    teamMembers,
     roundCity: asString(data.roundCity),
     notes: asString(data.notes),
     status,

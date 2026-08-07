@@ -35,6 +35,13 @@ type Props = {
   registrations: RobofestRegistration[]
 }
 
+function formatTeamMembers(r: RobofestRegistration): string {
+  if (!r.teamMembers?.length) return ''
+  return r.teamMembers
+    .map((m) => `${m.name} <${m.email}> (${m.grade})`)
+    .join('; ')
+}
+
 function exportCsv(rows: RobofestRegistration[]) {
   const headers = [
     'Registration ID',
@@ -42,6 +49,8 @@ function exportCsv(rows: RobofestRegistration[]) {
     'Email',
     'Phone',
     'School',
+    'Team Size',
+    'Members',
     'Category',
     'Round',
     'Status',
@@ -58,6 +67,8 @@ function exportCsv(rows: RobofestRegistration[]) {
       r.email,
       r.phone,
       r.school,
+      r.teamSize ?? r.teamMembers?.length ?? '',
+      formatTeamMembers(r),
       r.category,
       r.roundCity,
       r.status,
@@ -347,6 +358,24 @@ export default function RobofestDashboardClient({
                             </Badge>
                           ) : null}
                         </div>
+                        {(r.teamSize || r.teamMembers?.length) ? (
+                          <div className="mt-1.5 space-y-0.5">
+                            <Badge
+                              variant="secondary"
+                              className="bg-sky-50 text-sky-800 hover:bg-sky-50 text-[10px] px-1.5 py-0"
+                            >
+                              {r.teamSize || r.teamMembers?.length} member
+                              {(r.teamSize || r.teamMembers?.length) === 1 ? '' : 's'}
+                            </Badge>
+                            {r.teamMembers?.length ? (
+                              <div className="text-[11px] text-gray-500 leading-snug">
+                                {r.teamMembers
+                                  .map((m) => `${m.name} (${m.grade})`)
+                                  .join(' · ')}
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </TableCell>
                       <TableCell>{r.category}</TableCell>
                       <TableCell>{r.roundCity}</TableCell>

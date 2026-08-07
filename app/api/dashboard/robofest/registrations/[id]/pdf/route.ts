@@ -49,6 +49,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
     email: registration.email,
     phone: registration.phone,
     school: registration.school,
+    teamSize: registration.teamSize || registration.teamMembers?.length || 1,
+    teamMembers: registration.teamMembers || [],
     roundCity: registration.roundCity,
     notes: registration.notes,
   })
@@ -59,7 +61,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const infoParts = [
     `Category: ${registration.category}`,
     `Preferred round: ${registration.roundCity}`,
+    `Team size: ${registration.teamSize || registration.teamMembers?.length || 1}`,
   ]
+  if (registration.teamMembers?.length) {
+    infoParts.push(
+      `Members: ${registration.teamMembers
+        .map((m) => `${m.name} <${m.email}> (${m.grade})`)
+        .join('; ')}`,
+    )
+  }
   if (registration.notes) infoParts.push(`Notes: ${registration.notes}`)
   if (registration.amountPaid != null) {
     infoParts.push(`Amount paid: BDT ${registration.amountPaid}`)

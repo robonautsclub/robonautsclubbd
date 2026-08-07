@@ -15,15 +15,29 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
+type TeamMemberForm = {
+  name: string;
+  email: string;
+  grade: string;
+};
+
 type FormState = {
   name: string;
   email: string;
   phone: string;
   schoolSelection: string;
   customSchool: string;
+  teamSize: number;
+  teamMembers: TeamMemberForm[];
   roundCity: string;
   notes: string;
 };
+
+const emptyMember = (): TeamMemberForm => ({
+  name: "",
+  email: "",
+  grade: "",
+});
 
 const emptyForm = (roundCity: string): FormState => ({
   name: "",
@@ -31,9 +45,22 @@ const emptyForm = (roundCity: string): FormState => ({
   phone: "",
   schoolSelection: "",
   customSchool: "",
+  teamSize: 1,
+  teamMembers: [emptyMember()],
   roundCity,
   notes: "",
 });
+
+function resizeTeamMembers(
+  members: TeamMemberForm[],
+  size: number,
+): TeamMemberForm[] {
+  const next = members.slice(0, size);
+  while (next.length < size) {
+    next.push(emptyMember());
+  }
+  return next;
+}
 
 export default function RobofestCategoryRegistrationForm({
   category,
@@ -60,13 +87,34 @@ export default function RobofestCategoryRegistrationForm({
     `robofest-${field}-${category.replace(/\s+/g, "-").toLowerCase()}`;
 
   const updateField =
-    (field: keyof FormState) =>
+    (field: keyof Omit<FormState, "teamMembers" | "teamSize">) =>
     (
       event: ChangeEvent<
         HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
       >,
     ) => {
       setForm((prev) => ({ ...prev, [field]: event.target.value }));
+    };
+
+  const updateTeamSize = (event: ChangeEvent<HTMLSelectElement>) => {
+    const size = Math.min(4, Math.max(1, Number(event.target.value) || 1));
+    setForm((prev) => ({
+      ...prev,
+      teamSize: size,
+      teamMembers: resizeTeamMembers(prev.teamMembers, size),
+    }));
+  };
+
+  const updateMember =
+    (index: number, field: keyof TeamMemberForm) =>
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      setForm((prev) => {
+        const teamMembers = prev.teamMembers.map((member, i) =>
+          i === index ? { ...member, [field]: value } : member,
+        );
+        return { ...prev, teamMembers };
+      });
     };
 
   const handleSubmit = async (event: FormEvent) => {
@@ -82,6 +130,8 @@ export default function RobofestCategoryRegistrationForm({
       phone: form.phone,
       schoolSelection: form.schoolSelection,
       customSchool: form.customSchool,
+      teamSize: form.teamSize,
+      teamMembers: form.teamMembers.slice(0, form.teamSize),
       roundCity: form.roundCity,
       notes: form.notes,
     };
@@ -195,7 +245,7 @@ export default function RobofestCategoryRegistrationForm({
           htmlFor={fieldId("email")}
           className="text-sm font-medium text-gray-700"
         >
-          Email
+          Contact email
         </label>
         <Input
           id={fieldId("email")}
@@ -213,7 +263,7 @@ export default function RobofestCategoryRegistrationForm({
           htmlFor={fieldId("phone")}
           className="text-sm font-medium text-gray-700"
         >
-          Phone
+          Contact phone
         </label>
         <Input
           id={fieldId("phone")}
@@ -278,6 +328,89 @@ export default function RobofestCategoryRegistrationForm({
           </p>
         </div>
       ) : null}
+
+      <div className="space-y-1.5">
+        <label
+          htmlFor={fieldId("team-size")}
+          className="text-sm font-medium text-gray-700"
+        >
+          Team size
+        </label>
+        <select
+          id={fieldId("team-size")}
+          value={form.teamSize}
+          onChange={updateTeamSize}
+          required
+          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        >
+          {[1, 2, 3, 4].map((size) => (
+            <option key={size} value={size}>
+              {size} {size === 1 ? "person" : "people"}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="space-y-3">
+        {form.teamMembers.slice(0, form.teamSize).map((member, index) => (
+          <fieldset
+            key={`member-${index}`}
+            className="space-y-3 rounded-lg border border-gray-200 bg-gray-50/70 p-3"
+          >
+            <legend className="px-1 text-sm font-semibold text-gray-800">
+              Team member {index + 1}
+            </legend>
+            <div className="space-y-1.5">
+              <label
+                htmlFor={fieldId(`member-${index}-name`)}
+                className="text-sm font-medium text-gray-700"
+              >
+                Full name
+              </label>
+              <Input
+                id={fieldId(`member-${index}-name`)}
+                value={member.name}
+                onChange={updateMember(index, "name")}
+                placeholder="Member full name"
+                required
+                autoComplete="name"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label
+                htmlFor={fieldId(`member-${index}-email`)}
+                className="text-sm font-medium text-gray-700"
+              >
+                Email
+              </label>
+              <Input
+                id={fieldId(`member-${index}-email`)}
+                type="email"
+                value={member.email}
+                onChange={updateMember(index, "email")}
+                placeholder="member@example.com"
+                required
+                autoComplete="email"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label
+                htmlFor={fieldId(`member-${index}-grade`)}
+                className="text-sm font-medium text-gray-700"
+              >
+                Grade / class
+              </label>
+              <Input
+                id={fieldId(`member-${index}-grade`)}
+                value={member.grade}
+                onChange={updateMember(index, "grade")}
+                placeholder="e.g. Grade 8"
+                required
+              />
+            </div>
+          </fieldset>
+        ))}
+      </div>
 
       <div className="space-y-1.5">
         <label

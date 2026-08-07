@@ -30,6 +30,8 @@ export type RobofestRegistrationInput = {
   phone: string;
   schoolSelection: string;
   customSchool?: string;
+  teamSize: number;
+  teamMembers: Array<{ name: string; email: string; grade: string }>;
   roundCity: string;
   notes?: string;
 };
@@ -53,6 +55,8 @@ type PendingRobofestRegistration = {
   pendingSchoolId?: string;
   email: string;
   phone: string;
+  teamSize: number;
+  teamMembers: Array<{ name: string; email: string; grade: string }>;
   roundCity: string;
   notes: string;
   amount: number;
@@ -61,6 +65,50 @@ type PendingRobofestRegistration = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function parseTeamMembers(
+  rawMembers: RobofestRegistrationInput["teamMembers"] | undefined,
+  teamSizeRaw: number | undefined,
+):
+  | { ok: true; teamSize: number; teamMembers: Array<{ name: string; email: string; grade: string }> }
+  | { ok: false; error: string } {
+  const teamSize = Math.min(4, Math.max(1, Number(teamSizeRaw) || 0));
+  if (!Number.isInteger(teamSize) || teamSize < 1 || teamSize > 4) {
+    return { ok: false, error: "Team size must be between 1 and 4." };
+  }
+
+  const list = Array.isArray(rawMembers) ? rawMembers.slice(0, teamSize) : [];
+  if (list.length !== teamSize) {
+    return {
+      ok: false,
+      error: `Please provide details for all ${teamSize} team member(s).`,
+    };
+  }
+
+  const teamMembers: Array<{ name: string; email: string; grade: string }> = [];
+  for (let i = 0; i < list.length; i += 1) {
+    const name = list[i]?.name?.trim() ?? "";
+    const email = list[i]?.email?.trim().toLowerCase() ?? "";
+    const grade = list[i]?.grade?.trim() ?? "";
+    if (!name || !email || !grade) {
+      return {
+        ok: false,
+        error: `Team member ${i + 1} requires name, email, and grade.`,
+      };
+    }
+    if (!EMAIL_REGEX.test(email)) {
+      return {
+        ok: false,
+        error: `Team member ${i + 1} has an invalid email.`,
+      };
+    }
+    teamMembers.push({ name, email, grade });
+  }
+
+  return { ok: true, teamSize, teamMembers };
+}
 
 async function validateAndResolveSchool(formData: RobofestRegistrationInput): Promise<
   | {
@@ -82,8 +130,7 @@ async function validateAndResolveSchool(formData: RobofestRegistrationInput): Pr
     return { ok: false, error: "All required fields must be filled." };
   }
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
+  if (!EMAIL_REGEX.test(email)) {
     return { ok: false, error: "Invalid email format." };
   }
 
@@ -93,6 +140,9 @@ async function validateAndResolveSchool(formData: RobofestRegistrationInput): Pr
       error: "Phone number must be 11 digits and start with 01.",
     };
   }
+
+  const membersParsed = parseTeamMembers(formData.teamMembers, formData.teamSize);
+  if (!membersParsed.ok) return { ok: false, error: membersParsed.error };
 
   const resolved = resolveSchoolFromSelection(schoolSelection, customSchool);
   if (!resolved.school) {
@@ -124,6 +174,8 @@ async function validateAndResolveSchool(formData: RobofestRegistrationInput): Pr
       school,
       schoolIsCustom,
       pendingSchoolId,
+      teamSize: membersParsed.teamSize,
+      teamMembers: membersParsed.teamMembers,
       roundCity,
       notes,
     },
@@ -244,6 +296,8 @@ export async function initiateRobofestPaidCheckout(
       pendingSchoolId: validated.data.pendingSchoolId,
       email: validated.data.email,
       phone: validated.data.phone,
+      teamSize: validated.data.teamSize,
+      teamMembers: validated.data.teamMembers,
       roundCity: validated.data.roundCity,
       notes: validated.data.notes ?? "",
       amount: fee.amount,
@@ -367,6 +421,8 @@ export async function finalizeRobofestPaidRegistration(paymentId: string): Promi
         school: pending.school,
         schoolIsCustom: pending.schoolIsCustom,
         pendingSchoolId: pending.pendingSchoolId,
+        teamSize: pending.teamSize || pending.teamMembers?.length || 1,
+        teamMembers: pending.teamMembers || [],
         roundCity: pending.roundCity,
         notes: pending.notes,
       },
