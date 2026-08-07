@@ -147,148 +147,139 @@ export default async function RobofestLocalRoundPage() {
         />
       ))}
 
-      <section className="relative overflow-hidden px-4 sm:px-6 pt-16 sm:pt-20 md:pt-24 pb-14 sm:pb-20">
-        <div className="absolute inset-0 bg-linear-to-b from-sky-100 via-cyan-50 to-slate-50" aria-hidden />
+      <section className="relative overflow-hidden px-4 sm:px-6 pt-16 sm:pt-20 md:pt-24 pb-10 sm:pb-14">
+        <div className="absolute inset-0 bg-[#5c74b0]" aria-hidden />
+        <Image
+          src="/robobanner.gif"
+          alt=""
+          fill
+          priority
+          unoptimized
+          className="object-cover object-center"
+          sizes="100vw"
+        />
         <div
-          className="absolute inset-0 opacity-50"
-          style={{
-            backgroundImage: `
-              linear-gradient(rgba(8,145,178,0.08) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(8,145,178,0.08) 1px, transparent 1px)
-            `,
-            backgroundSize: "36px 36px",
-            maskImage:
-              "radial-gradient(ellipse 80% 70% at 50% 30%, black 15%, transparent 75%)",
-          }}
+          className="absolute inset-0 bg-linear-to-b from-[#3d4f7a]/55 via-[#5c74b0]/45 to-[#5c74b0]/75"
           aria-hidden
         />
         <div
-          className="absolute -top-32 left-1/2 h-[28rem] w-[42rem] -translate-x-1/2 rounded-full bg-cyan-300/35 blur-3xl"
-          aria-hidden
-        />
-        <div
-          className="absolute top-24 -left-24 h-72 w-72 rounded-full bg-sky-300/30 blur-3xl"
-          aria-hidden
-        />
-        <div
-          className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-teal-200/40 blur-3xl"
-          aria-hidden
-        />
-        <div
-          className="absolute inset-x-0 bottom-0 h-24 bg-linear-to-t from-slate-50 to-transparent"
+          className="absolute inset-x-0 bottom-0 h-28 bg-linear-to-t from-slate-50 to-transparent"
           aria-hidden
         />
 
         <div className="relative z-10 max-w-7xl mx-auto text-center animate-fade-in-up">
-          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-cyan-200/80 bg-white/70 backdrop-blur-md shadow-sm mb-5 sm:mb-7">
+          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/35 bg-white/15 backdrop-blur-md shadow-sm mb-5 sm:mb-7">
             <MaterialIcon
               name="precision_manufacturing"
-              className="text-base sm:text-lg text-cyan-700"
+              className="text-base sm:text-lg text-white"
             />
-            <span className="text-xs sm:text-sm font-medium text-slate-700 tracking-wide">
+            <span className="text-xs sm:text-sm font-medium text-white tracking-wide">
               {content.statusBadge}
             </span>
           </div>
 
-          <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.28em] text-cyan-700 mb-3">
+          <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.28em] text-white/85 mb-3">
             {content.presentsLabel}
           </p>
 
-          <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold mb-5 sm:mb-6 tracking-tight px-2 text-slate-900">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold mb-5 sm:mb-6 tracking-tight px-2 text-white drop-shadow-sm">
             {content.headline}
           </h1>
 
-          <p className="text-base sm:text-lg md:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed px-2">
+          <p className="text-base sm:text-lg md:text-xl text-white/90 max-w-3xl mx-auto leading-relaxed px-2">
             {content.lead}
           </p>
         </div>
-      </section>
 
-      <section className="relative z-10 px-4 sm:px-6 -mt-6 sm:-mt-8 mb-2">
-        <div className="max-w-7xl mx-auto rounded-2xl border border-slate-200/80 bg-white shadow-lg shadow-slate-200/50 overflow-hidden">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
-            <div className="p-4 sm:p-5 text-left">
-              <div className="flex items-center gap-2 text-cyan-700 mb-2">
-                <MaterialIcon name="calendar_month" className="text-xl" />
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  Date
-                </span>
+        <div className="relative z-10 max-w-7xl mx-auto mt-8 sm:mt-10">
+          <div className="rounded-2xl border border-white/40 bg-white/90 backdrop-blur-md shadow-lg shadow-slate-900/10 overflow-hidden">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-200/80">
+              <div className="p-4 sm:p-5 text-left">
+                <div className="flex items-center gap-2 text-cyan-700 mb-2">
+                  <MaterialIcon name="calendar_month" className="text-xl" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Date
+                  </span>
+                </div>
+                <ul className="space-y-1">
+                  {dateLines.map((line) => (
+                    <li key={line} className="text-sm font-semibold text-slate-900">
+                      {line}
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <ul className="space-y-1">
-                {dateLines.map((line) => (
-                  <li key={line} className="text-sm font-semibold text-slate-900">
-                    {line}
-                  </li>
-                ))}
-              </ul>
-            </div>
 
-            <div className="p-4 sm:p-5 text-left">
-              <div className="flex items-center gap-2 text-cyan-700 mb-2">
-                <MaterialIcon name="location_on" className="text-xl" />
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  Venue
-                </span>
+              <div className="p-4 sm:p-5 text-left">
+                <div className="flex items-center gap-2 text-cyan-700 mb-2">
+                  <MaterialIcon name="location_on" className="text-xl" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Venue
+                  </span>
+                </div>
+                <ul className="space-y-1">
+                  {venueLines.map((line) => (
+                    <li key={line} className="text-sm font-semibold text-slate-900">
+                      {line}
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <ul className="space-y-1">
-                {venueLines.map((line) => (
-                  <li key={line} className="text-sm font-semibold text-slate-900">
-                    {line}
-                  </li>
-                ))}
-              </ul>
-            </div>
 
-            <div className="p-4 sm:p-5 text-left">
-              <div className="flex items-center gap-2 text-cyan-700 mb-2">
-                <MaterialIcon name="apartment" className="text-xl" />
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  Host
-                </span>
-              </div>
-              <p className="text-sm font-semibold text-slate-900">
-                {content.hostName || SITE_CONFIG.name}
-              </p>
-            </div>
-
-            <div className="p-4 sm:p-5 text-left">
-              <div className="flex items-center gap-2 text-cyan-700 mb-2">
-                <MaterialIcon name="call" className="text-xl" />
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  Contact
-                </span>
-              </div>
-              {contactEmail ? (
-                <p className="text-sm text-slate-800 mb-2">
-                  <span className="font-medium text-slate-500">E-Mail:</span>{" "}
-                  <a
-                    href={`mailto:${contactEmail}`}
-                    className="font-semibold text-cyan-700 hover:text-cyan-800 break-all"
-                  >
-                    {contactEmail}
-                  </a>
+              <div className="p-4 sm:p-5 text-left">
+                <div className="flex items-center gap-2 text-cyan-700 mb-2">
+                  <MaterialIcon name="apartment" className="text-xl" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Host
+                  </span>
+                </div>
+                <p className="text-sm font-semibold text-slate-900">
+                  {content.hostName || SITE_CONFIG.name}
                 </p>
-              ) : null}
-              <ul className="space-y-2">
-                {contactLines.map((line) => (
-                  <li key={`${line.label}-${line.phone}`} className="text-sm text-slate-800">
-                    <span className="font-semibold text-slate-900">
-                      {line.label}:
-                    </span>{" "}
+              </div>
+
+              <div className="p-4 sm:p-5 text-left">
+                <div className="flex items-center gap-2 text-cyan-700 mb-2">
+                  <MaterialIcon name="call" className="text-xl" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Contact
+                  </span>
+                </div>
+                {contactEmail ? (
+                  <p className="text-sm text-slate-800 mb-2">
+                    <span className="font-medium text-slate-500">E-Mail:</span>{" "}
                     <a
-                      href={`tel:${line.phone.replace(/\s/g, "")}`}
-                      className="font-semibold text-cyan-700 hover:text-cyan-800"
+                      href={`mailto:${contactEmail}`}
+                      className="font-semibold text-cyan-700 hover:text-cyan-800 break-all"
                     >
-                      {line.phone}
+                      {contactEmail}
                     </a>
-                    {line.note ? (
-                      <span className="block text-xs text-slate-500">
-                        ({line.note})
-                      </span>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
+                  </p>
+                ) : null}
+                <ul className="space-y-2">
+                  {contactLines.map((line) => (
+                    <li
+                      key={`${line.label}-${line.phone}`}
+                      className="text-sm text-slate-800"
+                    >
+                      <span className="font-semibold text-slate-900">
+                        {line.label}:
+                      </span>{" "}
+                      <a
+                        href={`tel:${line.phone.replace(/\s/g, "")}`}
+                        className="font-semibold text-cyan-700 hover:text-cyan-800"
+                      >
+                        {line.phone}
+                      </a>
+                      {line.note ? (
+                        <span className="block text-xs text-slate-500">
+                          ({line.note})
+                        </span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
         </div>
