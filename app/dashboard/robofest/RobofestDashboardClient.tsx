@@ -1032,7 +1032,9 @@ export default function RobofestDashboardClient({
               Paid registration (global)
             </label>
             <div className="space-y-1">
-              <label className="text-xs text-gray-500">Global fee (BDT)</label>
+              <label className="text-xs text-gray-500">
+                Fee per member (BDT)
+              </label>
               <Input
                 type="number"
                 min={0}
@@ -1047,7 +1049,8 @@ export default function RobofestDashboardClient({
               />
             </div>
             <p className="text-xs text-gray-500 max-w-md">
-              Competition fee override above 0 replaces the global fee.
+              Charged as fee × team size via bKash. Competition per-member
+              override above 0 replaces the global fee.
             </p>
           </CardContent>
         </Card>
@@ -1159,7 +1162,7 @@ export default function RobofestDashboardClient({
                   ))}
                   <div className="space-y-1">
                     <label className="text-xs text-gray-500">
-                      Fee override (BDT, blank = use global)
+                      Fee per member override (BDT, blank = use global)
                     </label>
                     <Input
                       type="number"

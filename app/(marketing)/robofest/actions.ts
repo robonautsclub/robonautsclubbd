@@ -20,6 +20,7 @@ import {
   resolveRobofestFee,
   type RobofestTeamMember,
 } from "@/lib/robofest-content";
+import { computeRobofestRegistrationTotal } from "@/lib/robofest-fee";
 import {
   formatAgeCategoryLabel,
   isGradeAllowedForAgeCategory,
@@ -318,6 +319,17 @@ export async function initiateRobofestPaidCheckout(
       };
     }
 
+    const totalAmount = computeRobofestRegistrationTotal(
+      fee.amount,
+      validated.data.teamSize,
+    );
+    if (totalAmount <= 0) {
+      return {
+        success: false,
+        error: "Invalid registration fee. Please contact support.",
+      };
+    }
+
     const duplicate = await hasExistingRobofestRegistration(
       category.name,
       validated.data.email,
@@ -331,7 +343,7 @@ export async function initiateRobofestPaidCheckout(
 
     const callbackUrl = `${getRobofestBaseUrl()}/api/payments/bkash/success`;
     const checkout = await bkashCreateCheckout({
-      amount: fee.amount,
+      amount: totalAmount,
       payerReference: validated.data.phone,
       callbackUrl,
       merchantInvoiceNumber: `RF-${category.slug}-${Date.now()}`.slice(0, 40),
@@ -356,7 +368,7 @@ export async function initiateRobofestPaidCheckout(
       campusAmbassadorSchool: validated.data.campusAmbassadorSchool,
       roundCity: validated.data.roundCity,
       notes: validated.data.notes ?? "",
-      amount: fee.amount,
+      amount: totalAmount,
       status: "pending",
       createdAt: now,
       updatedAt: now,

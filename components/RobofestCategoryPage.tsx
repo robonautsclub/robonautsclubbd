@@ -266,9 +266,7 @@ export default function RobofestCategoryPage({
                   Register for {category.name}
                 </h2>
                 <p className="text-sm text-slate-500 mt-1 leading-relaxed">
-                  {fee.isPaid
-                    ? `Registration fee: BDT ${fee.amount}. You will be redirected to bKash to pay.`
-                    : "Enter team details for the local round. Confirmation will be emailed after submit."}
+                  Enter team details for the local round.
                 </p>
               </div>
               <div className="px-5 sm:px-6 py-5">

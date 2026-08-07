@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { computeRobofestRegistrationTotal } from "@/lib/robofest-fee";
 import type { RobofestRoundContent } from "@/lib/robofest-content";
 import {
   PRIVATE_CANDIDATE_OPTION,
@@ -108,6 +109,10 @@ export default function RobofestCategoryRegistrationForm({
   const [error, setError] = useState("");
 
   const gradeOptions = getGradesForAgeCategory(form.ageCategory);
+  const totalAmount =
+    isPaid && amount > 0
+      ? computeRobofestRegistrationTotal(amount, form.teamSize)
+      : 0;
 
   const fieldId = (field: string) =>
     `robofest-${field}-${category.replace(/\s+/g, "-").toLowerCase()}`;
@@ -253,8 +258,17 @@ export default function RobofestCategoryRegistrationForm({
       {isPaid && amount > 0 ? (
         <Alert className="border-indigo-200 bg-indigo-50">
           <AlertTitle className="text-indigo-900">Registration fee</AlertTitle>
-          <AlertDescription className="text-indigo-800">
-            BDT {amount} via bKash after you submit.
+          <AlertDescription className="text-indigo-800 space-y-1.5">
+            <p>
+              BDT {amount} per member × {form.teamSize} member
+              {form.teamSize === 1 ? "" : "s"} ={" "}
+              <span className="font-semibold">BDT {totalAmount}</span> via
+              bKash. Confirmation is emailed after successful payment.
+            </p>
+            <p className="text-sm font-medium text-indigo-900">
+              After paying on bKash, do not close or leave this browser until
+              you see the registration successful message.
+            </p>
           </AlertDescription>
         </Alert>
       ) : null}
@@ -548,7 +562,7 @@ export default function RobofestCategoryRegistrationForm({
             ? "Redirecting to bKash…"
             : "Submitting…"
           : isPaid
-            ? `Pay BDT ${amount} & register`
+            ? `Pay BDT ${totalAmount} to confirm registration`
             : "Submit registration"}
       </Button>
     </form>

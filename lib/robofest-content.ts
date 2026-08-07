@@ -11,6 +11,12 @@ import {
   ROBOFEST_HOW_IT_WORKS,
   ROBOFEST_LOCAL,
 } from "@/lib/robofest-local";
+import { ROBOFEST_DEFAULT_FEE_PER_MEMBER_BDT } from "@/lib/robofest-fee";
+
+export {
+  ROBOFEST_DEFAULT_FEE_PER_MEMBER_BDT,
+  computeRobofestRegistrationTotal,
+} from "@/lib/robofest-fee";
 
 export const ROBOFEST_CONTENT_COLLECTION = "robofestContent";
 export const ROBOFEST_CONTENT_DOC_ID = "settings";
@@ -215,8 +221,8 @@ export function getDefaultRobofestContent(): RobofestContent {
     rounds: ROBOFEST_LOCAL.rounds.map((round) => ({ ...round })),
     categories: seedCategories(),
     howItWorks: ROBOFEST_HOW_IT_WORKS.map((step) => ({ ...step })),
-    isPaid: false,
-    amount: 0,
+    isPaid: true,
+    amount: 300,
     updatedAt: null,
     updatedBy: null,
   };
@@ -576,7 +582,9 @@ export function getRobofestCategoryByName(
   );
 }
 
-/** Resolve fee: category override if set, else global amount when isPaid. */
+/** Resolve per-member fee: category override if set, else global amount when isPaid.
+ * `amount` is always the fee **per team member**, not the team total.
+ */
 export function resolveRobofestFee(
   content: RobofestContent,
   categoryName: string,
@@ -585,8 +593,14 @@ export function resolveRobofestFee(
   if (category?.amount != null && category.amount > 0) {
     return { isPaid: true, amount: category.amount };
   }
-  if (content.isPaid && content.amount > 0) {
-    return { isPaid: true, amount: content.amount };
+  if (content.isPaid) {
+    return {
+      isPaid: true,
+      amount:
+        content.amount > 0
+          ? content.amount
+          : ROBOFEST_DEFAULT_FEE_PER_MEMBER_BDT,
+    };
   }
   return { isPaid: false, amount: 0 };
 }

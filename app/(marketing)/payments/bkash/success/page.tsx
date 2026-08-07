@@ -27,10 +27,26 @@ export default async function BkashSuccessPage({ searchParams }: SuccessPageProp
           <Alert className="mb-4 border-green-200 bg-green-50">
             <CheckCircle className="h-5 w-5 text-green-600" />
             <AlertTitle className="text-green-900">Registration confirmed</AlertTitle>
-            <AlertDescription className="text-green-800">
-              {isRobofest
-                ? 'Your payment is completed and your Robofest registration is now confirmed. A confirmation email has been sent with your PDF and details.'
-                : 'Your payment is completed and your event registration is now confirmed. A confirmation email has been sent to your email address with all details.'}
+            <AlertDescription className="text-green-800 space-y-2">
+              {isRobofest ? (
+                <>
+                  <p>
+                    Your payment is completed and your Robofest registration is
+                    now confirmed. A confirmation email has been sent with your
+                    PDF and team details.
+                  </p>
+                  <p className="font-medium text-green-900">
+                    This page is your registration success confirmation. You can
+                    safely leave once you have noted your registration ID below.
+                  </p>
+                </>
+              ) : (
+                <p>
+                  Your payment is completed and your event registration is now
+                  confirmed. A confirmation email has been sent to your email
+                  address with all details.
+                </p>
+              )}
             </AlertDescription>
           </Alert>
           {registrationId ? (
