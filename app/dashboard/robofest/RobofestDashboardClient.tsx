@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import {
+  ChevronDown,
   Download,
   FileSpreadsheet,
   FileText,
@@ -14,6 +15,7 @@ import type {
   RobofestContent,
   RobofestRegistration,
   RobofestRegistrationStatus,
+  RobofestTeamMember,
 } from '@/lib/robofest-content'
 import { formatAgeCategoryLabel } from '@/lib/robofest-registration-options'
 import { cn } from '@/lib/utils'
@@ -34,6 +36,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import {
   Table,
   TableBody,
@@ -56,6 +63,75 @@ function statusBadgeClass(status: string) {
     return 'bg-rose-50 text-rose-800 hover:bg-rose-50 border-rose-100'
   }
   return 'bg-amber-50 text-amber-800 hover:bg-amber-50 border-amber-100'
+}
+
+function CollapsibleTeamMembers({
+  registrationId,
+  teamSize,
+  members,
+}: {
+  registrationId: string
+  teamSize?: number
+  members?: RobofestTeamMember[]
+}) {
+  const count = teamSize || members?.length || 0
+  if (!members?.length) {
+    return (
+      <div className="text-xs">
+        <div className="font-medium text-gray-800">
+          {count} member{count === 1 ? '' : 's'}
+        </div>
+        <span className="text-gray-400">—</span>
+      </div>
+    )
+  }
+
+  const preview = members
+    .slice(0, 2)
+    .map((m) => m.name)
+    .filter(Boolean)
+    .join(', ')
+  const remaining = Math.max(0, members.length - 2)
+
+  return (
+    <Collapsible className="group/team text-xs min-w-[11rem] max-w-[18rem]">
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="w-full text-left rounded-md border border-transparent hover:border-gray-200 hover:bg-gray-50/80 px-1.5 py-1 -mx-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-200"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="font-medium text-gray-800">
+                {count} member{count === 1 ? '' : 's'}
+              </div>
+              <div className="text-[11px] text-gray-500 truncate mt-0.5">
+                {preview}
+                {remaining > 0 ? ` +${remaining}` : ''}
+              </div>
+            </div>
+            <ChevronDown className="w-3.5 h-3.5 shrink-0 text-gray-400 mt-0.5 transition-transform group-data-[state=open]/team:rotate-180" />
+          </div>
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-2 space-y-1.5 data-[state=closed]:animate-none">
+        <ul className="space-y-1.5 rounded-md border border-gray-100 bg-gray-50/80 p-2 text-gray-600">
+          {members.map((m, i) => (
+            <li key={`${registrationId}-m-${i}`} className="leading-snug">
+              <span className="font-medium text-gray-800">
+                {String(i + 1).padStart(2, '0')}. {m.name}
+              </span>
+              <div className="text-[11px] text-gray-500 break-words">
+                {[m.grade, m.school, m.branch, m.phone, m.email]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </CollapsibleContent>
+    </Collapsible>
+  )
 }
 
 export default function RobofestDashboardClient({
@@ -550,40 +626,12 @@ export default function RobofestDashboardClient({
                         <TableCell className="text-sm whitespace-nowrap">
                           {r.roundCity}
                         </TableCell>
-                        <TableCell className="min-w-[11rem] max-w-[18rem] text-xs">
-                          <div className="font-medium text-gray-800 mb-1">
-                            {r.teamSize || r.teamMembers?.length || 0} member
-                            {(r.teamSize || r.teamMembers?.length) === 1
-                              ? ''
-                              : 's'}
-                          </div>
-                          {r.teamMembers?.length ? (
-                            <ul className="space-y-1.5 text-gray-600">
-                              {r.teamMembers.map((m, i) => (
-                                <li
-                                  key={`${r.id}-m-${i}`}
-                                  className="leading-snug"
-                                >
-                                  <span className="font-medium text-gray-800">
-                                    {String(i + 1).padStart(2, '0')}. {m.name}
-                                  </span>
-                                  <div className="text-[11px] text-gray-500 break-words">
-                                    {[
-                                      m.grade,
-                                      m.school,
-                                      m.branch,
-                                      m.phone,
-                                      m.email,
-                                    ]
-                                      .filter(Boolean)
-                                      .join(' · ')}
-                                  </div>
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <span className="text-gray-400">—</span>
-                          )}
+                        <TableCell className="min-w-[11rem] max-w-[18rem]">
+                          <CollapsibleTeamMembers
+                            registrationId={r.id}
+                            teamSize={r.teamSize}
+                            members={r.teamMembers}
+                          />
                         </TableCell>
                         <TableCell className="text-xs min-w-[8rem]">
                           <div className="break-all">{r.email}</div>

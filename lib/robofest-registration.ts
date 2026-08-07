@@ -5,7 +5,10 @@
 import { FieldValue } from "firebase-admin/firestore";
 import type { Event } from "@/types/event";
 import { adminDb } from "@/lib/firebase-admin";
-import { sendBookingConfirmationEmail } from "@/lib/email";
+import {
+  sendRobofestConfirmationEmail,
+  uniqueMemberEmails,
+} from "@/lib/robofest-email";
 import { uploadPDFToStorage } from "@/lib/pdfStorage";
 import { generateRegistrationId } from "@/lib/registrationId";
 import {
@@ -72,15 +75,17 @@ function buildRegistrationInfoParts(
   > & {
     amountPaid?: number;
     trxId?: string;
+    includeMembers?: boolean;
   },
 ): string[] {
+  const includeMembers = data.includeMembers !== false;
   const infoParts = [
     `Competition: ${data.category}`,
     `Division: ${data.roundCity}`,
     `Age category: ${formatAgeCategoryLabel(data.ageCategory)}`,
     `Team size: ${data.teamSize}`,
   ];
-  if (data.teamMembers.length > 0) {
+  if (includeMembers && data.teamMembers.length > 0) {
     infoParts.push(
       `Members: ${data.teamMembers.map((m) => formatMemberLine(m)).join("; ")}`,
     );
@@ -272,19 +277,25 @@ export async function createRobofestRegistrationAndSendEmail(
     notes,
     amountPaid: paymentMeta?.amountPaid,
     trxId: paymentMeta?.trxId,
+    includeMembers: false,
   });
 
-  const emailResult = await sendBookingConfirmationEmail({
-    to: email,
-    name,
+  const recipients = uniqueMemberEmails(teamMembers, email);
+  const emailResult = await sendRobofestConfirmationEmail({
+    recipients,
+    teamName: name,
+    competition: category,
+    division: roundCity,
+    ageCategory,
+    teamMembers,
     event,
     registrationId,
     bookingId: regRef.id,
-    bookingDetails: {
-      school,
-      phone,
-      information: infoParts.join("\n"),
-    },
+    school,
+    phone,
+    information: infoParts.join("\n"),
+    amountPaid: paymentMeta?.amountPaid,
+    trxId: paymentMeta?.trxId,
   });
 
   try {
@@ -394,19 +405,26 @@ export async function resendRobofestConfirmationEmail(
     notes: registration.notes,
     amountPaid: registration.amountPaid,
     trxId: registration.trxId,
+    includeMembers: false,
   });
 
-  const emailResult = await sendBookingConfirmationEmail({
-    to: registration.email,
-    name: registration.name,
+  const teamMembers = registration.teamMembers || [];
+  const recipients = uniqueMemberEmails(teamMembers, registration.email);
+  const emailResult = await sendRobofestConfirmationEmail({
+    recipients,
+    teamName: registration.name,
+    competition: registration.category,
+    division: registration.roundCity,
+    ageCategory,
+    teamMembers,
     event,
     registrationId: registration.registrationId,
     bookingId: registration.id,
-    bookingDetails: {
-      school: registration.school,
-      phone: registration.phone,
-      information: infoParts.join("\n"),
-    },
+    school: registration.school,
+    phone: registration.phone,
+    information: infoParts.join("\n"),
+    amountPaid: registration.amountPaid,
+    trxId: registration.trxId,
   });
 
   const ref = adminDb

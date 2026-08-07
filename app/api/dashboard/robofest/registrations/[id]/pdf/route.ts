@@ -6,6 +6,7 @@ import {
   buildRobofestEventForPdfEmail,
   getRobofestRegistrationById,
 } from '@/lib/robofest-registration'
+import { formatAgeCategoryLabel } from '@/lib/robofest-registration-options'
 import { SITE_CONFIG } from '@/lib/site-config'
 
 export const dynamic = 'force-dynamic'
@@ -44,6 +45,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   const ageCategory =
     registration.ageCategory === 'innovators' ? 'innovators' : 'explorer'
+  const teamMembers = registration.teamMembers || []
 
   const content = await getRobofestContentFresh()
   const event = buildRobofestEventForPdfEmail(content, {
@@ -53,8 +55,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
     phone: registration.phone,
     school: registration.school,
     ageCategory,
-    teamSize: registration.teamSize || registration.teamMembers?.length || 1,
-    teamMembers: registration.teamMembers || [],
+    teamSize: registration.teamSize || teamMembers.length || 1,
+    teamMembers,
     campusAmbassadorId: registration.campusAmbassadorId,
     campusAmbassadorName: registration.campusAmbassadorName,
     campusAmbassadorSchool: registration.campusAmbassadorSchool,
@@ -68,20 +70,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const infoParts = [
     `Competition: ${registration.category}`,
     `Division: ${registration.roundCity}`,
-    `Age category: ${ageCategory}`,
-    `Team size: ${registration.teamSize || registration.teamMembers?.length || 1}`,
+    `Age category: ${formatAgeCategoryLabel(ageCategory)}`,
+    `Team size: ${registration.teamSize || teamMembers.length || 1}`,
   ]
-  if (registration.teamMembers?.length) {
-    infoParts.push(
-      `Members: ${registration.teamMembers
-        .map((m) =>
-          [m.name, m.email && `<${m.email}>`, m.phone, m.school, m.grade]
-            .filter(Boolean)
-            .join(' · '),
-        )
-        .join('; ')}`,
-    )
-  }
   if (registration.campusAmbassadorName) {
     infoParts.push(
       `Campus ambassador: ${registration.campusAmbassadorName}${
@@ -103,10 +94,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
     event,
     bookingDetails: {
       name: registration.name,
+      teamName: registration.name,
       email: registration.email,
       school: registration.school,
       phone: registration.phone,
       information: infoParts.join('\n'),
+      teamMembers,
     },
     verificationUrl,
   })

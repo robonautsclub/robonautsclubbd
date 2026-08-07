@@ -10,6 +10,15 @@ import { PDFKIT_FONT_DATA } from './pdfkitFontData'
 import { join, dirname, basename } from 'path'
 import { existsSync, readdirSync, readFileSync } from 'fs'
 
+interface BookingTeamMember {
+  name: string
+  email: string
+  phone?: string
+  school?: string
+  branch?: string
+  grade?: string
+}
+
 interface BookingDetails {
   name: string
   school: string
@@ -17,6 +26,9 @@ interface BookingDetails {
   phone: string
   bkashNumber?: string
   information: string
+  /** Robofest team name (when set, PDF labels registration as Team name). */
+  teamName?: string
+  teamMembers?: BookingTeamMember[]
 }
 
 interface GeneratePDFProps {
@@ -634,10 +646,27 @@ async function generatePDFContent(
   // ---------- Registration Information ----------
   y = drawSectionHeader('Registration Information', y)
 
-  y = drawRow('Name', sanitizedBooking.name, y)
-  y = drawRow('School', sanitizedBooking.school, y)
-  y = drawRow('Email', sanitizedBooking.email, y)
-  y = drawRow('Phone', sanitizedBooking.phone, y)
+  const teamName =
+    sanitizedBooking.teamName ||
+    (sanitizedBooking.teamMembers && sanitizedBooking.teamMembers.length > 0
+      ? sanitizedBooking.name
+      : '')
+  const isTeamRegistration = Boolean(
+    sanitizedBooking.teamName ||
+      (sanitizedBooking.teamMembers && sanitizedBooking.teamMembers.length > 0),
+  )
+
+  if (isTeamRegistration) {
+    y = drawRow('Team name', teamName || sanitizedBooking.name, y)
+    y = drawRow('Primary school', sanitizedBooking.school, y)
+    y = drawRow('Primary contact', sanitizedBooking.email, y)
+    y = drawRow('Primary phone', sanitizedBooking.phone, y)
+  } else {
+    y = drawRow('Name', sanitizedBooking.name, y)
+    y = drawRow('School', sanitizedBooking.school, y)
+    y = drawRow('Email', sanitizedBooking.email, y)
+    y = drawRow('Phone', sanitizedBooking.phone, y)
+  }
   if (sanitizedBooking.bkashNumber) {
     y = drawRow('bKash Number', sanitizedBooking.bkashNumber, y)
   }
@@ -649,6 +678,26 @@ async function generatePDFContent(
   const footerH = 28
   const qrBlockY = pageHeight - theme.metric.pageMarginBottom - footerH - theme.metric.qrBlockH
   const flowSpaceBottom = qrBlockY - 14
+
+  // ---------- Team members (Robofest) ----------
+  if (
+    sanitizedBooking.teamMembers &&
+    sanitizedBooking.teamMembers.length > 0 &&
+    y + 40 < flowSpaceBottom
+  ) {
+    y += 6
+    y = drawSectionHeader('Team Members', y)
+    for (let i = 0; i < sanitizedBooking.teamMembers.length; i += 1) {
+      if (y + 28 > flowSpaceBottom) break
+      const member = sanitizedBooking.teamMembers[i]
+      const label = `${String(i + 1).padStart(2, '0')}. ${member.name || 'Member'}`
+      const detail = [member.email, member.grade, member.school, member.phone]
+        .filter(Boolean)
+        .join(' · ')
+      y = drawRow(label, detail || '—', y)
+    }
+    y += 4
+  }
 
   // ---------- Optional: Additional Information ----------
   if (sanitizedBooking.information && y + 32 < flowSpaceBottom) {
