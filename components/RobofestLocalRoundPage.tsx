@@ -90,11 +90,10 @@ export default async function RobofestLocalRoundPage() {
     : content.venueLabel
       ? [content.venueLabel]
       : [];
-  const contactLines = content.contactLines ?? [];
-  const contactEmail = content.contactEmail ?? "";
-  const generalRulesPdf = content.generalRulesPdf ?? "";
   const instagramUrl = content.instagramUrl ?? "";
-  const contactHref = content.contactHref || "/about#contact";
+  const contactEmail = content.contactEmail ?? "";
+  const contactLines = content.contactLines ?? [];
+  const generalRulesPdf = content.generalRulesPdf ?? "";
 
   const itemListSchema = {
     "@context": "https://schema.org",
@@ -442,52 +441,133 @@ export default async function RobofestLocalRoundPage() {
           </div>
         </section>
 
-        <section className="relative py-14 sm:py-20 px-4 sm:px-6 overflow-hidden border-t border-slate-200 bg-white">
+        <section className="relative py-14 sm:py-20 px-4 sm:px-6 overflow-hidden border-t border-slate-200 bg-slate-50">
           <CircuitBackdrop className="opacity-50" />
-          <div className="relative max-w-3xl mx-auto text-center rounded-3xl border border-cyan-200 bg-linear-to-b from-cyan-50 to-white px-6 py-10 sm:px-10 sm:py-12 shadow-sm">
-            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-200 bg-white text-cyan-700 shadow-sm">
-              <MaterialIcon name="rocket_launch" className="text-3xl" />
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3 tracking-tight">
-              Ready for the Local Round?
-            </h2>
-            <div className="text-slate-600 mb-7 text-sm sm:text-base leading-relaxed space-y-2">
-              <p>
-                RoboFest Bangladesh 2026 is coming to{" "}
-                <span className="font-semibold text-slate-800">
-                  Chittagong &amp; Dhaka
-                </span>{" "}
-                this <span className="font-semibold text-slate-800">September.</span>
-              </p>
-              <p>Choose Your Competition, Form Your Team, and Get Ready to Compete.</p>
-              {content.dateLabel ? (
-                <p className="font-semibold text-slate-900">{content.dateLabel}</p>
-              ) : null}
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center flex-wrap">
-              <Button
-                asChild
-                className="bg-cyan-600 text-white hover:bg-cyan-700 font-semibold"
-              >
-                <a href="#categories">Register Now</a>
-              </Button>
-              <Button asChild variant="outline">
-                <Link href={contactHref}>Contact</Link>
-              </Button>
-              {instagramUrl ? (
-                <Button asChild variant="outline">
-                  <a
-                    href={instagramUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2"
-                    aria-label="Robonauts Ltd on Instagram"
-                  >
-                    <Instagram className="h-4 w-4" aria-hidden />
-                    Instagram
-                  </a>
-                </Button>
-              ) : null}
+          <div className="relative max-w-7xl mx-auto">
+            <div className="rounded-3xl border border-slate-200/80 bg-white shadow-lg shadow-slate-200/40 overflow-hidden">
+              <div className="grid lg:grid-cols-5">
+                <div className="lg:col-span-3 px-6 py-8 sm:px-10 sm:py-12 bg-linear-to-br from-cyan-50/90 via-white to-white">
+                  <p className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-800 mb-5">
+                    <MaterialIcon name="rocket_launch" className="text-sm" />
+                    Local Round
+                  </p>
+                  <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 mb-4 tracking-tight">
+                    Ready for the Local Round?
+                  </h2>
+                  <div className="text-slate-600 text-sm sm:text-base leading-relaxed space-y-2 max-w-xl">
+                    <p>
+                      RoboFest Bangladesh 2026 is coming to{" "}
+                      <span className="font-semibold text-slate-800">
+                        Chittagong &amp; Dhaka
+                      </span>{" "}
+                      this{" "}
+                      <span className="font-semibold text-slate-800">
+                        September.
+                      </span>
+                    </p>
+                    <p>
+                      Choose Your Competition, Form Your Team, and Get Ready to
+                      Compete.
+                    </p>
+                  </div>
+                  {content.dateLabel ? (
+                    <p className="mt-5 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-semibold text-slate-900">
+                      <MaterialIcon
+                        name="calendar_month"
+                        className="text-lg text-cyan-700"
+                      />
+                      {content.dateLabel}
+                    </p>
+                  ) : null}
+                  <div className="mt-7 flex flex-col sm:flex-row gap-3">
+                    <Button
+                      asChild
+                      className="bg-cyan-600 text-white hover:bg-cyan-700 font-semibold"
+                    >
+                      <a href="#categories">Register Now</a>
+                    </Button>
+                    {instagramUrl ? (
+                      <Button asChild variant="outline">
+                        <a
+                          href={instagramUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2"
+                          aria-label="Robonauts Ltd on Instagram"
+                        >
+                          <Instagram className="h-4 w-4" aria-hidden />
+                          Instagram
+                        </a>
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="lg:col-span-2 border-t lg:border-t-0 lg:border-l border-slate-200 bg-slate-50/80 px-6 py-8 sm:px-8 sm:py-12">
+                  <div className="flex items-center gap-2 text-cyan-700 mb-5">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-100 bg-white text-cyan-700 shadow-sm">
+                      <MaterialIcon name="call" className="text-xl" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Contact
+                      </p>
+                      <p className="text-sm font-semibold text-slate-900">
+                        Need help registering?
+                      </p>
+                    </div>
+                  </div>
+
+                  {contactEmail ? (
+                    <a
+                      href={`mailto:${contactEmail}`}
+                      className="group mb-4 flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-colors hover:border-cyan-300 hover:bg-cyan-50/40"
+                    >
+                      <MaterialIcon
+                        name="mail"
+                        className="text-xl text-cyan-700 mt-0.5"
+                      />
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                          E-Mail
+                        </p>
+                        <p className="text-sm font-semibold text-cyan-700 group-hover:text-cyan-800 break-all">
+                          {contactEmail}
+                        </p>
+                      </div>
+                    </a>
+                  ) : null}
+
+                  <ul className="space-y-3">
+                    {contactLines.map((line) => (
+                      <li key={`${line.label}-${line.phone}`}>
+                        <a
+                          href={`tel:${line.phone.replace(/\s/g, "")}`}
+                          className="group flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-colors hover:border-cyan-300 hover:bg-cyan-50/40"
+                        >
+                          <MaterialIcon
+                            name="phone_in_talk"
+                            className="text-xl text-cyan-700 mt-0.5"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-900">
+                              {line.label}
+                            </p>
+                            <p className="text-sm font-semibold text-cyan-700 group-hover:text-cyan-800">
+                              {line.phone}
+                            </p>
+                            {line.note ? (
+                              <p className="text-xs text-slate-500 mt-0.5">
+                                {line.note}
+                              </p>
+                            ) : null}
+                          </div>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
         </section>
