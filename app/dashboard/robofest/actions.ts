@@ -43,9 +43,38 @@ export async function updateRobofestContent(
   }
 
   try {
+    const defaults = getDefaultRobofestContent()
     const sanitized: RobofestContent = {
-      ...getDefaultRobofestContent(),
+      ...defaults,
       ...input,
+      presentsLabel: (input.presentsLabel || defaults.presentsLabel).trim(),
+      generalRulesPdf: (input.generalRulesPdf || defaults.generalRulesPdf).trim(),
+      instagramUrl: (input.instagramUrl || defaults.instagramUrl).trim(),
+      contactEmail: (input.contactEmail || defaults.contactEmail).trim(),
+      dateLines: (() => {
+        const lines = Array.isArray(input.dateLines)
+          ? input.dateLines.map((line) => line.trim()).filter(Boolean)
+          : defaults.dateLines
+        return lines.length > 0 ? lines : defaults.dateLines
+      })(),
+      venueLines: (() => {
+        const lines = Array.isArray(input.venueLines)
+          ? input.venueLines.map((line) => line.trim()).filter(Boolean)
+          : defaults.venueLines
+        return lines.length > 0 ? lines : defaults.venueLines
+      })(),
+      contactLines: (() => {
+        const lines = Array.isArray(input.contactLines)
+          ? input.contactLines
+              .map((line) => ({
+                label: (line.label || '').trim(),
+                phone: (line.phone || '').trim(),
+                note: (line.note || '').trim(),
+              }))
+              .filter((line) => line.label || line.phone)
+          : defaults.contactLines
+        return lines.length > 0 ? lines : defaults.contactLines
+      })(),
       categories: (input.categories || []).map((category) => ({
         ...category,
         slug: category.slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-'),

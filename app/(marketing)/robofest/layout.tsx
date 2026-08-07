@@ -2,12 +2,16 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { SITE_CONFIG } from "@/lib/site-config";
 
+const title = "Robofest Bangladesh 2026 Local Round";
+const description =
+  "Register for Robofest Bangladesh 2026 local rounds in Chittagong (11 Sep) and Dhaka (18 Sep). Compete in BottleSumo, Buildathon, Line Following Bot, or Robo Exhibition—hosted by Robonauts Ltd. Path to the World Championship 2027 in South Korea.";
+const ogImage = "/robofest/dhaka.jpg";
+
 export const metadata: Metadata = {
-  title: "Robofest Bangladesh Local Round",
-  description:
-    "Robofest Bangladesh Local Round 2026 in Dhaka (4–5 Sep) and Chittagong (11–12 Sep), hosted by Robonauts Ltd. Register for BottleSumo, Buildathon, Line Following Bot, or Robo Exhibition—qualify toward the World Championship at Lawrence Technological University.",
+  title,
+  description,
   keywords: [
-    "Robofest Bangladesh",
+    "Robofest Bangladesh 2026",
     "Robofest local round",
     "Robofest Dhaka",
     "Robofest Chittagong",
@@ -17,21 +21,27 @@ export const metadata: Metadata = {
     "Robo Exhibition",
     "robotics competition Dhaka",
     "Robonauts Robofest",
-    "Lawrence Technological University Robofest",
+    "Robofest South Korea 2027",
   ],
   openGraph: {
-    title: `Robofest Bangladesh Local Round | ${SITE_CONFIG.name}`,
-    description:
-      "Compete in Dhaka and Chittagong at the Robofest local rounds hosted by Robonauts. Path to the World Championship at LTU, USA.",
+    title: `${title} | ${SITE_CONFIG.name}`,
+    description,
     url: "/robofest",
+    type: "website",
     images: [
       {
-        url: "/olympiads/robofest.png",
+        url: ogImage,
         width: 1200,
         height: 630,
-        alt: "Robofest Bangladesh Local Round",
+        alt: "Robofest Bangladesh 2026 Local Round",
       },
     ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `Robofest Bangladesh 2026 | ${SITE_CONFIG.name}`,
+    description,
+    images: [ogImage],
   },
   alternates: {
     canonical: "/robofest",

@@ -5,11 +5,17 @@ import {
   getRobofestCategoryRulesPdf,
   getRobofestContent,
 } from "@/lib/robofest-content";
-import { ROBOFEST_HOW_IT_WORKS, ROBOFEST_LOCAL } from "@/lib/robofest-local";
 import { Button } from "@/components/ui/button";
 import { Instagram } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import Script from "next/script";
+import {
+  absoluteSiteUrl,
+  getBreadcrumbSchema,
+  getEventSchema,
+} from "@/lib/seo";
+import { SITE_CONFIG } from "@/lib/site-config";
 
 function MaterialIcon({
   name,
@@ -73,9 +79,74 @@ function SectionHeading({
 export default async function RobofestLocalRoundPage() {
   const content = await getRobofestContent();
   const categories = getActiveRobofestCategories(content);
+  const howItWorks = content.howItWorks?.length ? content.howItWorks : [];
+  const dateLines = content.dateLines?.length
+    ? content.dateLines
+    : content.dateLabel
+      ? [content.dateLabel]
+      : [];
+  const venueLines = content.venueLines?.length
+    ? content.venueLines
+    : content.venueLabel
+      ? [content.venueLabel]
+      : [];
+  const contactLines = content.contactLines ?? [];
+  const contactEmail = content.contactEmail ?? "";
+  const generalRulesPdf = content.generalRulesPdf ?? "";
+  const instagramUrl = content.instagramUrl ?? "";
+  const contactHref = content.contactHref || "/about#contact";
+
+  const itemListSchema = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: content.headline || "Robofest Bangladesh competitions",
+    itemListElement: categories.map((category, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: category.name,
+      url: absoluteSiteUrl(getRobofestCategoryHref(category.slug)),
+    })),
+  };
+
+  const roundSchemas = (content.rounds ?? []).map((round, index) =>
+    getEventSchema({
+      id: `robofest-${(round.city || "round").toLowerCase().replace(/\s+/g, "-")}-${index}`,
+      title: round.title || `${content.headline} · ${round.city}`,
+      description: content.lead || content.headline,
+      date: round.dates,
+      location: round.city,
+      venue: round.venueLabel,
+      image: round.image,
+      url: "/robofest",
+    }),
+  );
+
+  const breadcrumbSchema = getBreadcrumbSchema([
+    { name: "Home", url: "/" },
+    { name: "Robofest Bangladesh", url: "/robofest" },
+  ]);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
+      <Script
+        id="robofest-breadcrumb-jsonld"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      <Script
+        id="robofest-itemlist-jsonld"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
+      />
+      {roundSchemas.map((schema, index) => (
+        <Script
+          key={`robofest-round-${index}`}
+          id={`robofest-round-jsonld-${index}`}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
+      ))}
+
       <section className="relative overflow-hidden px-4 sm:px-6 pt-16 sm:pt-20 md:pt-24 pb-14 sm:pb-20">
         <div className="absolute inset-0 bg-linear-to-b from-sky-100 via-cyan-50 to-slate-50" aria-hidden />
         <div
@@ -120,15 +191,15 @@ export default async function RobofestLocalRoundPage() {
           </div>
 
           <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.28em] text-cyan-700 mb-3">
-            {ROBOFEST_LOCAL.presentsLabel}
+            {content.presentsLabel}
           </p>
 
           <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold mb-5 sm:mb-6 tracking-tight px-2 text-slate-900">
-            {ROBOFEST_LOCAL.headline}
+            {content.headline}
           </h1>
 
           <p className="text-base sm:text-lg md:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed px-2">
-            {ROBOFEST_LOCAL.lead}
+            {content.lead}
           </p>
         </div>
       </section>
@@ -144,7 +215,7 @@ export default async function RobofestLocalRoundPage() {
                 </span>
               </div>
               <ul className="space-y-1">
-                {ROBOFEST_LOCAL.dateLines.map((line) => (
+                {dateLines.map((line) => (
                   <li key={line} className="text-sm font-semibold text-slate-900">
                     {line}
                   </li>
@@ -160,7 +231,7 @@ export default async function RobofestLocalRoundPage() {
                 </span>
               </div>
               <ul className="space-y-1">
-                {ROBOFEST_LOCAL.venueLines.map((line) => (
+                {venueLines.map((line) => (
                   <li key={line} className="text-sm font-semibold text-slate-900">
                     {line}
                   </li>
@@ -176,7 +247,7 @@ export default async function RobofestLocalRoundPage() {
                 </span>
               </div>
               <p className="text-sm font-semibold text-slate-900">
-                {content.hostName || ROBOFEST_LOCAL.hostName}
+                {content.hostName || SITE_CONFIG.name}
               </p>
             </div>
 
@@ -187,18 +258,20 @@ export default async function RobofestLocalRoundPage() {
                   Contact
                 </span>
               </div>
-              <p className="text-sm text-slate-800 mb-2">
-                <span className="font-medium text-slate-500">E-Mail:</span>{" "}
-                <a
-                  href={`mailto:${ROBOFEST_LOCAL.contactEmail}`}
-                  className="font-semibold text-cyan-700 hover:text-cyan-800 break-all"
-                >
-                  {ROBOFEST_LOCAL.contactEmail}
-                </a>
-              </p>
+              {contactEmail ? (
+                <p className="text-sm text-slate-800 mb-2">
+                  <span className="font-medium text-slate-500">E-Mail:</span>{" "}
+                  <a
+                    href={`mailto:${contactEmail}`}
+                    className="font-semibold text-cyan-700 hover:text-cyan-800 break-all"
+                  >
+                    {contactEmail}
+                  </a>
+                </p>
+              ) : null}
               <ul className="space-y-2">
-                {ROBOFEST_LOCAL.contactLines.map((line) => (
-                  <li key={line.phone} className="text-sm text-slate-800">
+                {contactLines.map((line) => (
+                  <li key={`${line.label}-${line.phone}`} className="text-sm text-slate-800">
                     <span className="font-semibold text-slate-900">
                       {line.label}:
                     </span>{" "}
@@ -208,9 +281,11 @@ export default async function RobofestLocalRoundPage() {
                     >
                       {line.phone}
                     </a>
-                    <span className="block text-xs text-slate-500">
-                      ({line.note})
-                    </span>
+                    {line.note ? (
+                      <span className="block text-xs text-slate-500">
+                        ({line.note})
+                      </span>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -230,7 +305,7 @@ export default async function RobofestLocalRoundPage() {
             />
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-              {ROBOFEST_HOW_IT_WORKS.map((step, index) => (
+              {howItWorks.map((step, index) => (
                 <div
                   key={step.title}
                   className="group relative rounded-2xl border border-slate-200 bg-slate-50/80 p-5 sm:p-6 transition-all duration-300 hover:border-cyan-300 hover:bg-cyan-50/50 hover:shadow-md"
@@ -267,24 +342,26 @@ export default async function RobofestLocalRoundPage() {
               description="Choose Your Challenge. Build, Code, Innovate & Compete at RoboFest Bangladesh 2026."
             />
 
-            <div className="flex justify-center mb-8 sm:mb-10">
-              <Button
-                asChild
-                size="lg"
-                className="bg-cyan-600 text-white hover:bg-cyan-700 font-semibold shadow-md shadow-cyan-600/20 px-6 sm:px-8"
-              >
-                <a
-                  href={ROBOFEST_LOCAL.generalRulesPdf}
-                  download="General-Rules-and-Regulations.pdf"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2"
+            {generalRulesPdf ? (
+              <div className="flex justify-center mb-8 sm:mb-10">
+                <Button
+                  asChild
+                  size="lg"
+                  className="bg-cyan-600 text-white hover:bg-cyan-700 font-semibold shadow-md shadow-cyan-600/20 px-6 sm:px-8"
                 >
-                  <MaterialIcon name="download" className="text-xl" />
-                  General Rules &amp; Regulations
-                </a>
-              </Button>
-            </div>
+                  <a
+                    href={generalRulesPdf}
+                    download="General-Rules-and-Regulations.pdf"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2"
+                  >
+                    <MaterialIcon name="download" className="text-xl" />
+                    General Rules &amp; Regulations
+                  </a>
+                </Button>
+              </div>
+            ) : null}
 
             <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-5 sm:gap-6">
               {categories.map((category, index) => {
@@ -392,9 +469,9 @@ export default async function RobofestLocalRoundPage() {
                 this <span className="font-semibold text-slate-800">September.</span>
               </p>
               <p>Choose Your Competition, Form Your Team, and Get Ready to Compete.</p>
-              <p className="font-semibold text-slate-900">
-                Chittagong - 11 September | Dhaka - 18 September
-              </p>
+              {content.dateLabel ? (
+                <p className="font-semibold text-slate-900">{content.dateLabel}</p>
+              ) : null}
             </div>
             <div className="flex flex-col sm:flex-row gap-3 justify-center flex-wrap">
               <Button
@@ -404,22 +481,22 @@ export default async function RobofestLocalRoundPage() {
                 <a href="#categories">Register Now</a>
               </Button>
               <Button asChild variant="outline">
-                <Link href={content.contactHref || ROBOFEST_LOCAL.contactHref}>
-                  Contact
-                </Link>
+                <Link href={contactHref}>Contact</Link>
               </Button>
-              <Button asChild variant="outline">
-                <a
-                  href={ROBOFEST_LOCAL.instagramUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2"
-                  aria-label="Robonauts Ltd on Instagram"
-                >
-                  <Instagram className="h-4 w-4" aria-hidden />
-                  Instagram
-                </a>
-              </Button>
+              {instagramUrl ? (
+                <Button asChild variant="outline">
+                  <a
+                    href={instagramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2"
+                    aria-label="Robonauts Ltd on Instagram"
+                  >
+                    <Instagram className="h-4 w-4" aria-hidden />
+                    Instagram
+                  </a>
+                </Button>
+              ) : null}
             </div>
           </div>
         </section>

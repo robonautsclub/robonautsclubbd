@@ -1,13 +1,21 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { notFound } from "next/navigation";
 import { getPublicEnglishMediumSchools } from "@/app/(marketing)/events/actions";
 import {
   getActiveRobofestCategories,
   getRobofestCategoryFromContent,
+  getRobofestCategoryHref,
+  getRobofestCategoryImage,
   getRobofestContent,
   resolveRobofestFee,
 } from "@/lib/robofest-content";
 import { ROBOFEST_CATEGORIES } from "@/lib/robofest-local";
+import {
+  absoluteSiteUrl,
+  getBreadcrumbSchema,
+  getEventSchema,
+} from "@/lib/seo";
 import { SITE_CONFIG } from "@/lib/site-config";
 import RobofestCategoryPage from "@/components/RobofestCategoryPage";
 
@@ -28,19 +36,54 @@ export async function generateMetadata({
   const content = await getRobofestContent();
   const category = getRobofestCategoryFromContent(content, slug);
   if (!category) {
-    return { title: "Category not found" };
+    return {
+      title: "Category not found",
+      robots: { index: false, follow: false },
+    };
   }
 
+  const image = getRobofestCategoryImage(category);
+  const descriptionBase =
+    category.about?.trim() || category.description?.trim() || category.name;
+  const description = `${descriptionBase} Local rounds: Chittagong 11 Sep & Dhaka 18 Sep. Register with ${SITE_CONFIG.name}.`;
+  const title = `${category.name} · Robofest Bangladesh 2026`;
+
   return {
-    title: `${category.name} · Robofest Bangladesh`,
-    description: category.description,
+    title,
+    description,
+    keywords: [
+      category.name,
+      "Robofest Bangladesh",
+      "Robofest 2026",
+      "Dhaka",
+      "Chittagong",
+      category.skillLevel,
+      category.format,
+      "robotics competition Bangladesh",
+      SITE_CONFIG.name,
+    ].filter(Boolean),
     openGraph: {
       title: `${category.name} | Robofest Bangladesh | ${SITE_CONFIG.name}`,
-      description: category.description,
-      url: `/robofest/${category.slug}`,
+      description: category.about || category.description,
+      url: getRobofestCategoryHref(category.slug),
+      type: "website",
+      images: [
+        {
+          url: image,
+          width: 1200,
+          height: 630,
+          alt: category.name,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${category.name} | Robofest Bangladesh`,
+      description: category.description || category.about,
+      images: [image],
     },
     alternates: {
-      canonical: `/robofest/${category.slug}`,
+      canonical: getRobofestCategoryHref(category.slug),
     },
   };
 }
@@ -60,13 +103,45 @@ export default async function RobofestCategoryRoute({ params }: PageProps) {
   }
 
   const schools = await getPublicEnglishMediumSchools();
+  const image = getRobofestCategoryImage(category);
+  const categoryUrl = getRobofestCategoryHref(category.slug);
+
+  const breadcrumbSchema = getBreadcrumbSchema([
+    { name: "Home", url: "/" },
+    { name: "Robofest Bangladesh", url: "/robofest" },
+    { name: category.name, url: categoryUrl },
+  ]);
+
+  const primaryRound = content.rounds[0];
+  const eventSchema = getEventSchema({
+    id: `robofest-${category.slug}`,
+    title: `${category.name} · ${content.headline || "Robofest Bangladesh 2026"}`,
+    description: category.about || category.description,
+    date: primaryRound?.dates || content.dateLabel || "2026-09-11",
+    location: primaryRound?.city || "Bangladesh",
+    venue: primaryRound?.venueLabel || content.venueLabel,
+    image,
+    url: absoluteSiteUrl(categoryUrl),
+  });
 
   return (
-    <RobofestCategoryPage
-      category={category}
-      content={content}
-      fee={fee}
-      schools={schools}
-    />
+    <>
+      <Script
+        id={`robofest-${category.slug}-breadcrumb-jsonld`}
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      <Script
+        id={`robofest-${category.slug}-event-jsonld`}
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventSchema) }}
+      />
+      <RobofestCategoryPage
+        category={category}
+        content={content}
+        fee={fee}
+        schools={schools}
+      />
+    </>
   );
 }

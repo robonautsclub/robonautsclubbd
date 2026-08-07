@@ -566,18 +566,25 @@ export default function RobofestDashboardClient({
             {(
               [
                 ['statusBadge', 'Status badge'],
+                ['presentsLabel', 'Presents label'],
                 ['headline', 'Headline'],
                 ['lead', 'Lead'],
-                ['dateLabel', 'Date label'],
-                ['venueLabel', 'Venue label'],
+                ['dateLabel', 'Date label (summary)'],
+                ['venueLabel', 'Venue label (summary)'],
                 ['venueDetail', 'Venue detail'],
                 ['hostName', 'Host name'],
                 ['officialSite', 'Official site URL'],
-                ['categoriesUrl', 'Categories URL'],
-                ['contactHref', 'Contact href'],
+                ['categoriesUrl', 'Official categories URL'],
+                ['generalRulesPdf', 'General rules PDF path'],
+                ['instagramUrl', 'Instagram URL'],
+                ['contactEmail', 'Contact email'],
+                ['contactHref', 'Contact page href'],
               ] as const
             ).map(([key, label]) => (
-              <div key={key} className="space-y-1 sm:col-span-1">
+              <div
+                key={key}
+                className={`space-y-1 ${key === 'lead' ? 'sm:col-span-2' : ''}`}
+              >
                 <label className="text-xs text-gray-500">{label}</label>
                 {key === 'lead' ? (
                   <Textarea
@@ -608,6 +615,115 @@ export default function RobofestDashboardClient({
                   }))
                 }
               />
+            </div>
+            <div className="space-y-1 sm:col-span-2">
+              <label className="text-xs text-gray-500">
+                Date lines (one per line — shown in info strip)
+              </label>
+              <Textarea
+                rows={3}
+                value={(content.dateLines || []).join('\n')}
+                onChange={(e) =>
+                  setContent((prev) => ({
+                    ...prev,
+                    dateLines: e.target.value
+                      .split('\n')
+                      .map((line) => line.trim())
+                      .filter(Boolean),
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-1 sm:col-span-2">
+              <label className="text-xs text-gray-500">
+                Venue lines (one per line — shown in info strip)
+              </label>
+              <Textarea
+                rows={3}
+                value={(content.venueLines || []).join('\n')}
+                onChange={(e) =>
+                  setContent((prev) => ({
+                    ...prev,
+                    venueLines: e.target.value
+                      .split('\n')
+                      .map((line) => line.trim())
+                      .filter(Boolean),
+                  }))
+                }
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <h3 className="font-semibold">Contact lines</h3>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {(content.contactLines || []).map((line, index) => (
+              <div
+                key={index}
+                className="grid sm:grid-cols-3 gap-2 border border-gray-100 rounded-lg p-3"
+              >
+                {(
+                  [
+                    ['label', 'Label'],
+                    ['phone', 'Phone'],
+                    ['note', 'Note'],
+                  ] as const
+                ).map(([field, label]) => (
+                  <div key={field} className="space-y-1">
+                    <label className="text-xs text-gray-500">{label}</label>
+                    <Input
+                      value={line[field]}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setContent((prev) => {
+                          const contactLines = [...(prev.contactLines || [])]
+                          contactLines[index] = {
+                            ...contactLines[index],
+                            [field]: value,
+                          }
+                          return { ...prev, contactLines }
+                        })
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            ))}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setContent((prev) => ({
+                    ...prev,
+                    contactLines: [
+                      ...(prev.contactLines || []),
+                      { label: '', phone: '', note: '' },
+                    ],
+                  }))
+                }
+              >
+                Add contact line
+              </Button>
+              {(content.contactLines || []).length > 0 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setContent((prev) => ({
+                      ...prev,
+                      contactLines: (prev.contactLines || []).slice(0, -1),
+                    }))
+                  }
+                >
+                  Remove last
+                </Button>
+              ) : null}
             </div>
           </CardContent>
         </Card>
@@ -643,14 +759,17 @@ export default function RobofestDashboardClient({
               />
             </div>
             <p className="text-xs text-gray-500 max-w-md">
-              Category-level amount overrides the global fee when set above 0.
+              Competition fee override above 0 replaces the global fee.
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <h3 className="font-semibold">Rounds</h3>
+            <h3 className="font-semibold">Divisions / rounds</h3>
+            <p className="text-xs text-gray-500 font-normal">
+              City value is the registration Division option (e.g. Dhaka, Chittagong).
+            </p>
           </CardHeader>
           <CardContent className="space-y-4">
             {content.rounds.map((round, index) => (
@@ -658,26 +777,30 @@ export default function RobofestDashboardClient({
                 key={`${round.city}-${index}`}
                 className="grid sm:grid-cols-2 gap-2 border border-gray-100 rounded-lg p-3"
               >
-                {(['city', 'title', 'dates', 'venueLabel', 'image'] as const).map(
-                  (field) => (
-                    <div key={field} className="space-y-1">
-                      <label className="text-xs text-gray-500 capitalize">
-                        {field}
-                      </label>
-                      <Input
-                        value={round[field]}
-                        onChange={(e) => {
-                          const value = e.target.value
-                          setContent((prev) => {
-                            const rounds = [...prev.rounds]
-                            rounds[index] = { ...rounds[index], [field]: value }
-                            return { ...prev, rounds }
-                          })
-                        }}
-                      />
-                    </div>
-                  ),
-                )}
+                {(
+                  [
+                    ['city', 'City / division'],
+                    ['title', 'Title'],
+                    ['dates', 'Dates'],
+                    ['venueLabel', 'Venue label'],
+                    ['image', 'Image path'],
+                  ] as const
+                ).map(([field, label]) => (
+                  <div key={field} className="space-y-1">
+                    <label className="text-xs text-gray-500">{label}</label>
+                    <Input
+                      value={round[field]}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setContent((prev) => {
+                          const rounds = [...prev.rounds]
+                          rounds[index] = { ...rounds[index], [field]: value }
+                          return { ...prev, rounds }
+                        })
+                      }}
+                    />
+                  </div>
+                ))}
               </div>
             ))}
           </CardContent>
@@ -685,7 +808,10 @@ export default function RobofestDashboardClient({
 
         <Card>
           <CardHeader className="pb-2">
-            <h3 className="font-semibold">Categories</h3>
+            <h3 className="font-semibold">Competitions</h3>
+            <p className="text-xs text-gray-500 font-normal">
+              Registration categories shown on the public Robofest pages.
+            </p>
           </CardHeader>
           <CardContent className="space-y-6">
             {content.categories.map((category, index) => (
@@ -695,7 +821,7 @@ export default function RobofestDashboardClient({
               >
                 <div className="flex flex-wrap gap-3 items-center justify-between">
                   <p className="font-medium text-gray-900">
-                    {category.name || `Category ${index + 1}`}
+                    {category.name || `Competition ${index + 1}`}
                   </p>
                   <label className="flex items-center gap-2 text-sm">
                     <input
@@ -716,17 +842,17 @@ export default function RobofestDashboardClient({
                 <div className="grid sm:grid-cols-2 gap-2">
                   {(
                     [
-                      'slug',
-                      'name',
-                      'icon',
-                      'image',
-                      'skillLevel',
-                      'format',
-                      'rulesPdf',
+                      ['slug', 'Slug'],
+                      ['name', 'Name'],
+                      ['icon', 'Icon'],
+                      ['image', 'Cover image'],
+                      ['skillLevel', 'Skill level'],
+                      ['format', 'Format'],
+                      ['rulesPdf', 'Rules PDF'],
                     ] as const
-                  ).map((field) => (
+                  ).map(([field, label]) => (
                     <div key={field} className="space-y-1">
-                      <label className="text-xs text-gray-500">{field}</label>
+                      <label className="text-xs text-gray-500">{label}</label>
                       <Input
                         value={category[field] ?? ''}
                         onChange={(e) => {
@@ -745,7 +871,7 @@ export default function RobofestDashboardClient({
                   ))}
                   <div className="space-y-1">
                     <label className="text-xs text-gray-500">
-                      Category fee override (BDT, blank = use global)
+                      Fee override (BDT, blank = use global)
                     </label>
                     <Input
                       type="number"
@@ -766,7 +892,7 @@ export default function RobofestDashboardClient({
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-gray-500">description</label>
+                  <label className="text-xs text-gray-500">Short description</label>
                   <Textarea
                     rows={2}
                     value={category.description}
@@ -784,7 +910,7 @@ export default function RobofestDashboardClient({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-gray-500">about</label>
+                  <label className="text-xs text-gray-500">About</label>
                   <Textarea
                     rows={3}
                     value={category.about}
@@ -800,7 +926,7 @@ export default function RobofestDashboardClient({
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs text-gray-500">
-                    highlights (one per line)
+                    Highlights (one per line)
                   </label>
                   <Textarea
                     rows={4}
@@ -822,7 +948,7 @@ export default function RobofestDashboardClient({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-gray-500">whoShouldJoin</label>
+                  <label className="text-xs text-gray-500">Who should join</label>
                   <Textarea
                     rows={2}
                     value={category.whoShouldJoin}
@@ -855,7 +981,7 @@ export default function RobofestDashboardClient({
                 className="grid sm:grid-cols-3 gap-2 border border-gray-100 rounded-lg p-3"
               >
                 <div className="space-y-1">
-                  <label className="text-xs text-gray-500">icon</label>
+                  <label className="text-xs text-gray-500">Icon</label>
                   <Input
                     value={step.icon}
                     onChange={(e) => {
@@ -869,7 +995,7 @@ export default function RobofestDashboardClient({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-gray-500">title</label>
+                  <label className="text-xs text-gray-500">Title</label>
                   <Input
                     value={step.title}
                     onChange={(e) => {
@@ -886,7 +1012,7 @@ export default function RobofestDashboardClient({
                   />
                 </div>
                 <div className="space-y-1 sm:col-span-3">
-                  <label className="text-xs text-gray-500">description</label>
+                  <label className="text-xs text-gray-500">Description</label>
                   <Textarea
                     rows={2}
                     value={step.description}

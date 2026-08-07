@@ -14,7 +14,7 @@ import {
 
 export const ROBOFEST_CONTENT_COLLECTION = "robofestContent";
 export const ROBOFEST_CONTENT_DOC_ID = "settings";
-export const ROBOFEST_CONTENT_CACHE_TAG = "robofest-content";
+export const ROBOFEST_CONTENT_CACHE_TAG = "robofest-content-v2";
 export const ROBOFEST_REGISTRATIONS_COLLECTION = "robofestRegistrations";
 
 export type RobofestRoundContent = {
@@ -80,8 +80,15 @@ export type RobofestHowItWorksStep = {
   description: string;
 };
 
+export type RobofestContactLine = {
+  label: string;
+  phone: string;
+  note: string;
+};
+
 export type RobofestContent = {
   statusBadge: string;
+  presentsLabel: string;
   headline: string;
   lead: string;
   dateLabel: string;
@@ -91,7 +98,13 @@ export type RobofestContent = {
   hostName: string;
   officialSite: string;
   categoriesUrl: string;
+  generalRulesPdf: string;
+  instagramUrl: string;
+  contactEmail: string;
   contactHref: string;
+  contactLines: RobofestContactLine[];
+  dateLines: string[];
+  venueLines: string[];
   placeholders: {
     schedule: string;
     roundAccent: string;
@@ -176,6 +189,7 @@ function seedCategories(): RobofestCategoryContent[] {
 export function getDefaultRobofestContent(): RobofestContent {
   return {
     statusBadge: ROBOFEST_LOCAL.statusBadge,
+    presentsLabel: ROBOFEST_LOCAL.presentsLabel,
     headline: ROBOFEST_LOCAL.headline,
     lead: ROBOFEST_LOCAL.lead,
     dateLabel: ROBOFEST_LOCAL.dateLabel,
@@ -185,7 +199,13 @@ export function getDefaultRobofestContent(): RobofestContent {
     hostName: ROBOFEST_LOCAL.hostName,
     officialSite: ROBOFEST_LOCAL.officialSite,
     categoriesUrl: ROBOFEST_LOCAL.categoriesUrl,
+    generalRulesPdf: ROBOFEST_LOCAL.generalRulesPdf,
+    instagramUrl: ROBOFEST_LOCAL.instagramUrl,
+    contactEmail: ROBOFEST_LOCAL.contactEmail,
     contactHref: ROBOFEST_LOCAL.contactHref,
+    contactLines: ROBOFEST_LOCAL.contactLines.map((line) => ({ ...line })),
+    dateLines: [...ROBOFEST_LOCAL.dateLines],
+    venueLines: [...ROBOFEST_LOCAL.venueLines],
     placeholders: {
       schedule: ROBOFEST_LOCAL.placeholders.schedule,
       roundAccent: ROBOFEST_LOCAL.placeholders.roundAccent,
@@ -284,8 +304,31 @@ export function mapRobofestContentDoc(
       ? (data.placeholders as Record<string, unknown>)
       : {};
 
+  const contactLinesRaw = Array.isArray(data.contactLines)
+    ? data.contactLines
+    : defaults.contactLines;
+  const dateLinesRaw = Array.isArray(data.dateLines)
+    ? data.dateLines.filter((line): line is string => typeof line === "string")
+    : defaults.dateLines;
+  const venueLinesRaw = Array.isArray(data.venueLines)
+    ? data.venueLines.filter((line): line is string => typeof line === "string")
+    : defaults.venueLines;
+
+  const contactLines = contactLinesRaw
+    .map((raw): RobofestContactLine | null => {
+      if (!raw || typeof raw !== "object") return null;
+      const line = raw as Record<string, unknown>;
+      const label = asString(line.label).trim();
+      const phone = asString(line.phone).trim();
+      const note = asString(line.note).trim();
+      if (!label && !phone) return null;
+      return { label, phone, note };
+    })
+    .filter((line): line is RobofestContactLine => line != null);
+
   return {
     statusBadge: asString(data.statusBadge, defaults.statusBadge),
+    presentsLabel: asString(data.presentsLabel, defaults.presentsLabel),
     headline: asString(data.headline, defaults.headline),
     lead: asString(data.lead, defaults.lead),
     dateLabel: asString(data.dateLabel, defaults.dateLabel),
@@ -298,7 +341,13 @@ export function mapRobofestContentDoc(
     hostName: asString(data.hostName, defaults.hostName),
     officialSite: asString(data.officialSite, defaults.officialSite),
     categoriesUrl: asString(data.categoriesUrl, defaults.categoriesUrl),
+    generalRulesPdf: asString(data.generalRulesPdf, defaults.generalRulesPdf),
+    instagramUrl: asString(data.instagramUrl, defaults.instagramUrl),
+    contactEmail: asString(data.contactEmail, defaults.contactEmail),
     contactHref: asString(data.contactHref, defaults.contactHref),
+    contactLines: contactLines.length > 0 ? contactLines : defaults.contactLines,
+    dateLines: dateLinesRaw.length > 0 ? dateLinesRaw.map((l) => l.trim()).filter(Boolean) : defaults.dateLines,
+    venueLines: venueLinesRaw.length > 0 ? venueLinesRaw.map((l) => l.trim()).filter(Boolean) : defaults.venueLines,
     placeholders: {
       schedule: asString(
         placeholdersRaw.schedule,
@@ -477,7 +526,9 @@ const getCachedRobofestContent = unstable_cache(
 /** Public/dashboard read — cached with seed fallback. */
 export async function getRobofestContent(): Promise<RobofestContent> {
   try {
-    return await getCachedRobofestContent();
+    const content = await getCachedRobofestContent();
+    // Re-normalize so older cached shapes pick up new fields.
+    return mapRobofestContentDoc(content as unknown as Record<string, unknown>);
   } catch (error) {
     console.error("[robofest-content] Failed to load content:", error);
     return getDefaultRobofestContent();
