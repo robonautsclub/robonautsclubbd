@@ -17,7 +17,6 @@ export const ROBOFEST_LOCAL = {
   contactHref: "/about#contact",
   placeholders: {
     schedule: "/olympiads/robofest.png",
-    whyTrain: "/robofest/robofest.jpg",
     roundAccent: "/olympiads/robofest.png",
   },
   rounds: [
@@ -36,65 +35,101 @@ export const ROBOFEST_LOCAL = {
       image: "/roboclass.jpg",
     },
   ],
-  achievement: {
-    title: "3rd Place · Senior BottleSumo",
-    event: "Robofest World Championship 2026",
-    location: "Lawrence Technological University, USA",
-    detail:
-      "A Robonauts-trained Bangladesh team earned the podium at Lawrence Technological University—proof that students from here can compete on the world stage.",
-  },
 } as const;
 
 export const ROBOFEST_CATEGORIES = [
   {
-    name: "Game",
-    icon: "precision_manufacturing",
-    description:
-      "Autonomous robots complete mission tasks; unknown factors are revealed at competition.",
-  },
-  {
-    name: "Exhibition",
-    icon: "lightbulb",
-    description:
-      "Full creative freedom to showcase any intelligent, autonomous robotics project.",
-  },
-  {
+    slug: "bottlesumo",
     name: "BottleSumo",
     icon: "sports_kabaddi",
     description:
-      "Push bottles—or your opponent—off the table in fast head-to-head matches.",
+      "Push bottles off a rectangular table in time trials, then face rivals head-to-head—no remote control.",
+    skillLevel: "Beginner to intermediate",
+    format: "Time trial + single elimination",
+    about:
+      "BottleSumo is a two-round autonomous challenge on an open rectangular table (~75 × 150–180 cm). Teams first push five sand-filled bottles off the table in a timed trial that seeds the bracket, then compete head-to-head (best of 3) with no bottles. Explorer and Innovator divisions set different size, weight, and motor limits.",
+    highlights: [
+      "Robots must wait 3 seconds after start before moving—same program and start method every game.",
+      "Every robot needs at least one edge/line sensor and one object-detection sensor.",
+      "Explorer (≤2.5 kg, 20 cm box, 2 motors) and Innovator (≤3.0 kg, 30 cm box, 4 motors) categories.",
+      "Time-trial seeding, then single-elimination matches decided by pushing the opponent off and surviving 3 seconds.",
+    ],
+    whoShouldJoin:
+      "Student teams who design, build, and program their own autonomous robot—especially those ready to iterate between time trials and bracket matches.",
+    rulesPdf: "/robofest/BottleSumo%20Competition.pdf",
   },
   {
-    name: "RoboParade",
-    icon: "celebration",
+    slug: "buildathon",
+    name: "Buildathon",
+    icon: "construction",
     description:
-      "Decorated robotic vehicles parade autonomously along a creative route.",
+      "Design, build, and present a robotics project under buildathon-style constraints.",
+    skillLevel: "Intermediate",
+    format: "Project build + presentation",
+    about:
+      "Buildathon challenges teams to design, assemble, and present a robotics project under time and theme constraints. Judges look for creativity, engineering process, and how well your team explains the work.",
+    highlights: [
+      "Form a team idea, build a working prototype, and present to judges.",
+      "Balanced focus on hardware, software, and storytelling.",
+      "Encourages collaboration, planning, and rapid problem-solving.",
+      "Showcase originality—solutions do not need to fit a fixed arena game.",
+    ],
+    whoShouldJoin:
+      "Teams that enjoy design thinking and building something original rather than purely scoring points in a fixed game.",
   },
   {
-    name: "RoboArts",
-    icon: "palette",
+    slug: "line-following-bot",
+    name: "Line Following Bot",
+    icon: "timeline",
     description:
-      "Robots perform, dance, paint, or make music in an interactive showcase.",
+      "Program an autonomous robot to follow a line course accurately and quickly.",
+    skillLevel: "Beginner to advanced",
+    format: "Timed autonomous course",
+    about:
+      "Line Following Bot tests how precisely and quickly your autonomous robot can track a marked course. Success depends on sensor placement, PID (or similar) control, and reliable calibration under real conditions.",
+    highlights: [
+      "Run on a defined line path; optimize for accuracy and speed.",
+      "Strong learning outcomes in sensors, control loops, and tuning.",
+      "Scalable difficulty—beginners finish the course; advanced teams chase best times.",
+      "Minimal game rules overhead: focus on robot performance.",
+    ],
+    whoShouldJoin:
+      "Teams who want a pure autonomous-control challenge and enjoy systematic tuning and testing.",
   },
   {
-    name: "RoboMed",
-    icon: "medical_services",
+    slug: "robo-exhibition",
+    name: "Robo Exhibition",
+    icon: "lightbulb",
     description:
-      "Intelligent biomedical robotics and device projects with real-world impact.",
-  },
-  {
-    name: "Unknown Mission Challenge",
-    icon: "psychology",
-    description:
-      "Build and program on the spot to solve totally unknown missions in two hours.",
-  },
-  {
-    name: "Vision Centric Challenge",
-    icon: "visibility",
-    description:
-      "Advanced senior division using vision-based autonomous robots.",
+      "Showcase an intelligent, creative robotics project to judges and visitors.",
+    skillLevel: "All levels",
+    format: "Project showcase + demo",
+    about:
+      "Robo Exhibition gives you creative freedom to present any intelligent robotics project. Demonstrate capability, impact, and craftsmanship to judges and visitors—from assistive devices to artful autonomous systems.",
+    highlights: [
+      "Free choice of theme within intelligent, autonomous robotics.",
+      "Judged on innovation, demonstration quality, and clarity of explanation.",
+      "Ideal for research-style or long-horizon school projects.",
+      "Practice real-world presentation skills alongside engineering.",
+    ],
+    whoShouldJoin:
+      "Teams with a distinctive project idea who want to share it rather than compete only on speed or wins.",
   },
 ] as const;
+
+export type RobofestCategory = (typeof ROBOFEST_CATEGORIES)[number];
+export type RobofestCategoryName = RobofestCategory["name"];
+export type RobofestCategorySlug = RobofestCategory["slug"];
+
+export function getRobofestCategoryBySlug(
+  slug: string,
+): RobofestCategory | undefined {
+  return ROBOFEST_CATEGORIES.find((category) => category.slug === slug);
+}
+
+export function getRobofestCategoryHref(slug: RobofestCategorySlug): string {
+  return `/robofest/${slug}`;
+}
 
 export const ROBOFEST_HOW_IT_WORKS = [
   {

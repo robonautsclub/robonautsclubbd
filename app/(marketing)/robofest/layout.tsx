@@ -5,13 +5,16 @@ import { SITE_CONFIG } from "@/lib/site-config";
 export const metadata: Metadata = {
   title: "Robofest Bangladesh Local Round",
   description:
-    "Robofest Bangladesh Local Round 2026 in Dhaka (4–5 Sep) and Chittagong (11–12 Sep), hosted by Robonauts Ltd. Compete in BottleSumo, Game, Exhibition, and more—qualify toward the World Championship at Lawrence Technological University.",
+    "Robofest Bangladesh Local Round 2026 in Dhaka (4–5 Sep) and Chittagong (11–12 Sep), hosted by Robonauts Ltd. Register for BottleSumo, Buildathon, Line Following Bot, or Robo Exhibition—qualify toward the World Championship at Lawrence Technological University.",
   keywords: [
     "Robofest Bangladesh",
     "Robofest local round",
     "Robofest Dhaka",
     "Robofest Chittagong",
     "BottleSumo Bangladesh",
+    "Buildathon Bangladesh",
+    "Line Following Bot",
+    "Robo Exhibition",
     "robotics competition Dhaka",
     "Robonauts Robofest",
     "Lawrence Technological University Robofest",

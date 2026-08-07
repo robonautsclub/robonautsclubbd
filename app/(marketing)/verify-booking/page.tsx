@@ -82,33 +82,84 @@ async function getBookingByRegistrationId(registrationId: string): Promise<{
       .limit(1)
       .get()
 
-    if (bookingsSnapshot.empty) {
+    if (!bookingsSnapshot.empty) {
+      const bookingDoc = bookingsSnapshot.docs[0]
+      const bookingData = bookingDoc.data()!
+
+      const booking: Booking = {
+        id: bookingDoc.id,
+        ...bookingData,
+        createdAt: bookingData.createdAt?.toDate?.() || bookingData.createdAt,
+      } as Booking
+
+      const eventDoc = await adminDb.collection('events').doc(booking.eventId).get()
+
+      if (!eventDoc.exists) {
+        return { booking, event: null }
+      }
+
+      const eventData = eventDoc.data()!
+      const event: Event = {
+        id: eventDoc.id,
+        ...eventData,
+        createdAt: eventData.createdAt?.toDate?.() || eventData.createdAt,
+        updatedAt: eventData.updatedAt?.toDate?.() || eventData.updatedAt,
+      } as Event
+
+      return { booking, event }
+    }
+
+    // Fallback: Robofest local-round registrations
+    const { getRobofestRegistrationByRegistrationId } = await import(
+      '@/lib/robofest-registration'
+    )
+    const { getRobofestContentFresh, resolveRobofestFee } = await import(
+      '@/lib/robofest-content'
+    )
+    const robofestReg = await getRobofestRegistrationByRegistrationId(registrationId)
+    if (!robofestReg || robofestReg.status === 'cancelled') {
       return { booking: null, event: null }
     }
 
-    const bookingDoc = bookingsSnapshot.docs[0]
-    const bookingData = bookingDoc.data()!
+    const content = await getRobofestContentFresh()
+    const fee = resolveRobofestFee(content, robofestReg.category)
+    const now = new Date().toISOString()
 
     const booking: Booking = {
-      id: bookingDoc.id,
-      ...bookingData,
-      createdAt: bookingData.createdAt?.toDate?.() || bookingData.createdAt,
+      id: robofestReg.id,
+      eventId: 'robofest',
+      registrationId: robofestReg.registrationId || registrationId,
+      name: robofestReg.name,
+      email: robofestReg.email,
+      phone: robofestReg.phone,
+      school: robofestReg.school,
+      category: robofestReg.category,
+      information: [
+        `Preferred round: ${robofestReg.roundCity}`,
+        robofestReg.notes ? `Notes: ${robofestReg.notes}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+      createdAt: robofestReg.createdAt || now,
+      paymentStatus: robofestReg.paymentStatus === 'paid' ? 'paid' : undefined,
+      amountPaid: robofestReg.amountPaid,
+      trxId: robofestReg.trxId,
     } as Booking
 
-    // Fetch event details
-    const eventDoc = await adminDb.collection('events').doc(booking.eventId).get()
-
-    if (!eventDoc.exists) {
-      return { booking, event: null }
-    }
-
-    const eventData = eventDoc.data()!
     const event: Event = {
-      id: eventDoc.id,
-      ...eventData,
-      createdAt: eventData.createdAt?.toDate?.() || eventData.createdAt,
-      updatedAt: eventData.updatedAt?.toDate?.() || eventData.updatedAt,
-    } as Event
+      id: 'robofest',
+      title: content.headline,
+      date: content.dateLabel,
+      time: content.timeLabel ?? undefined,
+      location: content.venueLabel,
+      venue: `${robofestReg.roundCity} · ${content.venueLabel}`,
+      description: content.lead,
+      isPaid: fee.isPaid,
+      amount: fee.amount,
+      createdAt: now,
+      updatedAt: now,
+      createdBy: 'system',
+    }
 
     return { booking, event }
   } catch {

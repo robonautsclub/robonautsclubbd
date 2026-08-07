@@ -1,0 +1,355 @@
+"use server";
+
+import {
+  BkashApiError,
+  bkashCreateCheckout,
+  bkashExecutePayment,
+  bkashQueryPayment,
+} from "@/lib/bkash";
+import { adminDb } from "@/lib/firebase-admin";
+import {
+  getRobofestCategoryByName,
+  getRobofestContentFresh,
+  resolveRobofestFee,
+} from "@/lib/robofest-content";
+import {
+  createRobofestRegistrationAndSendEmail,
+  getRobofestBaseUrl,
+  hasExistingRobofestRegistration,
+  type RobofestRegistrationFormData,
+} from "@/lib/robofest-registration";
+
+export type RobofestRegistrationInput = RobofestRegistrationFormData;
+
+export type RobofestRegistrationResult = {
+  success: boolean;
+  error?: string;
+  warning?: string;
+  registrationId?: string;
+  registrationDocId?: string;
+  checkoutUrl?: string;
+};
+
+type PendingRobofestRegistration = {
+  kind: "robofest";
+  paymentId: string;
+  category: string;
+  name: string;
+  school: string;
+  email: string;
+  phone: string;
+  roundCity: string;
+  notes: string;
+  amount: number;
+  status: "pending" | "completed" | "failed";
+  registrationDocId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+function validateCommonFields(formData: RobofestRegistrationInput): {
+  ok: true;
+  data: {
+    category: string;
+    name: string;
+    email: string;
+    phone: string;
+    school: string;
+    roundCity: string;
+    notes: string;
+  };
+} | { ok: false; error: string } {
+  const category = formData.category?.trim() ?? "";
+  const name = formData.name?.trim() ?? "";
+  const email = formData.email?.trim().toLowerCase() ?? "";
+  const phone = formData.phone?.trim().replace(/\s/g, "") ?? "";
+  const school = formData.school?.trim() ?? "";
+  const roundCity = formData.roundCity?.trim() ?? "";
+  const notes = formData.notes?.trim() ?? "";
+
+  if (!category || !name || !email || !phone || !school || !roundCity) {
+    return { ok: false, error: "All required fields must be filled." };
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return { ok: false, error: "Invalid email format." };
+  }
+
+  if (phone.length !== 11 || !phone.startsWith("01")) {
+    return {
+      ok: false,
+      error: "Phone number must be 11 digits and start with 01.",
+    };
+  }
+
+  return {
+    ok: true,
+    data: { category, name, email, phone, school, roundCity, notes },
+  };
+}
+
+/** Free registration (or when fee is 0). */
+export async function submitRobofestRegistration(
+  formData: RobofestRegistrationInput,
+): Promise<RobofestRegistrationResult> {
+  try {
+    if (!adminDb) {
+      return {
+        success: false,
+        error: "Service temporarily unavailable. Please try again later.",
+      };
+    }
+
+    const validated = validateCommonFields(formData);
+    if (!validated.ok) return { success: false, error: validated.error };
+
+    const content = await getRobofestContentFresh();
+    const category = getRobofestCategoryByName(content, validated.data.category);
+    if (!category) {
+      return { success: false, error: "Selected category is not valid." };
+    }
+
+    const roundOk = content.rounds.some(
+      (round) => round.city === validated.data.roundCity,
+    );
+    if (!roundOk) {
+      return { success: false, error: "Please select a valid round city." };
+    }
+
+    const fee = resolveRobofestFee(content, category.name);
+    if (fee.isPaid) {
+      return {
+        success: false,
+        error: "This category requires payment. Please use the payment flow.",
+      };
+    }
+
+    return await createRobofestRegistrationAndSendEmail(content, {
+      ...validated.data,
+      category: category.name,
+    });
+  } catch (error) {
+    console.error("Error submitting Robofest registration:", error);
+    return {
+      success: false,
+      error: "Failed to submit registration. Please try again.",
+    };
+  }
+}
+
+export async function initiateRobofestPaidCheckout(
+  formData: RobofestRegistrationInput,
+): Promise<RobofestRegistrationResult> {
+  try {
+    if (!adminDb) {
+      return {
+        success: false,
+        error: "Service temporarily unavailable. Please try again later.",
+      };
+    }
+
+    const validated = validateCommonFields(formData);
+    if (!validated.ok) return { success: false, error: validated.error };
+
+    const content = await getRobofestContentFresh();
+    const category = getRobofestCategoryByName(content, validated.data.category);
+    if (!category) {
+      return { success: false, error: "Selected category is not valid." };
+    }
+
+    const roundOk = content.rounds.some(
+      (round) => round.city === validated.data.roundCity,
+    );
+    if (!roundOk) {
+      return { success: false, error: "Please select a valid round city." };
+    }
+
+    const fee = resolveRobofestFee(content, category.name);
+    if (!fee.isPaid || fee.amount <= 0) {
+      return {
+        success: false,
+        error: "This category does not require payment.",
+      };
+    }
+
+    const duplicate = await hasExistingRobofestRegistration(
+      category.name,
+      validated.data.email,
+    );
+    if (duplicate) {
+      return {
+        success: false,
+        error: "You have already registered for this category with this email.",
+      };
+    }
+
+    const callbackUrl = `${getRobofestBaseUrl()}/api/payments/bkash/success`;
+    const checkout = await bkashCreateCheckout({
+      amount: fee.amount,
+      payerReference: validated.data.phone,
+      callbackUrl,
+      merchantInvoiceNumber: `RF-${category.slug}-${Date.now()}`.slice(0, 40),
+    });
+
+    const now = new Date();
+    const pending: PendingRobofestRegistration = {
+      kind: "robofest",
+      paymentId: checkout.paymentId,
+      category: category.name,
+      name: validated.data.name,
+      school: validated.data.school,
+      email: validated.data.email,
+      phone: validated.data.phone,
+      roundCity: validated.data.roundCity,
+      notes: validated.data.notes,
+      amount: fee.amount,
+      status: "pending",
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await adminDb
+      .collection("bkash_pending_registrations")
+      .doc(checkout.paymentId)
+      .set(pending);
+
+    return { success: true, checkoutUrl: checkout.checkoutUrl };
+  } catch (error) {
+    console.error("Error initiating Robofest bKash checkout:", error);
+    return {
+      success: false,
+      error: "Failed to initiate bKash payment. Please try again.",
+    };
+  }
+}
+
+export async function finalizeRobofestPaidRegistration(paymentId: string): Promise<{
+  success: boolean;
+  error?: string;
+  warning?: string;
+  registrationDocId?: string;
+  registrationId?: string;
+}> {
+  try {
+    if (!adminDb) {
+      return {
+        success: false,
+        error: "Service temporarily unavailable. Please try again later.",
+      };
+    }
+
+    const pendingRef = adminDb
+      .collection("bkash_pending_registrations")
+      .doc(paymentId);
+    const pendingSnap = await pendingRef.get();
+    if (!pendingSnap.exists) {
+      return { success: false, error: "Payment session not found or expired." };
+    }
+
+    const pending = pendingSnap.data() as PendingRobofestRegistration;
+    if (pending.kind !== "robofest") {
+      return { success: false, error: "Not a Robofest payment session." };
+    }
+
+    if (pending.status === "completed" && pending.registrationDocId) {
+      return {
+        success: true,
+        registrationDocId: pending.registrationDocId,
+      };
+    }
+
+    let execution;
+    try {
+      execution = await bkashExecutePayment(paymentId);
+    } catch (executeError) {
+      const isNoResponseFromExecute =
+        executeError instanceof BkashApiError
+          ? executeError.noResponse
+          : false;
+
+      if (!isNoResponseFromExecute) {
+        await pendingRef.update({ status: "failed", updatedAt: new Date() });
+        return {
+          success: false,
+          error:
+            executeError instanceof BkashApiError
+              ? executeError.statusMessage || executeError.message
+              : "Failed to execute payment with bKash.",
+        };
+      }
+
+      try {
+        const queried = await bkashQueryPayment(paymentId);
+        if (queried.transactionStatus.toLowerCase() !== "completed") {
+          await pendingRef.update({ status: "failed", updatedAt: new Date() });
+          return {
+            success: false,
+            error:
+              queried.statusMessage ||
+              `Payment is not successful (${queried.transactionStatus}).`,
+          };
+        }
+        execution = queried;
+      } catch (queryError) {
+        await pendingRef.update({ status: "failed", updatedAt: new Date() });
+        return {
+          success: false,
+          error:
+            queryError instanceof BkashApiError
+              ? queryError.statusMessage || queryError.message
+              : "Failed to verify payment status with bKash.",
+        };
+      }
+    }
+
+    if (execution.transactionStatus.toLowerCase() !== "completed") {
+      await pendingRef.update({ status: "failed", updatedAt: new Date() });
+      return {
+        success: false,
+        error:
+          execution.statusMessage ||
+          `Payment is not successful (${execution.transactionStatus}).`,
+      };
+    }
+
+    const content = await getRobofestContentFresh();
+    const result = await createRobofestRegistrationAndSendEmail(
+      content,
+      {
+        category: pending.category,
+        name: pending.name,
+        email: pending.email,
+        phone: pending.phone,
+        school: pending.school,
+        roundCity: pending.roundCity,
+        notes: pending.notes,
+      },
+      {
+        paymentId: execution.paymentId,
+        trxId: execution.trxId,
+        amountPaid: execution.amount || pending.amount,
+      },
+    );
+
+    if (!result.success) {
+      await pendingRef.update({ status: "failed", updatedAt: new Date() });
+      return result;
+    }
+
+    await pendingRef.update({
+      status: "completed",
+      registrationDocId: result.registrationDocId,
+      updatedAt: new Date(),
+      trxId: execution.trxId,
+    });
+
+    return result;
+  } catch (error) {
+    console.error("Error finalizing Robofest paid registration:", error);
+    return {
+      success: false,
+      error: "Failed to finalize payment. Please contact support.",
+    };
+  }
+}

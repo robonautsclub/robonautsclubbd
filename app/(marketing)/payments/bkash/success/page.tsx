@@ -7,12 +7,17 @@ import { Button } from '@/components/ui/button'
 type SuccessPageProps = {
   searchParams: Promise<{
     bookingId?: string
+    registrationDocId?: string
+    registrationId?: string
+    source?: string
   }>
 }
 
 export default async function BkashSuccessPage({ searchParams }: SuccessPageProps) {
   const params = await searchParams
   const bookingId = params.bookingId || ''
+  const registrationId = params.registrationId || ''
+  const isRobofest = params.source === 'robofest'
 
   return (
     <main className="min-h-[60vh] flex items-center justify-center px-4 py-12">
@@ -23,16 +28,24 @@ export default async function BkashSuccessPage({ searchParams }: SuccessPageProp
             <CheckCircle className="h-5 w-5 text-green-600" />
             <AlertTitle className="text-green-900">Registration confirmed</AlertTitle>
             <AlertDescription className="text-green-800">
-              Your payment is completed and your event registration is now confirmed. A confirmation email
-              has been sent to your email address with all details.
+              {isRobofest
+                ? 'Your payment is completed and your Robofest registration is now confirmed. A confirmation email has been sent with your PDF and details.'
+                : 'Your payment is completed and your event registration is now confirmed. A confirmation email has been sent to your email address with all details.'}
             </AlertDescription>
           </Alert>
-          {bookingId ? (
-            <p className="text-sm text-gray-500 mb-6">Booking ID: {bookingId}</p>
+          {registrationId ? (
+            <p className="text-sm text-gray-500 mb-2">
+              Registration ID: <span className="font-mono font-semibold">{registrationId}</span>
+            </p>
           ) : null}
+          {bookingId && !isRobofest ? (
+            <p className="text-sm text-gray-500 mb-6">Booking ID: {bookingId}</p>
+          ) : (
+            <div className="mb-6" />
+          )}
           <Button asChild className="bg-indigo-600 hover:bg-indigo-700 text-white">
-            <Link href="/events" prefetch={false}>
-              Back to Events
+            <Link href={isRobofest ? '/robofest' : '/events'} prefetch={false}>
+              {isRobofest ? 'Back to Robofest' : 'Back to Events'}
             </Link>
           </Button>
         </CardContent>

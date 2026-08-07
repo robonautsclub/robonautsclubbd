@@ -11,6 +11,7 @@ import {
   Newspaper,
   Images,
   School,
+  Trophy,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -37,6 +38,7 @@ export default function Sidebar({ role }: SidebarProps) {
     { href: '/dashboard/news', icon: Newspaper, label: 'News' },
     { href: '/dashboard/gallery', icon: Images, label: 'Gallery' },
     { href: '/dashboard/schools', icon: School, label: 'Schools' },
+    { href: '/dashboard/robofest', icon: Trophy, label: 'Robofest' },
     ...(role === 'superAdmin'
       ? [{ href: '/dashboard/members', icon: Users, label: 'Members' }]
       : []),
