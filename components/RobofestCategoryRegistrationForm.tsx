@@ -23,6 +23,7 @@ import {
 } from "@/app/(marketing)/robofest/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type TeamMemberForm = {
@@ -107,6 +108,7 @@ export default function RobofestCategoryRegistrationForm({
   const [registrationId, setRegistrationId] = useState<string | null>(null);
   const [warning, setWarning] = useState("");
   const [error, setError] = useState("");
+  const [understood, setUnderstood] = useState(false);
 
   const gradeOptions = getGradesForAgeCategory(form.ageCategory);
   const totalAmount =
@@ -157,6 +159,14 @@ export default function RobofestCategoryRegistrationForm({
     event.preventDefault();
     setError("");
     setWarning("");
+
+    if (isPaid && amount > 0 && !understood) {
+      setError(
+        "Please confirm that you understand the fee and payment instructions.",
+      );
+      return;
+    }
+
     setIsSubmitting(true);
 
     const payload = {
@@ -254,24 +264,6 @@ export default function RobofestCategoryRegistrationForm({
           className="bg-gray-50"
         />
       </div>
-
-      {isPaid && amount > 0 ? (
-        <Alert className="border-indigo-200 bg-indigo-50">
-          <AlertTitle className="text-indigo-900">Registration fee</AlertTitle>
-          <AlertDescription className="text-indigo-800 space-y-1.5">
-            <p>
-              BDT {amount} per member × {form.teamSize} member
-              {form.teamSize === 1 ? "" : "s"} ={" "}
-              <span className="font-semibold">BDT {totalAmount}</span> via
-              bKash. Confirmation is emailed after successful payment.
-            </p>
-            <p className="text-sm font-medium text-indigo-900">
-              After paying on bKash, do not close or leave this browser until
-              you see the registration successful message.
-            </p>
-          </AlertDescription>
-        </Alert>
-      ) : null}
 
       <div className="space-y-1.5">
         <label
@@ -552,9 +544,30 @@ export default function RobofestCategoryRegistrationForm({
         </Alert>
       ) : null}
 
+      {isPaid && amount > 0 ? (
+        <label
+          htmlFor={fieldId("understood")}
+          className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 cursor-pointer"
+        >
+          <Checkbox
+            id={fieldId("understood")}
+            checked={understood}
+            onCheckedChange={(checked) => setUnderstood(checked === true)}
+            className="mt-0.5"
+          />
+          <span className="text-sm text-slate-700 leading-snug">
+            I understand the registration fee is{" "}
+            <span className="font-semibold">BDT {totalAmount}</span> (
+            {form.teamSize} member{form.teamSize === 1 ? "" : "s"} × BDT{" "}
+            {amount}), and after paying on bKash I will not close or leave this
+            browser until I see the registration successful message.
+          </span>
+        </label>
+      ) : null}
+
       <Button
         type="submit"
-        disabled={isSubmitting}
+        disabled={isSubmitting || (isPaid && amount > 0 && !understood)}
         className="w-full bg-indigo-500 text-white hover:bg-indigo-600"
       >
         {isSubmitting
