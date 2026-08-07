@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useMemo, useState, useTransition, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import {
@@ -31,7 +31,7 @@ import {
   exportRobofestPdf,
 } from './exportRobofestRegistrations'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -49,6 +49,60 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+
+function ContentSection({
+  title,
+  description,
+  icon,
+  defaultOpen = false,
+  children,
+  contentClassName,
+}: {
+  title: string
+  description?: string
+  icon?: ReactNode
+  defaultOpen?: boolean
+  children: ReactNode
+  contentClassName?: string
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <Card className="border-gray-200/80 shadow-sm overflow-hidden py-0 gap-0">
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-start justify-between gap-3 px-4 py-3.5 text-left hover:bg-gray-50/80 transition-colors"
+          >
+            <div className="min-w-0">
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                {icon}
+                {title}
+              </h3>
+              {description ? (
+                <p className="text-xs text-gray-500 mt-0.5 font-normal">
+                  {description}
+                </p>
+              ) : null}
+            </div>
+            <ChevronDown
+              className={cn(
+                'w-4 h-4 shrink-0 text-gray-400 mt-1 transition-transform duration-200',
+                open && 'rotate-180',
+              )}
+            />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className={cn('pt-3 pb-4 border-t border-gray-100', contentClassName)}>
+            {children}
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
+  )
+}
 
 type Props = {
   initialContent: RobofestContent
@@ -843,14 +897,13 @@ export default function RobofestDashboardClient({
           </p>
         )}
 
-        <Card>
-          <CardHeader className="pb-2">
-            <h3 className="font-semibold flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-indigo-500" />
-              Event copy
-            </h3>
-          </CardHeader>
-          <CardContent className="grid sm:grid-cols-2 gap-3">
+        <ContentSection
+          title="Event copy"
+          description="Hero labels, venue summaries, links, and info-strip lines."
+          icon={<Trophy className="w-4 h-4 text-indigo-500" />}
+          defaultOpen
+          contentClassName="grid sm:grid-cols-2 gap-3"
+        >
             {(
               [
                 ['statusBadge', 'Status badge'],
@@ -940,14 +993,13 @@ export default function RobofestDashboardClient({
                 }
               />
             </div>
-          </CardContent>
-        </Card>
+        </ContentSection>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <h3 className="font-semibold">Contact lines</h3>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <ContentSection
+          title="Contact lines"
+          description="Phone contacts shown on the Robofest hub."
+          contentClassName="space-y-3"
+        >
             {(content.contactLines || []).map((line, index) => (
               <div
                 key={index}
@@ -1013,14 +1065,13 @@ export default function RobofestDashboardClient({
                 </Button>
               ) : null}
             </div>
-          </CardContent>
-        </Card>
+        </ContentSection>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <h3 className="font-semibold">Payment</h3>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-4 items-end">
+        <ContentSection
+          title="Payment"
+          description="Global fee per member for bKash registration."
+          contentClassName="flex flex-wrap gap-4 items-end"
+        >
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -1052,17 +1103,13 @@ export default function RobofestDashboardClient({
               Charged as fee × team size via bKash. Competition per-member
               override above 0 replaces the global fee.
             </p>
-          </CardContent>
-        </Card>
+        </ContentSection>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <h3 className="font-semibold">Divisions / rounds</h3>
-            <p className="text-xs text-gray-500 font-normal">
-              City value is the registration Division option (e.g. Dhaka, Chittagong).
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <ContentSection
+          title="Divisions / rounds"
+          description="City value is the registration Division option (e.g. Dhaka, Chittagong)."
+          contentClassName="space-y-4"
+        >
             {content.rounds.map((round, index) => (
               <div
                 key={`${round.city}-${index}`}
@@ -1094,26 +1141,44 @@ export default function RobofestDashboardClient({
                 ))}
               </div>
             ))}
-          </CardContent>
-        </Card>
+        </ContentSection>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <h3 className="font-semibold">Competitions</h3>
-            <p className="text-xs text-gray-500 font-normal">
-              Registration categories shown on the public Robofest pages.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-6">
+        <ContentSection
+          title="Competitions"
+          description="Registration categories shown on the public Robofest pages."
+          contentClassName="space-y-3"
+        >
             {content.categories.map((category, index) => (
-              <div
+              <Collapsible
                 key={category.slug || index}
-                className="border border-gray-100 rounded-lg p-4 space-y-3"
+                className="group/cat rounded-lg border border-gray-100 overflow-hidden"
               >
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-gray-50/80 transition-colors"
+                  >
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <p className="font-medium text-gray-900 truncate">
+                        {category.name || `Competition ${index + 1}`}
+                      </p>
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          'text-[10px] px-1.5 py-0',
+                          category.active
+                            ? 'bg-emerald-50 text-emerald-800'
+                            : 'bg-gray-100 text-gray-600',
+                        )}
+                      >
+                        {category.active ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </div>
+                    <ChevronDown className="w-4 h-4 shrink-0 text-gray-400 transition-transform group-data-[state=open]/cat:rotate-180" />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="border-t border-gray-100 px-3 py-3 space-y-3">
                 <div className="flex flex-wrap gap-3 items-center justify-between">
-                  <p className="font-medium text-gray-900">
-                    {category.name || `Competition ${index + 1}`}
-                  </p>
                   <label className="flex items-center gap-2 text-sm">
                     <input
                       type="checkbox"
@@ -1126,6 +1191,7 @@ export default function RobofestDashboardClient({
                           return { ...prev, categories }
                         })
                       }}
+                      onClick={(e) => e.stopPropagation()}
                     />
                     Active
                   </label>
@@ -1256,16 +1322,16 @@ export default function RobofestDashboardClient({
                     }}
                   />
                 </div>
-              </div>
+                </CollapsibleContent>
+              </Collapsible>
             ))}
-          </CardContent>
-        </Card>
+        </ContentSection>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <h3 className="font-semibold">How it works</h3>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <ContentSection
+          title="How it works"
+          description="Steps shown on the Robofest hub."
+          contentClassName="space-y-3"
+        >
             {content.howItWorks.map((step, index) => (
               <div
                 key={index}
@@ -1322,8 +1388,7 @@ export default function RobofestDashboardClient({
                 </div>
               </div>
             ))}
-          </CardContent>
-        </Card>
+        </ContentSection>
 
         <div className="flex flex-wrap gap-3">
           <Button type="button" onClick={saveContent} disabled={pending}>

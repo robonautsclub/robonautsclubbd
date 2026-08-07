@@ -84,12 +84,14 @@ export default function RobofestCategoryRegistrationForm({
   schools,
   isPaid,
   amount,
+  rulesPdf,
 }: {
   category: string;
   rounds: RobofestRoundContent[];
   schools: string[];
   isPaid: boolean;
   amount: number;
+  rulesPdf?: string;
 }) {
   const divisionOptions = useMemo(() => {
     const fromRounds = rounds
@@ -109,6 +111,7 @@ export default function RobofestCategoryRegistrationForm({
   const [warning, setWarning] = useState("");
   const [error, setError] = useState("");
   const [understood, setUnderstood] = useState(false);
+  const [rulesUnderstood, setRulesUnderstood] = useState(false);
 
   const gradeOptions = getGradesForAgeCategory(form.ageCategory);
   const totalAmount =
@@ -159,6 +162,13 @@ export default function RobofestCategoryRegistrationForm({
     event.preventDefault();
     setError("");
     setWarning("");
+
+    if (!rulesUnderstood) {
+      setError(
+        "Please confirm that you have read and understood the category rulebook.",
+      );
+      return;
+    }
 
     if (isPaid && amount > 0 && !understood) {
       setError(
@@ -544,30 +554,69 @@ export default function RobofestCategoryRegistrationForm({
         </Alert>
       ) : null}
 
-      {isPaid && amount > 0 ? (
+      <div className="space-y-2.5">
         <label
-          htmlFor={fieldId("understood")}
+          htmlFor={fieldId("rules-understood")}
           className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 cursor-pointer"
         >
           <Checkbox
-            id={fieldId("understood")}
-            checked={understood}
-            onCheckedChange={(checked) => setUnderstood(checked === true)}
+            id={fieldId("rules-understood")}
+            checked={rulesUnderstood}
+            onCheckedChange={(checked) => setRulesUnderstood(checked === true)}
             className="mt-0.5"
           />
           <span className="text-sm text-slate-700 leading-snug">
-            I understand the registration fee is{" "}
-            <span className="font-semibold">BDT {totalAmount}</span> (
-            {form.teamSize} member{form.teamSize === 1 ? "" : "s"} × BDT{" "}
-            {amount}), and after paying on bKash I will not close or leave this
-            browser until I see the registration successful message.
+            Yes, I have read and understood the rules found in the rulebook for{" "}
+            <span className="font-semibold">{category}</span>
+            {rulesPdf ? (
+              <>
+                {" "}
+                (
+                <a
+                  href={rulesPdf}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-cyan-700 underline underline-offset-2 hover:text-cyan-800"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  open rulebook
+                </a>
+                )
+              </>
+            ) : null}
+            .
           </span>
         </label>
-      ) : null}
+
+        {isPaid && amount > 0 ? (
+          <label
+            htmlFor={fieldId("understood")}
+            className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 cursor-pointer"
+          >
+            <Checkbox
+              id={fieldId("understood")}
+              checked={understood}
+              onCheckedChange={(checked) => setUnderstood(checked === true)}
+              className="mt-0.5"
+            />
+            <span className="text-sm text-slate-700 leading-snug">
+              I understand the registration fee is{" "}
+              <span className="font-semibold">BDT {totalAmount}</span> (
+              {form.teamSize} member{form.teamSize === 1 ? "" : "s"} × BDT{" "}
+              {amount}), and after paying on bKash I will not close or leave
+              this browser until I see the registration successful message.
+            </span>
+          </label>
+        ) : null}
+      </div>
 
       <Button
         type="submit"
-        disabled={isSubmitting || (isPaid && amount > 0 && !understood)}
+        disabled={
+          isSubmitting ||
+          !rulesUnderstood ||
+          (isPaid && amount > 0 && !understood)
+        }
         className="w-full bg-indigo-500 text-white hover:bg-indigo-600"
       >
         {isSubmitting

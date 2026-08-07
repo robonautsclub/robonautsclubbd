@@ -278,6 +278,7 @@ export default function RobofestCategoryPage({
                   schools={schools}
                   isPaid={fee.isPaid}
                   amount={fee.amount}
+                  rulesPdf={rulesPdf || undefined}
                 />
               </div>
             </div>
