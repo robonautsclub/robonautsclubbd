@@ -122,6 +122,15 @@ export function sanitizeBookingDetailsForPDF(bookingDetails: {
   phone?: string
   bkashNumber?: string
   information?: string
+  teamName?: string
+  teamMembers?: Array<{
+    name?: string
+    email?: string
+    phone?: string
+    school?: string
+    branch?: string
+    grade?: string
+  }>
 }): {
   name: string
   school: string
@@ -129,7 +138,27 @@ export function sanitizeBookingDetailsForPDF(bookingDetails: {
   phone: string
   bkashNumber: string
   information: string
+  teamName: string
+  teamMembers: Array<{
+    name: string
+    email: string
+    phone: string
+    school: string
+    branch: string
+    grade: string
+  }>
 } {
+  const teamMembers = Array.isArray(bookingDetails.teamMembers)
+    ? bookingDetails.teamMembers.map((member) => ({
+        name: sanitizeTextForPDF(member.name) || '',
+        email: sanitizeTextForPDF(member.email) || '',
+        phone: sanitizeTextForPDF(member.phone) || '',
+        school: sanitizeTextForPDF(member.school) || '',
+        branch: sanitizeTextForPDF(member.branch) || '',
+        grade: sanitizeTextForPDF(member.grade) || '',
+      }))
+    : []
+
   return {
     name: sanitizeTextForPDF(bookingDetails.name) || '',
     school: sanitizeTextForPDF(bookingDetails.school) || '',
@@ -137,6 +166,8 @@ export function sanitizeBookingDetailsForPDF(bookingDetails: {
     phone: sanitizeTextForPDF(bookingDetails.phone) || '',
     bkashNumber: sanitizeTextForPDF(bookingDetails.bkashNumber) || '',
     information: sanitizeTextForPDF(bookingDetails.information) || '',
+    teamName: sanitizeTextForPDF(bookingDetails.teamName) || '',
+    teamMembers,
   }
 }
 

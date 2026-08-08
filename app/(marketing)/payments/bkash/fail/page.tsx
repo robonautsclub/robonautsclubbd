@@ -23,7 +23,9 @@ export default async function BkashFailPage({ searchParams }: FailPageProps) {
             <XCircle className="h-5 w-5" />
             <AlertTitle>Registration was not created</AlertTitle>
             <AlertDescription>
-              We could not complete your payment. {error}
+              We could not complete your payment. {error} Your registration was
+              not created — please try again and stay on this browser until you
+              see the payment successful message.
             </AlertDescription>
           </Alert>
           <Button asChild className="bg-indigo-600 hover:bg-indigo-700 text-white">

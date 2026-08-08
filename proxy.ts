@@ -12,7 +12,7 @@ function clearAuthAndRedirect(loginUrl: URL) {
   return response
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const token = request.cookies.get('auth-token')?.value
 
@@ -64,4 +64,3 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: ['/dashboard/:path*', '/login'],
 }
-

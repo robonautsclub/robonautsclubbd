@@ -13,7 +13,7 @@ export default async function SchoolsPage() {
       <div>
         <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">School Directory</h2>
         <p className="text-sm sm:text-base text-gray-600 mt-1">
-          Manage English-medium schools in Bangladesh for event registration dropdowns.
+          Manage English-medium schools for registration dropdowns. Confirm custom names submitted via Robofest.
         </p>
       </div>
       <SchoolDirectoryManager schools={schools} />

@@ -2,6 +2,10 @@ export const SCHOOL_DIRECTORY_COLLECTION = 'school_directory'
 export const PRIVATE_CANDIDATE_OPTION = 'Private Candidate'
 export const SCHOOL_NOT_FOUND_OPTION = '__OTHER__'
 
+export type SchoolDirectoryStatus = 'pending' | 'approved'
+
+export type SchoolDirectorySource = 'robofest' | 'admin' | 'seed'
+
 export type SchoolDirectoryEntry = {
   id: string
   name: string
@@ -9,6 +13,11 @@ export type SchoolDirectoryEntry = {
   country: 'bangladesh'
   city?: string
   isActive: boolean
+  status: SchoolDirectoryStatus
+  source?: SchoolDirectorySource
+  requestedByName?: string
+  requestedByEmail?: string
+  requestedAt?: Date | string
   createdAt?: Date | string
   updatedAt?: Date | string
 }

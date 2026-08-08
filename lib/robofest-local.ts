@@ -5,121 +5,182 @@
 
 export const ROBOFEST_LOCAL = {
   statusBadge: "Local Round · September 2026",
-  headline: "Robofest Local Round · Bangladesh",
-  lead: "Compete in Dhaka and Chittagong for a path to the Robofest World Championship",
-  dateLabel: "4–12 September 2026",
+  presentsLabel: "Robonauts Ltd Presents",
+  headline: "RoboFest Bangladesh 2026",
+  lead: "Compete in Dhaka & Chittagong for a Path to the RoboFest World Championship 2027 in South Korea.",
+  dateLabel: "11 September (CTG) · 18 September (DHK)",
   timeLabel: null as string | null,
-  venueLabel: "Dhaka & Chittagong · TBA",
+  venueLabel: "Chittagong · TBA · Dhaka · TBA",
   venueDetail: "Exact venues to be announced",
   hostName: "Robonauts Ltd",
   officialSite: "https://www.robofest.net/",
   categoriesUrl: "https://www.robofest.net/index.php/current-competitions/overview",
+  generalRulesPdf: "/robofest/General%20Rules%20%26%20Regulations.pdf",
+  instagramUrl:
+    "https://www.instagram.com/robonautsltd?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==",
   contactHref: "/about#contact",
+  contactEmail: "events@robonautsltd.com",
+  contactLines: [
+    {
+      label: "Contact - 01",
+      phone: "+880 1897-666864",
+      note: "Competitions Related",
+    },
+    {
+      label: "Contact - 02",
+      phone: "+880 1954-954047",
+      note: "Registrations Related",
+    },
+  ],
+  dateLines: ["11 September (CTG)", "18 September (DHK)"],
+  venueLines: ["Chittagong - TBA", "Dhaka - TBA"],
   placeholders: {
     schedule: "/olympiads/robofest.png",
-    whyTrain: "/robofest/robofest.jpg",
     roundAccent: "/olympiads/robofest.png",
   },
   rounds: [
     {
-      city: "Dhaka",
-      title: "ROBOFEST BANGLADESH ROUND 2026 | DHAKA",
-      dates: "4–5 September 2026",
-      venueLabel: "Venue to be announced",
-      image: "/robofest/dhaka.jpg",
-    },
-    {
       city: "Chittagong",
       title: "ROBOFEST BANGLADESH ROUND 2026 | CHITTAGONG",
-      dates: "11–12 September 2026",
-      venueLabel: "Venue to be announced",
+      dates: "11 September (CTG)",
+      venueLabel: "Chittagong - TBA",
       image: "/roboclass.jpg",
     },
+    {
+      city: "Dhaka",
+      title: "ROBOFEST BANGLADESH ROUND 2026 | DHAKA",
+      dates: "18 September (DHK)",
+      venueLabel: "Dhaka - TBA",
+      image: "/robofest/dhaka.jpg",
+    },
   ],
-  achievement: {
-    title: "3rd Place · Senior BottleSumo",
-    event: "Robofest World Championship 2026",
-    location: "Lawrence Technological University, USA",
-    detail:
-      "A Robonauts-trained Bangladesh team earned the podium at Lawrence Technological University—proof that students from here can compete on the world stage.",
-  },
 } as const;
 
 export const ROBOFEST_CATEGORIES = [
   {
-    name: "Game",
-    icon: "precision_manufacturing",
-    description:
-      "Autonomous robots complete mission tasks; unknown factors are revealed at competition.",
-  },
-  {
-    name: "Exhibition",
-    icon: "lightbulb",
-    description:
-      "Full creative freedom to showcase any intelligent, autonomous robotics project.",
-  },
-  {
+    slug: "bottlesumo",
     name: "BottleSumo",
     icon: "sports_kabaddi",
+    image: "/robofest/robofest.jpg",
     description:
-      "Push bottles—or your opponent—off the table in fast head-to-head matches.",
+      "Autonomous bottle-pushing: time trials, then head-to-head—no remotes.",
+    skillLevel: "Beginner to intermediate",
+    format: "Time trial + single elimination",
+    about:
+      "Push bottles off the table in a timed seed round, then fight head-to-head. Fully autonomous only.",
+    highlights: [
+      "Time-trial seeding, then single-elimination matches.",
+      "Explorer and Innovator size/weight/motor limits.",
+      "Edge and object sensors required; 3-second start delay.",
+      "Win by pushing the opponent off and surviving on the table.",
+    ],
+    whoShouldJoin:
+      "Teams building and programming their own autonomous sumo-style robot.",
+    rulesPdf: "/robofest/BottleSumo%20Competition.pdf",
   },
   {
-    name: "RoboParade",
-    icon: "celebration",
+    slug: "buildathon",
+    name: "Buildathon",
+    icon: "construction",
+    image: "/roboclass.jpg",
     description:
-      "Decorated robotic vehicles parade autonomously along a creative route.",
+      "Design, build, and present a robotics project under buildathon constraints.",
+    skillLevel: "Intermediate",
+    format: "Project build + presentation",
+    about:
+      "Build a working robotics prototype under theme and time pressure, then pitch it to judges.",
+    highlights: [
+      "Prototype + live presentation to judges.",
+      "Scored on engineering, creativity, and clarity.",
+      "Hardware, software, and storytelling all count.",
+      "No fixed arena game—your idea leads.",
+    ],
+    whoShouldJoin:
+      "Teams who want to invent and present an original robotics build.",
+    rulesPdf: "/robofest/BuildAthon%20Competition.pdf",
   },
   {
-    name: "RoboArts",
-    icon: "palette",
+    slug: "line-following-bot",
+    name: "Line Following Bot",
+    icon: "timeline",
+    image: "/feed/robotics.jpg",
     description:
-      "Robots perform, dance, paint, or make music in an interactive showcase.",
+      "Race an autonomous bot along a marked line—accuracy and speed win.",
+    skillLevel: "Beginner to advanced",
+    format: "Timed autonomous course",
+    about:
+      "Program your robot to track a line course as fast and clean as possible. Sensors and control tuning decide the podium.",
+    highlights: [
+      "Timed runs on a defined line path.",
+      "Focus on sensors, control loops, and calibration.",
+      "Beginners finish; advanced teams chase best times.",
+      "Simple game rules—performance is everything.",
+    ],
+    whoShouldJoin:
+      "Teams who love autonomous control, tuning, and racing the clock.",
+    rulesPdf: "/robofest/Line-Following%20Bot%20Competition.pdf",
   },
   {
-    name: "RoboMed",
-    icon: "medical_services",
+    slug: "robo-exhibition",
+    name: "Robo Exhibition",
+    icon: "lightbulb",
+    image: "/olympiads/robofest.png",
     description:
-      "Intelligent biomedical robotics and device projects with real-world impact.",
-  },
-  {
-    name: "Unknown Mission Challenge",
-    icon: "psychology",
-    description:
-      "Build and program on the spot to solve totally unknown missions in two hours.",
-  },
-  {
-    name: "Vision Centric Challenge",
-    icon: "visibility",
-    description:
-      "Advanced senior division using vision-based autonomous robots.",
+      "Showcase an intelligent robotics project to judges and visitors.",
+    skillLevel: "All levels",
+    format: "Project showcase + demo",
+    about:
+      "Bring any intelligent robotics project, demo it live, and explain the impact. Judged on innovation and presentation.",
+    highlights: [
+      "Free theme within intelligent, autonomous robotics.",
+      "Live demo plus clear explanation to judges.",
+      "Scored on innovation, craft, and communication.",
+      "Ideal for research-style or long-horizon school projects.",
+    ],
+    whoShouldJoin:
+      "Teams with a distinctive project ready to show, not only race or fight.",
+    rulesPdf: "/robofest/Robo-Exhibition%20Competition.pdf",
   },
 ] as const;
+
+export type RobofestCategory = (typeof ROBOFEST_CATEGORIES)[number];
+export type RobofestCategoryName = RobofestCategory["name"];
+export type RobofestCategorySlug = RobofestCategory["slug"];
+
+export function getRobofestCategoryBySlug(
+  slug: string,
+): RobofestCategory | undefined {
+  return ROBOFEST_CATEGORIES.find((category) => category.slug === slug);
+}
+
+export function getRobofestCategoryHref(slug: RobofestCategorySlug): string {
+  return `/robofest/${slug}`;
+}
 
 export const ROBOFEST_HOW_IT_WORKS = [
   {
     icon: "group",
-    title: "Form a team",
+    title: "Form Your Team",
     description:
-      "Students in grades 4–12 join Junior or Senior divisions and pick a competition category.",
+      "Students in Grades 05 - 12 compete under Explorer (Grades 05 - 08) or Innovators (Grades 09 - 12) and form a Team of up to 4 Members.",
   },
   {
     icon: "smart_toy",
-    title: "Build & program",
+    title: "Choose Your Competition",
     description:
-      "Design fully autonomous robots—no remote control during matches. Any approved kit and language welcome.",
+      "Select from BottleSumo, Line-Following Bot, BuildAthon, or Robo-Exhibition, based on your Team's Interests & Skills.",
   },
   {
     icon: "flag",
-    title: "Compete in Bangladesh",
+    title: "Compete in the Local Round",
     description:
-      "Join the local rounds in Dhaka or Chittagong, hosted by Robonauts, and showcase your robot on home turf.",
+      "Compete in Dhaka or Chattogram under the Rules & Judging Format of your Selected Competition.",
   },
   {
     icon: "public",
-    title: "Aim for the World Championship",
+    title: "Path to the World Stage",
     description:
-      "Top qualifying teams earn a path to the Robofest World Championship at Lawrence Technological University, USA.",
+      "Outstanding Teams may earn the opportunity to represent Bangladesh at the Robofest World Championship 2027 in Seoul, South Korea.",
   },
 ] as const;
 
