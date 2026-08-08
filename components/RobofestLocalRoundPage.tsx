@@ -349,13 +349,12 @@ export default async function RobofestLocalRoundPage() {
                 >
                   <a
                     href={generalRulesPdf}
-                    download="General-Rules-and-Regulations.pdf"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2"
                   >
-                    <MaterialIcon name="download" className="text-xl" />
-                    General Rules &amp; Regulations
+                    <MaterialIcon name="open_in_new" className="text-xl" />
+                    View General Rules &amp; Regulations
                   </a>
                 </Button>
               </div>
@@ -418,13 +417,12 @@ export default async function RobofestLocalRoundPage() {
                           >
                             <a
                               href={rulesPdf}
-                              download
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex items-center justify-center gap-1.5"
                             >
-                              <MaterialIcon name="download" className="text-base" />
-                              Download rulebook
+                              <MaterialIcon name="open_in_new" className="text-base" />
+                              View rulebook
                             </a>
                           </Button>
                         ) : null}

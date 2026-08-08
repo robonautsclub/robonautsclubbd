@@ -28,14 +28,12 @@ function MaterialIcon({
   );
 }
 
-function RulesDownloadButton({
+function RulesViewButton({
   href,
-  filename,
-  label = "Download rules (PDF)",
+  label = "View rules (PDF)",
   className = "",
 }: {
   href: string;
-  filename: string;
   label?: string;
   className?: string;
 }) {
@@ -46,12 +44,11 @@ function RulesDownloadButton({
     >
       <a
         href={href}
-        download={filename}
         target="_blank"
         rel="noopener noreferrer"
         className="inline-flex items-center gap-1.5"
       >
-        <MaterialIcon name="download" className="text-base" />
+        <MaterialIcon name="open_in_new" className="text-base" />
         {label}
       </a>
     </Button>
@@ -72,8 +69,6 @@ export default function RobofestCategoryPage({
   const rulesPdf = getRobofestCategoryRulesPdf(category);
   const rules = getRobofestCategoryRules(category.slug);
   const heroImage = getRobofestCategoryImage(category);
-  const downloadFilename =
-    rules?.downloadFilename ?? `${category.slug}-rules.pdf`;
   const showPdf = Boolean(rulesPdf);
 
   return (
@@ -253,14 +248,12 @@ export default function RobofestCategoryPage({
                         "Full competition rules, specs, and scoring are in the official PDF."}
                     </p>
                     <p className="text-xs text-slate-500 mt-2">
-                      On-page highlights only—download the PDF for complete
-                      details.
+                      On-page highlights only—open the PDF for complete details.
                     </p>
                   </div>
-                  <RulesDownloadButton
+                  <RulesViewButton
                     href={rulesPdf}
-                    filename={downloadFilename}
-                    label={`Download ${category.name} rules`}
+                    label={`View ${category.name} rules`}
                     className="shrink-0"
                   />
                 </div>
