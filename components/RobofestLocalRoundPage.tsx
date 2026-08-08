@@ -2,11 +2,10 @@ import {
   getActiveRobofestCategories,
   getRobofestCategoryHref,
   getRobofestCategoryImage,
-  getRobofestCategoryRulesPdf,
   getRobofestContent,
 } from "@/lib/robofest-content";
 import { Button } from "@/components/ui/button";
-import { Instagram } from "lucide-react";
+import { Facebook, Instagram } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import Script from "next/script";
@@ -232,14 +231,14 @@ export default async function RobofestLocalRoundPage() {
                 </ul>
               </div>
 
-              <div className="p-4 sm:p-5 text-left">
-                <div className="flex items-center gap-2 text-cyan-700 mb-2">
-                  <MaterialIcon name="apartment" className="text-xl" />
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              <div className="p-5 sm:p-6 text-left">
+                <div className="flex items-center gap-2.5 text-cyan-700 mb-3">
+                  <MaterialIcon name="apartment" className="text-2xl sm:text-[1.75rem]" />
+                  <span className="text-xs sm:text-sm font-bold uppercase tracking-[0.14em] text-cyan-800/80">
                     Host
                   </span>
                 </div>
-                <p className="text-sm font-semibold text-slate-900">
+                <p className="text-base sm:text-lg md:text-xl font-bold text-slate-900 tracking-tight leading-snug">
                   {content.hostName || SITE_CONFIG.name}
                 </p>
               </div>
@@ -369,7 +368,6 @@ export default async function RobofestLocalRoundPage() {
             <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-5 sm:gap-6">
               {categories.map((category, index) => {
                 const cover = getRobofestCategoryImage(category);
-                const rulesPdf = getRobofestCategoryRulesPdf(category);
                 return (
                   <article
                     key={category.slug}
@@ -403,35 +401,10 @@ export default async function RobofestLocalRoundPage() {
                     </div>
 
                     <div className="flex flex-1 flex-col p-5 pt-4">
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        <span className="rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-0.5 text-[11px] font-medium text-cyan-800">
-                          {category.skillLevel}
-                        </span>
-                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] font-medium text-slate-700">
-                          {category.format}
-                        </span>
-                      </div>
                       <p className="text-sm text-slate-600 leading-relaxed flex-1">
                         {category.description}
                       </p>
-                      <div className="mt-5 space-y-2">
-                        {rulesPdf ? (
-                          <Button
-                            asChild
-                            variant="outline"
-                            className="w-full border-cyan-200 text-cyan-800 hover:bg-cyan-50"
-                          >
-                            <a
-                              href={rulesPdf}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center gap-1.5"
-                            >
-                              <MaterialIcon name="open_in_new" className="text-base" />
-                              View rulebook
-                            </a>
-                          </Button>
-                        ) : null}
+                      <div className="mt-5">
                         <Button
                           asChild
                           className="w-full bg-cyan-600 text-white hover:bg-cyan-700 font-semibold"
@@ -525,6 +498,20 @@ export default async function RobofestLocalRoundPage() {
                         >
                           <Instagram className="h-4 w-4" aria-hidden />
                           Instagram
+                        </a>
+                      </Button>
+                    ) : null}
+                    {SITE_CONFIG.social.facebook ? (
+                      <Button asChild variant="outline">
+                        <a
+                          href={SITE_CONFIG.social.facebook}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2"
+                          aria-label="Robonauts Ltd on Facebook"
+                        >
+                          <Facebook className="h-4 w-4" aria-hidden />
+                          Facebook
                         </a>
                       </Button>
                     ) : null}
