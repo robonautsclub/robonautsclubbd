@@ -478,14 +478,30 @@ export default async function RobofestLocalRoundPage() {
                       Compete.
                     </p>
                   </div>
-                  {content.dateLabel ? (
-                    <p className="mt-5 inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-semibold text-slate-900">
-                      <MaterialIcon
-                        name="calendar_month"
-                        className="text-lg text-cyan-700"
-                      />
-                      {content.dateLabel}
-                    </p>
+                  {dateLines.length ? (
+                    <ul className="mt-5 space-y-2">
+                      {dateLines.map((line, index) => (
+                        <li
+                          key={`${line}-${index}`}
+                          className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5"
+                        >
+                          <MaterialIcon
+                            name="calendar_month"
+                            className="text-lg text-cyan-700 shrink-0 mt-0.5"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-900">
+                              {line}
+                            </p>
+                            {venueLines[index] ? (
+                              <p className="text-xs text-slate-500 mt-0.5">
+                                {venueLines[index]}
+                              </p>
+                            ) : null}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
                   ) : null}
                   <div className="mt-7 flex flex-col sm:flex-row gap-3">
                     <Button
