@@ -194,32 +194,38 @@ export default async function RobofestLocalRoundPage() {
         <div className="relative z-10 max-w-7xl mx-auto mt-8 sm:mt-10">
           <div className="rounded-2xl border border-white/40 bg-white/90 backdrop-blur-md shadow-lg shadow-slate-900/10 overflow-hidden">
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-200/80">
-              <div className="p-4 sm:p-5 text-left">
-                <div className="flex items-center gap-2 text-cyan-700 mb-2">
-                  <MaterialIcon name="calendar_month" className="text-xl" />
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              <div className="p-5 sm:p-6 text-left bg-cyan-50/50">
+                <div className="flex items-center gap-2.5 text-cyan-700 mb-3">
+                  <MaterialIcon name="calendar_month" className="text-2xl sm:text-[1.75rem]" />
+                  <span className="text-xs sm:text-sm font-bold uppercase tracking-[0.14em] text-cyan-800/80">
                     Date
                   </span>
                 </div>
-                <ul className="space-y-1">
+                <ul className="space-y-1.5">
                   {dateLines.map((line) => (
-                    <li key={line} className="text-sm font-semibold text-slate-900">
+                    <li
+                      key={line}
+                      className="text-base sm:text-lg md:text-xl font-bold text-slate-900 tracking-tight leading-snug"
+                    >
                       {line}
                     </li>
                   ))}
                 </ul>
               </div>
 
-              <div className="p-4 sm:p-5 text-left">
-                <div className="flex items-center gap-2 text-cyan-700 mb-2">
-                  <MaterialIcon name="location_on" className="text-xl" />
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              <div className="p-5 sm:p-6 text-left bg-cyan-50/50">
+                <div className="flex items-center gap-2.5 text-cyan-700 mb-3">
+                  <MaterialIcon name="location_on" className="text-2xl sm:text-[1.75rem]" />
+                  <span className="text-xs sm:text-sm font-bold uppercase tracking-[0.14em] text-cyan-800/80">
                     Venue
                   </span>
                 </div>
-                <ul className="space-y-1">
+                <ul className="space-y-1.5">
                   {venueLines.map((line) => (
-                    <li key={line} className="text-sm font-semibold text-slate-900">
+                    <li
+                      key={line}
+                      className="text-base sm:text-lg md:text-xl font-bold text-slate-900 tracking-tight leading-snug"
+                    >
                       {line}
                     </li>
                   ))}
