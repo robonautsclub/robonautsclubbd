@@ -1,4 +1,5 @@
 import { requireAuth } from '@/lib/auth'
+import { getPublicEnglishMediumSchools } from '@/app/(marketing)/events/actions'
 import {
   getRobofestDashboardContent,
   getRobofestRegistrations,
@@ -9,9 +10,10 @@ export const dynamic = 'force-dynamic'
 
 export default async function RobofestDashboardPage() {
   await requireAuth()
-  const [content, registrations] = await Promise.all([
+  const [content, registrations, schools] = await Promise.all([
     getRobofestDashboardContent(),
     getRobofestRegistrations(),
+    getPublicEnglishMediumSchools(),
   ])
 
   return (
@@ -19,6 +21,7 @@ export default async function RobofestDashboardPage() {
       <RobofestDashboardClient
         initialContent={content}
         registrations={registrations}
+        schools={schools}
       />
     </div>
   )

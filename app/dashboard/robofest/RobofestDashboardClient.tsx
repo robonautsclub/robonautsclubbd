@@ -30,6 +30,7 @@ import {
   exportRobofestExcel,
   exportRobofestPdf,
 } from './exportRobofestRegistrations'
+import CreateRobofestRegistrationForm from './CreateRobofestRegistrationForm'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -107,6 +108,7 @@ function ContentSection({
 type Props = {
   initialContent: RobofestContent
   registrations: RobofestRegistration[]
+  schools: string[]
 }
 
 function statusBadgeClass(status: string) {
@@ -191,6 +193,7 @@ function CollapsibleTeamMembers({
 export default function RobofestDashboardClient({
   initialContent,
   registrations,
+  schools,
 }: Props) {
   const router = useRouter()
   const [content, setContent] = useState(initialContent)
@@ -418,11 +421,22 @@ export default function RobofestDashboardClient({
               <> registrations</>
             )}
           </p>
-          {filtersActive ? (
-            <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
-              Clear filters
-            </Button>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <CreateRobofestRegistrationForm
+              content={content}
+              schools={schools}
+            />
+            {filtersActive ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+              >
+                Clear filters
+              </Button>
+            ) : null}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">

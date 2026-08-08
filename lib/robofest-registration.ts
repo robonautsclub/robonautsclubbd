@@ -158,15 +158,27 @@ export async function hasExistingRobofestRegistration(
   });
 }
 
+export type RobofestPaymentMeta = {
+  paymentId: string;
+  trxId?: string;
+  amountPaid: number;
+  paymentGateway?: string;
+};
+
+export type RobofestCreateOptions = {
+  /** Default true. When false, skip email and PDF generation. */
+  sendEmail?: boolean;
+  paymentMeta?: RobofestPaymentMeta;
+};
+
 export async function createRobofestRegistrationAndSendEmail(
   content: RobofestContent,
   formData: RobofestRegistrationFormData,
-  paymentMeta?: {
-    paymentId: string;
-    trxId: string;
-    amountPaid: number;
-  },
+  options: RobofestCreateOptions = {},
 ): Promise<RobofestRegistrationWriteResult> {
+  const sendEmail = options.sendEmail !== false;
+  const paymentMeta = options.paymentMeta;
+
   if (!adminDb) {
     return {
       success: false,
@@ -241,14 +253,24 @@ export async function createRobofestRegistrationAndSendEmail(
   }
 
   if (paymentMeta) {
-    registrationData.paymentGateway = "bkash";
+    registrationData.paymentGateway = paymentMeta.paymentGateway || "bkash";
     registrationData.paymentId = paymentMeta.paymentId;
-    registrationData.trxId = paymentMeta.trxId;
+    if (paymentMeta.trxId) {
+      registrationData.trxId = paymentMeta.trxId;
+    }
     registrationData.amountPaid = paymentMeta.amountPaid;
     registrationData.paidAt = now;
   }
 
   await regRef.set(registrationData);
+
+  if (!sendEmail) {
+    return {
+      success: true,
+      registrationDocId: regRef.id,
+      registrationId,
+    };
+  }
 
   const event = buildRobofestEventForPdfEmail(content, {
     category,

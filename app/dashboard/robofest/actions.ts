@@ -10,6 +10,7 @@ import {
   ROBOFEST_CONTENT_DOC_ID,
   ROBOFEST_REGISTRATIONS_COLLECTION,
   getDefaultRobofestContent,
+  getRobofestCategoryByName,
   getRobofestContentFresh,
   mapRobofestContentDoc,
   mapRobofestRegistrationDoc,
@@ -20,7 +21,13 @@ import {
 import {
   getRobofestRegistrationById,
   resendRobofestConfirmationEmail,
+  createRobofestRegistrationAndSendEmail,
 } from '@/lib/robofest-registration'
+import {
+  validateRobofestRegistrationInput,
+  type RobofestRegistrationInput,
+} from '@/lib/robofest-registration-input'
+import { computeRobofestRegistrationTotal, resolveRobofestFee } from '@/lib/robofest-fee'
 
 function revalidateRobofestPublic() {
   revalidateTag(ROBOFEST_CONTENT_CACHE_TAG, 'max')
@@ -205,6 +212,115 @@ export async function resendRobofestRegistrationEmail(
     revalidatePath('/dashboard/robofest')
   }
   return result
+}
+
+export type CreateRobofestRegistrationManualInput =
+  RobofestRegistrationInput & {
+    notes?: string
+    paymentMode: 'paid_offline' | 'waived'
+    amountPaid?: number
+    trxId?: string
+    sendEmail?: boolean
+  }
+
+export async function createRobofestRegistrationManual(
+  input: CreateRobofestRegistrationManualInput,
+): Promise<{
+  success: boolean
+  error?: string
+  warning?: string
+  registrationId?: string
+  registrationDocId?: string
+}> {
+  await requireAuth()
+  if (!adminDb) {
+    return { success: false, error: 'Database unavailable.' }
+  }
+
+  try {
+    const validated = await validateRobofestRegistrationInput({
+      category: input.category,
+      name: input.name,
+      division: input.division,
+      ageCategory: input.ageCategory,
+      teamSize: input.teamSize,
+      teamMembers: input.teamMembers,
+      campusAmbassadorId: input.campusAmbassadorId,
+      notes: input.notes,
+    })
+    if (!validated.ok) {
+      return { success: false, error: validated.error }
+    }
+
+    const content = await getRobofestContentFresh()
+    const category = getRobofestCategoryByName(
+      content,
+      validated.data.category,
+    )
+    if (!category) {
+      return { success: false, error: 'Selected category is not valid.' }
+    }
+
+    const roundOk = content.rounds.some(
+      (round) => round.city === validated.data.roundCity,
+    )
+    if (!roundOk) {
+      return { success: false, error: 'Please select a valid division.' }
+    }
+
+    const fee = resolveRobofestFee(content, category.name)
+    const defaultTotal = computeRobofestRegistrationTotal(
+      fee.amount || 300,
+      validated.data.teamSize,
+    )
+
+    let paymentMeta:
+      | {
+          paymentId: string
+          trxId?: string
+          amountPaid: number
+          paymentGateway: string
+        }
+      | undefined
+
+    if (input.paymentMode === 'paid_offline') {
+      const amountPaid =
+        typeof input.amountPaid === 'number' && input.amountPaid >= 0
+          ? input.amountPaid
+          : defaultTotal
+      paymentMeta = {
+        paymentId: `admin-manual-${Date.now()}`,
+        trxId: input.trxId?.trim() || undefined,
+        amountPaid,
+        paymentGateway: 'manual',
+      }
+    }
+
+    const result = await createRobofestRegistrationAndSendEmail(
+      content,
+      {
+        ...validated.data,
+        category: category.name,
+        notes: input.notes?.trim() || validated.data.notes || '',
+      },
+      {
+        sendEmail: input.sendEmail !== false,
+        paymentMeta,
+      },
+    )
+
+    if (result.success) {
+      revalidatePath('/dashboard/robofest')
+    }
+
+    return result
+  } catch (error) {
+    console.error('Admin manual Robofest registration failed:', error)
+    return {
+      success: false,
+      error: 'Failed to create registration. Please try again.',
+    }
+  }
 }
 
 export async function resetRobofestContentToDefaults(): Promise<{

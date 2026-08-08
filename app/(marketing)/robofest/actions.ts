@@ -8,50 +8,24 @@ import {
 } from "@/lib/bkash";
 import { adminDb } from "@/lib/firebase-admin";
 import {
-  createPendingSchoolIfNeeded,
-  resolveSchoolFromSelection,
-} from "@/lib/pendingSchool";
-import {
-  getRobofestCampusAmbassadorById,
-} from "@/lib/robofest-campus-ambassadors";
-import {
   getRobofestCategoryByName,
   getRobofestContentFresh,
   resolveRobofestFee,
   type RobofestTeamMember,
 } from "@/lib/robofest-content";
 import { computeRobofestRegistrationTotal } from "@/lib/robofest-fee";
+import type { RobofestAgeCategory } from "@/lib/robofest-registration-options";
 import {
-  formatAgeCategoryLabel,
-  isGradeAllowedForAgeCategory,
-  type RobofestAgeCategory,
-} from "@/lib/robofest-registration-options";
+  validateRobofestRegistrationInput,
+  type RobofestRegistrationInput,
+} from "@/lib/robofest-registration-input";
 import {
   createRobofestRegistrationAndSendEmail,
   getRobofestBaseUrl,
   hasExistingRobofestRegistration,
-  type RobofestRegistrationFormData,
 } from "@/lib/robofest-registration";
 
-export type RobofestMemberInput = {
-  name: string;
-  email: string;
-  phone: string;
-  schoolSelection: string;
-  customSchool?: string;
-  branch?: string;
-  grade: string;
-};
-
-export type RobofestRegistrationInput = {
-  category: string;
-  name: string;
-  division: string;
-  ageCategory: string;
-  teamSize: number;
-  teamMembers: RobofestMemberInput[];
-  campusAmbassadorId?: string;
-};
+export type { RobofestMemberInput, RobofestRegistrationInput } from "@/lib/robofest-registration-input";
 
 export type RobofestRegistrationResult = {
   success: boolean;
@@ -87,154 +61,6 @@ type PendingRobofestRegistration = {
   updatedAt: Date;
 };
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-async function validateRegistrationInput(
-  formData: RobofestRegistrationInput,
-): Promise<
-  | { ok: true; data: RobofestRegistrationFormData }
-  | { ok: false; error: string }
-> {
-  const category = formData.category?.trim() ?? "";
-  const name = formData.name?.trim() ?? "";
-  const division = formData.division?.trim() ?? "";
-  const ageCategoryRaw = formData.ageCategory?.trim() ?? "";
-  const ageCategory =
-    ageCategoryRaw === "explorer" || ageCategoryRaw === "innovators"
-      ? ageCategoryRaw
-      : null;
-
-  if (!category || !name || !division || !ageCategory) {
-    return { ok: false, error: "All required fields must be filled." };
-  }
-
-  const teamSize = Math.min(4, Math.max(1, Number(formData.teamSize) || 0));
-  if (!Number.isInteger(teamSize) || teamSize < 1 || teamSize > 4) {
-    return { ok: false, error: "Number of members must be between 1 and 4." };
-  }
-
-  const list = Array.isArray(formData.teamMembers)
-    ? formData.teamMembers.slice(0, teamSize)
-    : [];
-  if (list.length !== teamSize) {
-    return {
-      ok: false,
-      error: `Please provide details for all ${teamSize} team member(s).`,
-    };
-  }
-
-  const teamMembers: RobofestTeamMember[] = [];
-  for (let i = 0; i < list.length; i += 1) {
-    const raw = list[i];
-    const memberName = raw?.name?.trim() ?? "";
-    const email = raw?.email?.trim().toLowerCase() ?? "";
-    const phone = raw?.phone?.trim().replace(/\s/g, "") ?? "";
-    const schoolSelection = raw?.schoolSelection?.trim() ?? "";
-    const customSchool = raw?.customSchool?.trim() ?? "";
-    const branch = raw?.branch?.trim() ?? "";
-    const grade = raw?.grade?.trim() ?? "";
-
-    if (!memberName || !email || !phone || !schoolSelection || !grade) {
-      return {
-        ok: false,
-        error: `Team member ${String(i + 1).padStart(2, "0")} is missing required fields.`,
-      };
-    }
-    if (!EMAIL_REGEX.test(email)) {
-      return {
-        ok: false,
-        error: `Team member ${String(i + 1).padStart(2, "0")} has an invalid email.`,
-      };
-    }
-    if (phone.length !== 11 || !phone.startsWith("01")) {
-      return {
-        ok: false,
-        error: `Team member ${String(i + 1).padStart(2, "0")} phone must be 11 digits starting with 01.`,
-      };
-    }
-    if (!isGradeAllowedForAgeCategory(grade, ageCategory)) {
-      return {
-        ok: false,
-        error: `Team member ${String(i + 1).padStart(2, "0")} grade does not match ${formatAgeCategoryLabel(ageCategory)}.`,
-      };
-    }
-
-    const resolved = resolveSchoolFromSelection(schoolSelection, customSchool);
-    if (!resolved.school) {
-      return {
-        ok: false,
-        error: `Team member ${String(i + 1).padStart(2, "0")} needs an institution name.`,
-      };
-    }
-
-    let school = resolved.school;
-    let schoolIsCustom = resolved.isCustom;
-    let pendingSchoolId: string | undefined;
-
-    if (resolved.isCustom) {
-      const pending = await createPendingSchoolIfNeeded(resolved.school, {
-        requestedByName: memberName,
-        requestedByEmail: email,
-        source: "robofest",
-      });
-      school = pending.school;
-      schoolIsCustom = pending.schoolIsCustom;
-      pendingSchoolId = pending.pendingSchoolId;
-    }
-
-    teamMembers.push({
-      name: memberName,
-      email,
-      phone,
-      school,
-      schoolIsCustom,
-      pendingSchoolId,
-      branch: branch || undefined,
-      grade,
-    });
-  }
-
-  const primary = teamMembers[0];
-  if (!primary) {
-    return { ok: false, error: "At least one team member is required." };
-  }
-
-  let campusAmbassadorId: string | undefined;
-  let campusAmbassadorName: string | undefined;
-  let campusAmbassadorSchool: string | undefined;
-  const ambassadorId = formData.campusAmbassadorId?.trim() ?? "";
-  if (ambassadorId) {
-    const ambassador = getRobofestCampusAmbassadorById(ambassadorId);
-    if (!ambassador) {
-      return { ok: false, error: "Selected campus ambassador is not valid." };
-    }
-    campusAmbassadorId = ambassador.id;
-    campusAmbassadorName = ambassador.name;
-    campusAmbassadorSchool = ambassador.school;
-  }
-
-  return {
-    ok: true,
-    data: {
-      category,
-      name,
-      email: primary.email,
-      phone: primary.phone || "",
-      school: primary.school || "",
-      schoolIsCustom: Boolean(primary.schoolIsCustom),
-      pendingSchoolId: primary.pendingSchoolId,
-      ageCategory,
-      teamSize,
-      teamMembers,
-      campusAmbassadorId,
-      campusAmbassadorName,
-      campusAmbassadorSchool,
-      roundCity: division,
-      notes: "",
-    },
-  };
-}
-
 /** Free registration (or when fee is 0). */
 export async function submitRobofestRegistration(
   formData: RobofestRegistrationInput,
@@ -247,7 +73,7 @@ export async function submitRobofestRegistration(
       };
     }
 
-    const validated = await validateRegistrationInput(formData);
+    const validated = await validateRobofestRegistrationInput(formData);
     if (!validated.ok) return { success: false, error: validated.error };
 
     const content = await getRobofestContentFresh();
@@ -295,7 +121,7 @@ export async function initiateRobofestPaidCheckout(
       };
     }
 
-    const validated = await validateRegistrationInput(formData);
+    const validated = await validateRobofestRegistrationInput(formData);
     if (!validated.ok) return { success: false, error: validated.error };
 
     const content = await getRobofestContentFresh();
@@ -499,9 +325,11 @@ export async function finalizeRobofestPaidRegistration(paymentId: string): Promi
         notes: pending.notes,
       },
       {
-        paymentId: execution.paymentId,
-        trxId: execution.trxId,
-        amountPaid: execution.amount || pending.amount,
+        paymentMeta: {
+          paymentId: execution.paymentId,
+          trxId: execution.trxId,
+          amountPaid: execution.amount || pending.amount,
+        },
       },
     );
 

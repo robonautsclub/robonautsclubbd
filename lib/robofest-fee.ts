@@ -12,3 +12,36 @@ export function computeRobofestRegistrationTotal(
   const unit = Math.max(0, Number(perMemberAmount) || 0)
   return unit * members
 }
+
+type FeeContentLike = {
+  isPaid: boolean
+  amount: number
+  categories: Array<{ name: string; amount?: number | null; active?: boolean }>
+}
+
+/**
+ * Resolve per-member fee: category override if set, else global amount when isPaid.
+ * `amount` is always the fee **per team member**, not the team total.
+ */
+export function resolveRobofestFee(
+  content: FeeContentLike,
+  categoryName: string,
+): { isPaid: boolean; amount: number } {
+  const normalized = categoryName.trim().toLowerCase()
+  const category = content.categories.find(
+    (c) => c.name.trim().toLowerCase() === normalized && c.active !== false,
+  )
+  if (category?.amount != null && category.amount > 0) {
+    return { isPaid: true, amount: category.amount }
+  }
+  if (content.isPaid) {
+    return {
+      isPaid: true,
+      amount:
+        content.amount > 0
+          ? content.amount
+          : ROBOFEST_DEFAULT_FEE_PER_MEMBER_BDT,
+    }
+  }
+  return { isPaid: false, amount: 0 }
+}

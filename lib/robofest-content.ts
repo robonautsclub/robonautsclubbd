@@ -16,6 +16,7 @@ import { ROBOFEST_DEFAULT_FEE_PER_MEMBER_BDT } from "@/lib/robofest-fee";
 export {
   ROBOFEST_DEFAULT_FEE_PER_MEMBER_BDT,
   computeRobofestRegistrationTotal,
+  resolveRobofestFee,
 } from "@/lib/robofest-fee";
 
 export const ROBOFEST_CONTENT_COLLECTION = "robofestContent";
@@ -580,29 +581,6 @@ export function getRobofestCategoryByName(
   return getActiveRobofestCategories(content).find(
     (category) => category.name.trim().toLowerCase() === normalized,
   );
-}
-
-/** Resolve per-member fee: category override if set, else global amount when isPaid.
- * `amount` is always the fee **per team member**, not the team total.
- */
-export function resolveRobofestFee(
-  content: RobofestContent,
-  categoryName: string,
-): { isPaid: boolean; amount: number } {
-  const category = getRobofestCategoryByName(content, categoryName);
-  if (category?.amount != null && category.amount > 0) {
-    return { isPaid: true, amount: category.amount };
-  }
-  if (content.isPaid) {
-    return {
-      isPaid: true,
-      amount:
-        content.amount > 0
-          ? content.amount
-          : ROBOFEST_DEFAULT_FEE_PER_MEMBER_BDT,
-    };
-  }
-  return { isPaid: false, amount: 0 };
 }
 
 export function getRobofestCategoryHref(slug: string): string {
