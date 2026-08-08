@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { finalizePaidEventBooking } from '@/app/(marketing)/events/actions'
+import { finalizeRobofestPaidRegistration } from '@/app/(marketing)/robofest/actions'
+import { adminDb } from '@/lib/firebase-admin'
 
 function normalizeStatus(raw: string): string {
   const value = raw.toLowerCase()
   if (value === 'failed') return 'failure'
   return value
+}
+
+async function isRobofestPending(paymentId: string): Promise<boolean> {
+  if (!adminDb || !paymentId) return false
+  const snap = await adminDb
+    .collection('bkash_pending_registrations')
+    .doc(paymentId)
+    .get()
+  if (!snap.exists) return false
+  return snap.data()?.kind === 'robofest'
 }
 
 async function handleCallback(
@@ -47,6 +59,37 @@ async function handleCallback(
     console.warn('[bkash-callback] unexpected status', { paymentId, status })
     return NextResponse.redirect(
       `${baseUrl}/payments/bkash/fail?error=${encodeURIComponent(`Unexpected bKash status: ${status || 'unknown'}`)}`
+    )
+  }
+
+  const robofest = await isRobofestPending(paymentId)
+  if (robofest) {
+    const result = await finalizeRobofestPaidRegistration(paymentId)
+    if (!result.success) {
+      console.error('[bkash-callback] robofest finalize failed', {
+        paymentId,
+        error: result.error || 'unknown',
+      })
+      return NextResponse.redirect(
+        `${baseUrl}/payments/bkash/fail?error=${encodeURIComponent(result.error || 'Unable to finalize Robofest registration after payment.')}`
+      )
+    }
+
+    console.info('[bkash-callback] robofest finalize success', {
+      paymentId,
+      registrationDocId: result.registrationDocId || null,
+    })
+
+    const params = new URLSearchParams()
+    if (result.registrationDocId) {
+      params.set('registrationDocId', result.registrationDocId)
+    }
+    if (result.registrationId) {
+      params.set('registrationId', result.registrationId)
+    }
+    params.set('source', 'robofest')
+    return NextResponse.redirect(
+      `${baseUrl}/payments/bkash/success?${params.toString()}`
     )
   }
 

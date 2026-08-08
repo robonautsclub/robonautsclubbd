@@ -4,6 +4,7 @@ import { generateQRCodeDataURL } from '@/lib/qrCode'
 import { adminDb } from '@/lib/firebase-admin'
 import type { Booking } from '@/types/booking'
 import type { Event } from '@/types/event'
+import type { RobofestContent, RobofestRegistration } from '@/lib/robofest-content'
 import { format } from 'date-fns'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -11,6 +12,7 @@ import { Metadata } from 'next'
 import { SITE_CONFIG } from '@/lib/site-config'
 import CopyButton from './CopyButton'
 import RetryButton from './RetryButton'
+import VerifyRobofestRegistration from './VerifyRobofestRegistration'
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -62,17 +64,25 @@ interface VerificationPageProps {
   searchParams: Promise<{ registrationId?: string }>
 }
 
-async function getBookingByRegistrationId(registrationId: string): Promise<{
-  booking: Booking | null
-  event: Event | null
-}> {
+type VerificationLookup =
+  | { kind: 'event'; booking: Booking; event: Event }
+  | {
+      kind: 'robofest'
+      registration: RobofestRegistration
+      content: RobofestContent
+    }
+  | { kind: 'none' }
+
+async function getBookingByRegistrationId(
+  registrationId: string,
+): Promise<VerificationLookup> {
   try {
     if (!adminDb) {
-      return { booking: null, event: null }
+      return { kind: 'none' }
     }
 
     if (!registrationId || registrationId.trim() === '') {
-      return { booking: null, event: null }
+      return { kind: 'none' }
     }
 
     // Query bookings collection by registrationId
@@ -82,37 +92,47 @@ async function getBookingByRegistrationId(registrationId: string): Promise<{
       .limit(1)
       .get()
 
-    if (bookingsSnapshot.empty) {
-      return { booking: null, event: null }
+    if (!bookingsSnapshot.empty) {
+      const bookingDoc = bookingsSnapshot.docs[0]
+      const bookingData = bookingDoc.data()!
+
+      const booking: Booking = {
+        id: bookingDoc.id,
+        ...bookingData,
+        createdAt: bookingData.createdAt?.toDate?.() || bookingData.createdAt,
+      } as Booking
+
+      const eventDoc = await adminDb.collection('events').doc(booking.eventId).get()
+
+      if (!eventDoc.exists) {
+        return { kind: 'none' }
+      }
+
+      const eventData = eventDoc.data()!
+      const event: Event = {
+        id: eventDoc.id,
+        ...eventData,
+        createdAt: eventData.createdAt?.toDate?.() || eventData.createdAt,
+        updatedAt: eventData.updatedAt?.toDate?.() || eventData.updatedAt,
+      } as Event
+
+      return { kind: 'event', booking, event }
     }
 
-    const bookingDoc = bookingsSnapshot.docs[0]
-    const bookingData = bookingDoc.data()!
-
-    const booking: Booking = {
-      id: bookingDoc.id,
-      ...bookingData,
-      createdAt: bookingData.createdAt?.toDate?.() || bookingData.createdAt,
-    } as Booking
-
-    // Fetch event details
-    const eventDoc = await adminDb.collection('events').doc(booking.eventId).get()
-
-    if (!eventDoc.exists) {
-      return { booking, event: null }
+    // Fallback: Robofest local-round registrations
+    const { getRobofestRegistrationByRegistrationId } = await import(
+      '@/lib/robofest-registration'
+    )
+    const { getRobofestContentFresh } = await import('@/lib/robofest-content')
+    const robofestReg = await getRobofestRegistrationByRegistrationId(registrationId)
+    if (!robofestReg || robofestReg.status === 'cancelled') {
+      return { kind: 'none' }
     }
 
-    const eventData = eventDoc.data()!
-    const event: Event = {
-      id: eventDoc.id,
-      ...eventData,
-      createdAt: eventData.createdAt?.toDate?.() || eventData.createdAt,
-      updatedAt: eventData.updatedAt?.toDate?.() || eventData.updatedAt,
-    } as Event
-
-    return { booking, event }
+    const content = await getRobofestContentFresh()
+    return { kind: 'robofest', registration: robofestReg, content }
   } catch {
-    return { booking: null, event: null }
+    return { kind: 'none' }
   }
 }
 
@@ -169,8 +189,8 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
     )
   }
 
-  const { booking, event } = await getBookingByRegistrationId(registrationId)
-  const isValid = booking !== null && event !== null
+  const result = await getBookingByRegistrationId(registrationId)
+  const isValid = result.kind !== 'none'
   
   // Generate base URL for QR code display
   let baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL
@@ -254,12 +274,25 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
     )
   }
 
+  if (result.kind === 'robofest') {
+    return (
+      <VerifyRobofestRegistration
+        registration={result.registration}
+        content={result.content}
+        qrCodeDataURL={qrCodeDataURL}
+      />
+    )
+  }
+
+  const booking = result.booking
+  const event = result.event
+
   // Success State: Registration found and verified
-  const eventDates = parseEventDates(event!.date)
+  const eventDates = parseEventDates(event.date)
   const formattedDate = eventDates.length > 0 ? formatEventDates(eventDates, 'long') : 'TBA'
-  const bookingDate = booking!.createdAt instanceof Date 
-    ? booking!.createdAt 
-    : new Date(booking!.createdAt)
+  const bookingDate = booking.createdAt instanceof Date 
+    ? booking.createdAt 
+    : new Date(booking.createdAt)
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 via-blue-50 to-indigo-100 py-8 sm:py-12 px-4">
@@ -317,9 +350,9 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
                     </div>
                     <div className="flex items-center gap-2">
                       <p className="text-2xl sm:text-3xl font-bold text-indigo-900 font-mono tracking-tight">
-                        {booking!.registrationId}
+                        {booking.registrationId}
                       </p>
-                      <CopyButton text={booking!.registrationId} label="Registration ID" />
+                      <CopyButton text={booking.registrationId} label="Registration ID" />
                     </div>
                     <p className="text-xs text-indigo-700 mt-2 font-medium">
                       Save this number for your records
@@ -361,7 +394,7 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
                 <div className="space-y-4">
                   <div className="bg-white rounded-xl p-4 border border-gray-200">
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Event Name</p>
-                    <p className="text-base sm:text-lg font-bold text-gray-900 leading-relaxed">{event!.title}</p>
+                    <p className="text-base sm:text-lg font-bold text-gray-900 leading-relaxed">{event.title}</p>
                   </div>
                   <div className="bg-white rounded-xl p-4 border border-gray-200">
                     <div className="flex items-center gap-2 mb-1.5">
@@ -370,30 +403,30 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
                     </div>
                     <p className="text-base font-semibold text-gray-900">{formattedDate}</p>
                   </div>
-                  {event!.time && (
+                  {event.time && (
                     <div className="bg-white rounded-xl p-4 border border-gray-200">
                       <div className="flex items-center gap-2 mb-1.5">
                         <Clock className="w-4 h-4 text-gray-500" />
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Time</p>
                       </div>
-                      <p className="text-base font-semibold text-gray-900">{event!.time}</p>
+                      <p className="text-base font-semibold text-gray-900">{event.time}</p>
                     </div>
                   )}
-                  {(event!.venue || event!.location) && (
+                  {(event.venue || event.location) && (
                     <div className="bg-white rounded-xl p-4 border border-gray-200">
                       <div className="flex items-center gap-2 mb-1.5">
                         <MapPin className="w-4 h-4 text-gray-500" />
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Venue</p>
                       </div>
                       <p className="text-base font-semibold text-gray-900 leading-relaxed">
-                        {event!.venue || event!.location}
+                        {event.venue || event.location}
                       </p>
                     </div>
                   )}
-                  {event!.eligibility && (
+                  {event.eligibility && (
                     <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
                       <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider mb-1.5">Eligibility</p>
-                      <p className="text-sm font-medium text-blue-900">{event!.eligibility}</p>
+                      <p className="text-sm font-medium text-blue-900">{event.eligibility}</p>
                     </div>
                   )}
                 </div>
@@ -413,14 +446,14 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
                       <User className="w-4 h-4 text-gray-500" />
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</p>
                     </div>
-                    <p className="text-base sm:text-lg font-bold text-gray-900">{booking!.name}</p>
+                    <p className="text-base sm:text-lg font-bold text-gray-900">{booking.name}</p>
                   </div>
                   <div className="bg-white rounded-xl p-4 border border-gray-200">
                     <div className="flex items-center gap-2 mb-1.5">
                       <School className="w-4 h-4 text-gray-500" />
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">School</p>
                     </div>
-                    <p className="text-base font-semibold text-gray-900">{booking!.school}</p>
+                    <p className="text-base font-semibold text-gray-900">{booking.school}</p>
                   </div>
                   <div className="bg-white rounded-xl p-4 border border-gray-200">
                     <div className="flex items-center justify-between mb-1.5">
@@ -428,9 +461,9 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
                         <Mail className="w-4 h-4 text-gray-500" />
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</p>
                       </div>
-                      <CopyButton text={booking!.email} label="Email" />
+                      <CopyButton text={booking.email} label="Email" />
                     </div>
-                    <p className="text-base font-semibold text-gray-900 break-all">{booking!.email}</p>
+                    <p className="text-base font-semibold text-gray-900 break-all">{booking.email}</p>
                   </div>
                   <div className="bg-white rounded-xl p-4 border border-gray-200">
                     <div className="flex items-center justify-between mb-1.5">
@@ -438,20 +471,20 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
                         <Phone className="w-4 h-4 text-gray-500" />
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Phone</p>
                       </div>
-                      <CopyButton text={booking!.phone || ''} label="Phone" />
+                      <CopyButton text={booking.phone || ''} label="Phone" />
                     </div>
-                    <p className="text-base font-semibold text-gray-900">{booking!.phone || 'N/A'}</p>
+                    <p className="text-base font-semibold text-gray-900">{booking.phone || 'N/A'}</p>
                   </div>
-                  {booking!.bkashNumber && (
+                  {booking.bkashNumber && (
                     <div className="bg-white rounded-xl p-4 border border-gray-200">
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2">
                           <Phone className="w-4 h-4 text-gray-500" />
                           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">bKash Number</p>
                         </div>
-                        <CopyButton text={booking!.bkashNumber} label="bKash Number" />
+                        <CopyButton text={booking.bkashNumber} label="bKash Number" />
                       </div>
-                      <p className="text-base font-semibold text-gray-900">{booking!.bkashNumber}</p>
+                      <p className="text-base font-semibold text-gray-900">{booking.bkashNumber}</p>
                     </div>
                   )}
                   <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-200">
@@ -465,7 +498,7 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
             </div>
 
             {/* Additional Information */}
-            {booking!.information && (
+            {booking.information && (
               <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 sm:p-8 border-2 border-blue-200 shadow-md mb-6 sm:mb-8">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -474,7 +507,7 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
                   <h3 className="text-lg sm:text-xl font-bold text-gray-900">Additional Information</h3>
                 </div>
                 <div className="bg-white rounded-xl p-4 sm:p-5 border border-blue-200">
-                  <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{booking!.information}</p>
+                  <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{booking.information}</p>
                 </div>
               </div>
             )}

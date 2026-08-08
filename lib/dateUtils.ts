@@ -50,6 +50,37 @@ export function getFirstEventDate(date: string | string[] | undefined): Date | n
 }
 
 /**
+ * Human-readable event date label.
+ * ISO dates (YYYY-MM-DD) are formatted; free-text CMS labels are shown as stored
+ * (e.g. "11 September (CTG)", "18 September (DHK)").
+ */
+export function formatEventDateLabel(
+  date: string | string[] | undefined,
+  formatType: 'short' | 'long' = 'long',
+): string {
+  const parts = parseEventDates(date)
+  if (parts.length === 0) return 'TBA'
+
+  const looksLikeIso = (value: string) => /^\d{4}-\d{2}-\d{2}/.test(value.trim())
+  const allFreeText = parts.every((part) => !looksLikeIso(part))
+  if (allFreeText) {
+    if (typeof date === 'string' && date.trim()) return date.trim()
+    return parts.join(' · ')
+  }
+
+  const firstDate = getFirstEventDate(date)
+  if (firstDate && !Number.isNaN(firstDate.getTime())) {
+    const formatted = formatEventDates(parts, formatType)
+    if (formatted && !formatted.toLowerCase().includes('invalid')) {
+      return formatted
+    }
+  }
+
+  if (typeof date === 'string' && date.trim()) return date.trim()
+  return parts.join(' · ')
+}
+
+/**
  * Get the last (latest) date from event dates
  */
 export function getLastEventDate(date: string | string[] | undefined): Date | null {
@@ -90,17 +121,53 @@ export function isEventUpcoming(date: string | string[] | undefined): boolean {
 }
 
 /**
- * Check if registration is closed by the optional closing date.
+ * Parse a registration closing value into a local Date.
+ * Supports `YYYY-MM-DDTHH:mm[:ss]` (exact instant) and `YYYY-MM-DD`
+ * (end of that local calendar day).
+ */
+export function parseRegistrationClosingInstant(
+  registrationClosingDate?: string | null,
+): Date | null {
+  if (!registrationClosingDate || String(registrationClosingDate).trim() === '') {
+    return null
+  }
+  const raw = registrationClosingDate.trim()
+
+  const dtMatch = raw.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/,
+  )
+  if (dtMatch) {
+    const [, y, mo, d, h, mi, s] = dtMatch
+    return new Date(
+      Number(y),
+      Number(mo) - 1,
+      Number(d),
+      Number(h),
+      Number(mi),
+      Number(s ?? '0'),
+      0,
+    )
+  }
+
+  const dateMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (dateMatch) {
+    const [, y, mo, d] = dateMatch
+    return new Date(Number(y), Number(mo) - 1, Number(d), 23, 59, 59, 999)
+  }
+
+  const parsed = new Date(raw)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+/**
+ * Check if registration is closed by the optional closing date/datetime.
  * If registrationClosingDate is missing/empty, returns false (not closed by date).
- * Returns true when today is after the closing date.
+ * Date-only values stay open through that calendar day; datetimes close at the exact time.
  */
 export function isRegistrationClosedByDate(registrationClosingDate?: string): boolean {
-  if (!registrationClosingDate || String(registrationClosingDate).trim() === '') return false
-  const now = new Date()
-  now.setHours(0, 0, 0, 0)
-  const closing = new Date(registrationClosingDate.trim())
-  closing.setHours(0, 0, 0, 0)
-  return now > closing
+  const closing = parseRegistrationClosingInstant(registrationClosingDate)
+  if (!closing) return false
+  return Date.now() > closing.getTime()
 }
 
 /**
