@@ -10,6 +10,8 @@ import {
 } from "@/lib/robofest-content";
 import { getRobofestCategoryRules } from "@/lib/robofest-category-rules";
 import RobofestCategoryRegistrationForm from "@/components/RobofestCategoryRegistrationForm";
+import RobofestRegistrationCountdown from "@/components/RobofestRegistrationCountdown";
+import { isRegistrationClosedByDate } from "@/lib/dateUtils";
 import { Button } from "@/components/ui/button";
 
 function MaterialIcon({
@@ -280,6 +282,13 @@ export default function RobofestCategoryPage({
                     ? `Registration fee: BDT ${fee.amount} per member (e.g. 3 members = BDT ${fee.amount * 3}). Pay via bKash to confirm. After payment, do not close or leave the page until you see the registration successful message. Confirmation will be emailed after successful payment.`
                     : "Enter team details for the local round. Confirmation will be emailed after submit."}
                 </p>
+                {content.registrationClosingDate ? (
+                  <RobofestRegistrationCountdown
+                    closingDate={content.registrationClosingDate}
+                    className="mt-3"
+                    compact
+                  />
+                ) : null}
               </div>
               <div className="px-5 sm:px-6 py-5">
                 <RobofestCategoryRegistrationForm
@@ -289,6 +298,9 @@ export default function RobofestCategoryPage({
                   isPaid={fee.isPaid}
                   amount={fee.amount}
                   rulesPdf={rulesPdf || undefined}
+                  registrationClosed={isRegistrationClosedByDate(
+                    content.registrationClosingDate ?? undefined,
+                  )}
                 />
               </div>
             </div>

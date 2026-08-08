@@ -85,6 +85,7 @@ export default function RobofestCategoryRegistrationForm({
   isPaid,
   amount,
   rulesPdf,
+  registrationClosed = false,
 }: {
   category: string;
   rounds: RobofestRoundContent[];
@@ -92,6 +93,7 @@ export default function RobofestCategoryRegistrationForm({
   isPaid: boolean;
   amount: number;
   rulesPdf?: string;
+  registrationClosed?: boolean;
 }) {
   const divisionOptions = useMemo(() => {
     const fromRounds = rounds
@@ -163,6 +165,11 @@ export default function RobofestCategoryRegistrationForm({
     setError("");
     setWarning("");
 
+    if (registrationClosed) {
+      setError("Registration is closed for this event.");
+      return;
+    }
+
     if (!rulesUnderstood) {
       setError(
         "Please confirm that you have read and understood the category rulebook.",
@@ -224,6 +231,18 @@ export default function RobofestCategoryRegistrationForm({
       setIsSubmitting(false);
     }
   };
+
+  if (registrationClosed) {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>Registration closed</AlertTitle>
+        <AlertDescription>
+          The registration deadline has passed. New team registrations are no
+          longer accepted online.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   if (isSubmitted) {
     return (

@@ -16,6 +16,7 @@ import {
   getEventSchema,
 } from "@/lib/seo";
 import { SITE_CONFIG } from "@/lib/site-config";
+import RobofestRegistrationCountdown from "@/components/RobofestRegistrationCountdown";
 
 function MaterialIcon({
   name,
@@ -281,6 +282,13 @@ export default async function RobofestLocalRoundPage() {
               </div>
             </div>
           </div>
+          {content.registrationClosingDate ? (
+            <div className="mt-4 sm:mt-5">
+              <RobofestRegistrationCountdown
+                closingDate={content.registrationClosingDate}
+              />
+            </div>
+          ) : null}
         </div>
       </section>
 

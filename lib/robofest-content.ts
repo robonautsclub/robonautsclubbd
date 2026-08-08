@@ -121,6 +121,8 @@ export type RobofestContent = {
   howItWorks: RobofestHowItWorksStep[];
   isPaid: boolean;
   amount: number;
+  /** YYYY-MM-DDTHH:mm (local) or legacy YYYY-MM-DD. Null = no deadline. */
+  registrationClosingDate: string | null;
   updatedAt?: string | null;
   updatedBy?: string | null;
 };
@@ -224,6 +226,7 @@ export function getDefaultRobofestContent(): RobofestContent {
     howItWorks: ROBOFEST_HOW_IT_WORKS.map((step) => ({ ...step })),
     isPaid: true,
     amount: 300,
+    registrationClosingDate: null,
     updatedAt: null,
     updatedBy: null,
   };
@@ -393,6 +396,17 @@ export function mapRobofestContentDoc(
     }),
     isPaid: asBool(data.isPaid, defaults.isPaid),
     amount: asNumber(data.amount, defaults.amount),
+    registrationClosingDate: (() => {
+      if (data.registrationClosingDate == null || data.registrationClosingDate === "") {
+        return null;
+      }
+      const raw = asString(data.registrationClosingDate).trim();
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(raw)) {
+        return raw.slice(0, 16);
+      }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+      return null;
+    })(),
     updatedAt: toIso(data.updatedAt),
     updatedBy: data.updatedBy ? asString(data.updatedBy) : null,
   };

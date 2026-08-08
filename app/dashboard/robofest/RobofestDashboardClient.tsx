@@ -31,6 +31,7 @@ import {
   exportRobofestPdf,
 } from './exportRobofestRegistrations'
 import CreateRobofestRegistrationForm from './CreateRobofestRegistrationForm'
+import DatePicker from '@/app/dashboard/events/DatePicker'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -70,7 +71,12 @@ function ContentSection({
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <Card className="border-gray-200/80 shadow-sm overflow-hidden py-0 gap-0">
+      <Card
+        className={cn(
+          'border-gray-200/80 shadow-sm py-0 gap-0',
+          open ? 'overflow-visible relative z-10' : 'overflow-hidden',
+        )}
+      >
         <CollapsibleTrigger asChild>
           <button
             type="button"
@@ -95,8 +101,13 @@ function ContentSection({
             />
           </button>
         </CollapsibleTrigger>
-        <CollapsibleContent>
-          <CardContent className={cn('pt-3 pb-4 border-t border-gray-100', contentClassName)}>
+        <CollapsibleContent className="overflow-visible">
+          <CardContent
+            className={cn(
+              'pt-3 pb-4 border-t border-gray-100 overflow-visible',
+              contentClassName,
+            )}
+          >
             {children}
           </CardContent>
         </CollapsibleContent>
@@ -913,7 +924,7 @@ export default function RobofestDashboardClient({
 
         <ContentSection
           title="Event copy"
-          description="Hero labels, venue summaries, links, and info-strip lines."
+          description="Hero text, contact links, and info-strip date/venue lines."
           icon={<Trophy className="w-4 h-4 text-indigo-500" />}
           defaultOpen
           contentClassName="grid sm:grid-cols-2 gap-3"
@@ -921,17 +932,9 @@ export default function RobofestDashboardClient({
             {(
               [
                 ['statusBadge', 'Status badge'],
-                ['presentsLabel', 'Presents label'],
                 ['headline', 'Headline'],
                 ['lead', 'Lead'],
-                ['dateLabel', 'Date label (summary)'],
-                ['venueLabel', 'Venue label (summary)'],
-                ['venueDetail', 'Venue detail'],
-                ['hostName', 'Host name'],
-                ['officialSite', 'Official site URL'],
-                ['categoriesUrl', 'Official categories URL'],
                 ['generalRulesPdf', 'General rules PDF path'],
-                ['instagramUrl', 'Instagram URL'],
                 ['contactEmail', 'Contact email'],
                 ['contactHref', 'Contact page href'],
               ] as const
@@ -959,18 +962,6 @@ export default function RobofestDashboardClient({
                 )}
               </div>
             ))}
-            <div className="space-y-1">
-              <label className="text-xs text-gray-500">Time label (optional)</label>
-              <Input
-                value={content.timeLabel ?? ''}
-                onChange={(e) =>
-                  setContent((prev) => ({
-                    ...prev,
-                    timeLabel: e.target.value || null,
-                  }))
-                }
-              />
-            </div>
             <div className="space-y-1 sm:col-span-2">
               <label className="text-xs text-gray-500">
                 Date lines (one per line — shown in info strip)
@@ -1116,6 +1107,85 @@ export default function RobofestDashboardClient({
             <p className="text-xs text-gray-500 max-w-md">
               Charged as fee × team size via bKash. Competition per-member
               override above 0 replaces the global fee.
+            </p>
+        </ContentSection>
+
+        <ContentSection
+          title="Registration deadline"
+          description="Public registration closes at this date and time. Leave empty for no deadline."
+          contentClassName="flex flex-wrap items-end gap-3"
+          defaultOpen
+        >
+            <div className="space-y-1 min-w-56">
+              <label className="text-xs text-gray-500">Closing date</label>
+              <DatePicker
+                value={
+                  content.registrationClosingDate
+                    ? content.registrationClosingDate.slice(0, 10)
+                    : ''
+                }
+                onChange={(date) =>
+                  setContent((prev) => {
+                    if (!date) {
+                      return { ...prev, registrationClosingDate: null }
+                    }
+                    const prevTime = prev.registrationClosingDate?.includes('T')
+                      ? prev.registrationClosingDate.slice(11, 16)
+                      : '23:59'
+                    return {
+                      ...prev,
+                      registrationClosingDate: `${date}T${prevTime || '23:59'}`,
+                    }
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500">Closing time</label>
+              <Input
+                type="time"
+                value={
+                  content.registrationClosingDate?.includes('T')
+                    ? content.registrationClosingDate.slice(11, 16)
+                    : content.registrationClosingDate
+                      ? '23:59'
+                      : ''
+                }
+                disabled={!content.registrationClosingDate}
+                onChange={(e) =>
+                  setContent((prev) => {
+                    const date = prev.registrationClosingDate
+                      ? prev.registrationClosingDate.slice(0, 10)
+                      : ''
+                    if (!date) return prev
+                    const time = e.target.value || '23:59'
+                    return {
+                      ...prev,
+                      registrationClosingDate: `${date}T${time}`,
+                    }
+                  })
+                }
+                className="w-36 h-12.5"
+              />
+            </div>
+            {content.registrationClosingDate ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setContent((prev) => ({
+                    ...prev,
+                    registrationClosingDate: null,
+                  }))
+                }
+              >
+                Clear deadline
+              </Button>
+            ) : null}
+            <p className="text-xs text-gray-500 w-full">
+              Shown as a live countdown on the Robofest pages. Registration closes
+              at the exact date and time you set.
             </p>
         </ContentSection>
 
