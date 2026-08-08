@@ -76,12 +76,12 @@ export default function Footer() {
           className="mt-8 mb-6 h-px w-full"
           style={{
             background:
-              "linear-linear(to right, transparent, rgba(17,24,39,0.12), transparent)",
+              "linear-gradient(to right, transparent, rgba(17,24,39,0.12), transparent)",
           }}
         />
 
         {/* Main Content */}
-        <div className="grid gap-8 sm:gap-10 sm:grid-cols-2 md:grid-cols-3">
+        <div className="grid gap-8 sm:gap-10 sm:grid-cols-2 md:grid-cols-4">
           {/* Navigation */}
           <div>
             <h3 className="mb-3 sm:mb-4 text-xs sm:text-sm font-semibold uppercase tracking-wide text-brand-blue">
@@ -141,17 +141,42 @@ export default function Footer() {
               <p className="text-brand-dark/70">{SITE_CONFIG.location}</p>
             </div>
           </div>
+
+          {/* Payment */}
+          <div>
+            <h3 className="mb-3 sm:mb-4 text-xs sm:text-sm font-semibold uppercase tracking-wide text-brand-blue">
+              Payment method
+            </h3>
+            <div
+              className="inline-flex items-center gap-2.5 rounded-xl border border-[#E2136E]/20 bg-white px-3 py-2.5 shadow-sm"
+              title="bKash"
+            >
+              <Image
+                src="/bkashlogo.svg"
+                alt="bKash"
+                width={40}
+                height={40}
+                className="h-10 w-10 shrink-0 object-contain"
+              />
+              <div className="leading-tight">
+                <p className="text-sm font-semibold text-[#E2136E]">bKash</p>
+                <p className="text-[11px] text-brand-dark/60">
+                  Secure online payments
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Bottom linear bar */}
       <div
-          className="mt-4 h-px w-full"
-          style={{
-            background:
-              "linear-linear(to right, transparent, rgba(17,24,39,0.12), transparent)",
-          }}
-        />
+        className="mt-4 h-px w-full"
+        style={{
+          background:
+            "linear-gradient(to right, transparent, rgba(17,24,39,0.12), transparent)",
+        }}
+      />
 
       {/* Bottom text row */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-3 sm:py-4">
@@ -166,7 +191,8 @@ export default function Footer() {
             rel="noopener noreferrer"
             className="transition hover:text-brand-blue"
           >
-            Developed by <span className="font-semibold">{SITE_CONFIG.developer.name}</span>
+            Developed by{" "}
+            <span className="font-semibold">{SITE_CONFIG.developer.name}</span>
           </a>
         </div>
       </div>
