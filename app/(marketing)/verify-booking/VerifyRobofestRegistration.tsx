@@ -14,6 +14,10 @@ import { format } from 'date-fns'
 import Image from 'next/image'
 import Link from 'next/link'
 import type { RobofestContent, RobofestRegistration } from '@/lib/robofest-content'
+import {
+  resolveRobofestRoundDateLabel,
+  resolveRobofestRoundVenueLabel,
+} from '@/lib/robofest-content'
 import { formatAgeCategoryLabel } from '@/lib/robofest-registration-options'
 import { SITE_CONFIG } from '@/lib/site-config'
 import { Badge } from '@/components/ui/badge'
@@ -38,6 +42,14 @@ export default function VerifyRobofestRegistration({
   const ageLabel = registration.ageCategory
     ? formatAgeCategoryLabel(registration.ageCategory)
     : null
+  const roundDate = resolveRobofestRoundDateLabel(
+    content,
+    registration.roundCity || '',
+  )
+  const roundVenue = resolveRobofestRoundVenueLabel(
+    content,
+    registration.roundCity || '',
+  )
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 via-cyan-50 to-slate-100 py-8 sm:py-12 px-4">
@@ -171,7 +183,7 @@ export default function VerifyRobofestRegistration({
                       </p>
                     </div>
                     <p className="text-base font-semibold text-slate-900">
-                      {content.dateLabel || 'TBA'}
+                      {roundDate}
                     </p>
                   </div>
                   <div className="bg-white rounded-xl p-4 border border-slate-200">
@@ -182,8 +194,7 @@ export default function VerifyRobofestRegistration({
                       </p>
                     </div>
                     <p className="text-base font-semibold text-slate-900">
-                      {registration.roundCity}
-                      {content.venueLabel ? ` · ${content.venueLabel}` : ''}
+                      {roundVenue}
                     </p>
                   </div>
                 </div>

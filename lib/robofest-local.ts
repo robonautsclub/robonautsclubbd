@@ -42,14 +42,14 @@ export const ROBOFEST_LOCAL = {
     {
       city: "Chittagong",
       title: "ROBOFEST BANGLADESH ROUND 2026 | CHITTAGONG",
-      dates: "11 September 2026",
+      dates: "11 September (CTG)",
       venueLabel: "Chittagong - TBA",
       image: "/roboclass.jpg",
     },
     {
       city: "Dhaka",
       title: "ROBOFEST BANGLADESH ROUND 2026 | DHAKA",
-      dates: "18 September 2026",
+      dates: "18 September (DHK)",
       venueLabel: "Dhaka - TBA",
       image: "/robofest/dhaka.jpg",
     },

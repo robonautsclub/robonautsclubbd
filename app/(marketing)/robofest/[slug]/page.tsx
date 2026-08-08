@@ -117,7 +117,7 @@ export default async function RobofestCategoryRoute({ params }: PageProps) {
     id: `robofest-${category.slug}`,
     title: `${category.name} · ${content.headline || "Robofest Bangladesh 2026"}`,
     description: category.about || category.description,
-    date: primaryRound?.dates || content.dateLabel || "2026-09-11",
+    date: primaryRound?.dates || content.dateLabel || content.dateLines?.[0] || "",
     location: primaryRound?.city || "Bangladesh",
     venue: primaryRound?.venueLabel || content.venueLabel,
     image,

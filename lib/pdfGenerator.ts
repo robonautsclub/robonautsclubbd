@@ -4,7 +4,7 @@
 
 import type { Event } from '@/types/event'
 import { SITE_CONFIG } from './site-config'
-import { formatEventDates, getFirstEventDate, parseEventDates } from './dateUtils'
+import { formatEventDateLabel } from './dateUtils'
 import { sanitizeEventForPDF, sanitizeBookingDetailsForPDF, sanitizeTextForPDF } from './textSanitizer'
 import { PDFKIT_FONT_DATA } from './pdfkitFontData'
 import { join, dirname, basename } from 'path'
@@ -631,8 +631,7 @@ async function generatePDFContent(
   // ---------- Event Details ----------
   y = drawSectionHeader('Event Details', y)
 
-  const firstDate = getFirstEventDate(event.date)
-  const formattedDate = firstDate ? formatEventDates(parseEventDates(event.date), 'long') : 'TBA'
+  const formattedDate = formatEventDateLabel(event.date, 'long')
 
   y = drawRow('Event Name', sanitizeTextForPDF(sanitizedEvent.title || 'Event'), y)
   y = drawRow('Date', sanitizeTextForPDF(formattedDate || 'TBA'), y)

@@ -50,6 +50,37 @@ export function getFirstEventDate(date: string | string[] | undefined): Date | n
 }
 
 /**
+ * Human-readable event date label.
+ * ISO dates (YYYY-MM-DD) are formatted; free-text CMS labels are shown as stored
+ * (e.g. "11 September (CTG)", "18 September (DHK)").
+ */
+export function formatEventDateLabel(
+  date: string | string[] | undefined,
+  formatType: 'short' | 'long' = 'long',
+): string {
+  const parts = parseEventDates(date)
+  if (parts.length === 0) return 'TBA'
+
+  const looksLikeIso = (value: string) => /^\d{4}-\d{2}-\d{2}/.test(value.trim())
+  const allFreeText = parts.every((part) => !looksLikeIso(part))
+  if (allFreeText) {
+    if (typeof date === 'string' && date.trim()) return date.trim()
+    return parts.join(' · ')
+  }
+
+  const firstDate = getFirstEventDate(date)
+  if (firstDate && !Number.isNaN(firstDate.getTime())) {
+    const formatted = formatEventDates(parts, formatType)
+    if (formatted && !formatted.toLowerCase().includes('invalid')) {
+      return formatted
+    }
+  }
+
+  if (typeof date === 'string' && date.trim()) return date.trim()
+  return parts.join(' · ')
+}
+
+/**
  * Get the last (latest) date from event dates
  */
 export function getLastEventDate(date: string | string[] | undefined): Date | null {

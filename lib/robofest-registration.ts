@@ -13,6 +13,8 @@ import { uploadPDFToStorage } from "@/lib/pdfStorage";
 import { generateRegistrationId } from "@/lib/registrationId";
 import {
   ROBOFEST_REGISTRATIONS_COLLECTION,
+  resolveRobofestRoundDateLabel,
+  resolveRobofestRoundVenueLabel,
   type RobofestContent,
   type RobofestRegistration,
   type RobofestTeamMember,
@@ -124,13 +126,16 @@ export function buildRobofestEventForPdfEmail(
   form: RobofestRegistrationFormData,
 ): Event {
   const now = new Date().toISOString();
+  const date = resolveRobofestRoundDateLabel(content, form.roundCity);
+  const venueLabel = resolveRobofestRoundVenueLabel(content, form.roundCity);
+
   return {
     id: "robofest",
     title: content.headline || "Robofest Local Round · Bangladesh",
-    date: content.dateLabel,
+    date,
     time: content.timeLabel ?? undefined,
-    location: content.venueLabel,
-    venue: `${form.roundCity} · ${content.venueLabel}`,
+    location: venueLabel,
+    venue: venueLabel,
     description: `${form.category} — ${formatAgeCategoryLabel(form.ageCategory)} · ${form.roundCity} Division`,
     fullDescription: content.lead,
     eligibility: "Robofest Bangladesh local round participants",

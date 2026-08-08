@@ -7,7 +7,7 @@ import type { Event } from '@/types/event'
 import type { RobofestTeamMember } from '@/lib/robofest-content'
 import { generateBookingConfirmationPDF } from '@/lib/pdfGenerator'
 import { SITE_CONFIG } from '@/lib/site-config'
-import { formatEventDates, getFirstEventDate, parseEventDates } from '@/lib/dateUtils'
+import { formatEventDateLabel } from '@/lib/dateUtils'
 import { formatAgeCategoryLabel } from '@/lib/robofest-registration-options'
 
 export type RobofestEmailTeamMember = {
@@ -306,10 +306,10 @@ export async function sendRobofestConfirmationEmail(
     }
   }
 
-  const firstDate = getFirstEventDate(event.date)
-  const formattedDate = firstDate
-    ? formatEventDates(parseEventDates(event.date), 'long')
-    : 'TBA'
+  const formattedDate =
+    typeof event.date === 'string' && event.date.trim()
+      ? event.date.trim()
+      : formatEventDateLabel(event.date, 'long')
   const ageCategoryLabel = formatAgeCategoryLabel(ageCategory)
   const baseUrl = resolveBaseUrl()
   const verificationUrl = `${baseUrl}/verify-booking?registrationId=${encodeURIComponent(registrationId)}`

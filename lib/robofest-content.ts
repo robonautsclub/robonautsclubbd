@@ -583,6 +583,67 @@ export function getRobofestCategoryByName(
   );
 }
 
+/** Look up a local-round entry by division/city name (case-insensitive). */
+export function getRobofestRoundForCity(
+  content: RobofestContent,
+  city: string,
+): RobofestRoundContent | undefined {
+  const normalized = city.trim().toLowerCase();
+  if (!normalized) return undefined;
+  return (content.rounds || []).find(
+    (round) => round.city.trim().toLowerCase() === normalized,
+  );
+}
+
+function cityDateNeedle(city: string): string | null {
+  const normalized = city.trim().toLowerCase();
+  if (normalized.startsWith("chit") || normalized.includes("ctg")) return "CTG";
+  if (normalized.startsWith("dha") || normalized.includes("dhk")) return "DHK";
+  return null;
+}
+
+/** Division date for PDF/email/verify — prefers CTG/DHK labels from content. */
+export function resolveRobofestRoundDateLabel(
+  content: RobofestContent,
+  city: string,
+): string {
+  const round = getRobofestRoundForCity(content, city);
+  const fromRound = round?.dates?.trim() || "";
+  if (/\((CTG|DHK)\)/i.test(fromRound)) return fromRound;
+
+  const needle = cityDateNeedle(city);
+  if (needle && content.dateLines?.length) {
+    const fromLines = content.dateLines.find((line) =>
+      line.toUpperCase().includes(needle),
+    );
+    if (fromLines?.trim()) return fromLines.trim();
+  }
+
+  if (fromRound) return fromRound;
+  return content.dateLabel || "TBA";
+}
+
+/** Division venue for PDF/email/verify. */
+export function resolveRobofestRoundVenueLabel(
+  content: RobofestContent,
+  city: string,
+): string {
+  const round = getRobofestRoundForCity(content, city);
+  const fromRound = round?.venueLabel?.trim() || "";
+  if (fromRound && !fromRound.includes("·")) return fromRound;
+
+  const cityLower = city.trim().toLowerCase();
+  if (cityLower && content.venueLines?.length) {
+    const fromLines = content.venueLines.find((line) =>
+      line.toLowerCase().includes(cityLower),
+    );
+    if (fromLines?.trim()) return fromLines.trim();
+  }
+
+  if (fromRound) return fromRound;
+  return content.venueLabel || "TBA";
+}
+
 export function getRobofestCategoryHref(slug: string): string {
   return `/robofest/${slug}`;
 }

@@ -211,21 +211,31 @@ export default function RobofestCategoryPage({
                 {category.whoShouldJoin}
               </p>
               <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-600">
-                {content.dateLabel ? (
-                  <p className="flex items-center gap-1.5">
+                {(content.dateLines?.length
+                  ? content.dateLines
+                  : content.dateLabel
+                    ? [content.dateLabel]
+                    : []
+                ).map((line) => (
+                  <p key={line} className="flex items-center gap-1.5">
                     <MaterialIcon
                       name="calendar_month"
                       className="text-cyan-700"
                     />
-                    {content.dateLabel}
+                    {line}
                   </p>
-                ) : null}
-                {content.venueLabel ? (
-                  <p className="flex items-center gap-1.5">
+                ))}
+                {(content.venueLines?.length
+                  ? content.venueLines
+                  : content.venueLabel
+                    ? [content.venueLabel]
+                    : []
+                ).map((line) => (
+                  <p key={line} className="flex items-center gap-1.5">
                     <MaterialIcon name="location_on" className="text-cyan-700" />
-                    {content.venueLabel}
+                    {line}
                   </p>
-                ) : null}
+                ))}
               </div>
             </section>
 
