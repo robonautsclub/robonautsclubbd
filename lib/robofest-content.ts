@@ -50,11 +50,27 @@ export type RobofestCategoryContent = {
 
 /** Fallback cover art when CMS content has no image yet. */
 export const ROBOFEST_CATEGORY_IMAGE_FALLBACKS: Record<string, string> = {
-  bottlesumo: "/robofest/robofest.jpg",
-  buildathon: "/roboclass.jpg",
-  "line-following-bot": "/feed/robotics.jpg",
-  "robo-exhibition": "/olympiads/robofest.png",
+  bottlesumo: "/robofest/bottlesumo.jpeg",
+  buildathon: "/robofest/builathon.jpeg",
+  "line-following-bot": "/robofest/linefollowing.jpeg",
+  "robo-exhibition": "/robofest/roboexhibition.jpeg",
 };
+
+/** Previous default covers — treat as unset so new art wins over stale CMS values. */
+const ROBOFEST_LEGACY_CATEGORY_IMAGES = new Set([
+  "/robofest/robofest.jpg",
+  "/roboclass.jpg",
+  "/feed/robotics.jpg",
+  "/olympiads/robofest.png",
+]);
+
+/** Previous How it Works titles — replace with seed copy when CMS still has them. */
+const ROBOFEST_LEGACY_HOW_IT_WORKS_TITLES = new Set([
+  "form a team",
+  "build & program",
+  "compete in bangladesh",
+  "aim for the world championship",
+]);
 
 /** Fallback rules PDF paths when CMS content is missing rulesPdf. */
 export const ROBOFEST_CATEGORY_RULES_PDF_FALLBACKS: Record<string, string> = {
@@ -67,11 +83,12 @@ export const ROBOFEST_CATEGORY_RULES_PDF_FALLBACKS: Record<string, string> = {
 export function getRobofestCategoryImage(
   category: Pick<RobofestCategoryContent, "slug" | "image">,
 ): string {
-  if (category.image?.trim()) return category.image.trim();
-  return (
+  const image = category.image?.trim();
+  const fallback =
     ROBOFEST_CATEGORY_IMAGE_FALLBACKS[category.slug] ||
-    "/olympiads/robofest.png"
-  );
+    "/olympiads/robofest.png";
+  if (image && !ROBOFEST_LEGACY_CATEGORY_IMAGES.has(image)) return image;
+  return fallback;
 }
 
 export function getRobofestCategoryRulesPdf(
@@ -386,12 +403,24 @@ export function mapRobofestContentDoc(
         defaults.categories[index],
       ),
     ),
-    howItWorks: howItWorksRaw.map((step) => {
+    howItWorks: howItWorksRaw.map((step, index) => {
       const s = step as Record<string, unknown>;
+      const title = asString(s.title);
+      const seed = ROBOFEST_HOW_IT_WORKS[index];
+      if (
+        seed &&
+        ROBOFEST_LEGACY_HOW_IT_WORKS_TITLES.has(title.trim().toLowerCase())
+      ) {
+        return {
+          icon: seed.icon,
+          title: seed.title,
+          description: seed.description,
+        };
+      }
       return {
-        icon: asString(s.icon, "group"),
-        title: asString(s.title),
-        description: asString(s.description),
+        icon: asString(s.icon, seed?.icon ?? "group"),
+        title: title || seed?.title || "",
+        description: asString(s.description, seed?.description ?? ""),
       };
     }),
     isPaid: asBool(data.isPaid, defaults.isPaid),

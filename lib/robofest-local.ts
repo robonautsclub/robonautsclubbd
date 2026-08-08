@@ -61,7 +61,7 @@ export const ROBOFEST_CATEGORIES = [
     slug: "bottlesumo",
     name: "BottleSumo",
     icon: "sports_kabaddi",
-    image: "/robofest/robofest.jpg",
+    image: "/robofest/bottlesumo.jpeg",
     description:
       "Autonomous bottle-pushing: time trials, then head-to-head—no remotes.",
     skillLevel: "Beginner to intermediate",
@@ -82,7 +82,7 @@ export const ROBOFEST_CATEGORIES = [
     slug: "buildathon",
     name: "Buildathon",
     icon: "construction",
-    image: "/roboclass.jpg",
+    image: "/robofest/builathon.jpeg",
     description:
       "Design, build, and present a robotics project under buildathon constraints.",
     skillLevel: "Intermediate",
@@ -103,7 +103,7 @@ export const ROBOFEST_CATEGORIES = [
     slug: "line-following-bot",
     name: "Line Following Bot",
     icon: "timeline",
-    image: "/feed/robotics.jpg",
+    image: "/robofest/linefollowing.jpeg",
     description:
       "Race an autonomous bot along a marked line—accuracy and speed win.",
     skillLevel: "Beginner to advanced",
@@ -124,7 +124,7 @@ export const ROBOFEST_CATEGORIES = [
     slug: "robo-exhibition",
     name: "Robo Exhibition",
     icon: "lightbulb",
-    image: "/olympiads/robofest.png",
+    image: "/robofest/roboexhibition.jpeg",
     description:
       "Showcase an intelligent robotics project to judges and visitors.",
     skillLevel: "All levels",
@@ -162,7 +162,7 @@ export const ROBOFEST_HOW_IT_WORKS = [
     icon: "group",
     title: "Form Your Team",
     description:
-      "Students in Grades 05 - 12 compete under Explorer (Grades 05 - 08) or Innovators (Grades 09 - 12) and form a Team of up to 4 Members.",
+      "Students in Grades 05 – 12 compete under Explorer (Grades 05 – 08) or Innovators (Grades 09 – 12) and form a Team of up to 4 Members.",
   },
   {
     icon: "smart_toy",

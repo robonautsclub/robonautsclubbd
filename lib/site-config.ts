@@ -33,7 +33,7 @@ export const SITE_CONFIG = {
   },
   social: {
     facebook: "https://www.facebook.com/robonautsltd",
-    instagram: "https://www.instagram.com/robonauts_ltd/",
+    instagram: "https://www.instagram.com/robonautsltd?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==",
     whatsapp: "https://wa.me/8801824863366",
     linkedin: "https://www.linkedin.com/company/robonauts-ltd/",
     youtube: "/youtube",
