@@ -29,7 +29,7 @@ export default function Sidebar({
   return (
     <aside
       className={cn(
-        'hidden lg:flex lg:flex-col shrink-0 bg-white border-r border-gray-200 lg:min-h-[calc(100vh-4rem)] lg:sticky lg:top-16 transition-[width] duration-200 ease-in-out overflow-hidden',
+        'hidden lg:flex lg:flex-col shrink-0 self-start bg-white border-r border-gray-200 lg:h-[calc(100vh-4rem)] lg:sticky lg:top-16 transition-[width] duration-200 ease-in-out overflow-hidden',
         collapsed ? 'lg:w-16' : 'lg:w-64',
       )}
     >
