@@ -28,6 +28,8 @@ interface BookingDetails {
   information: string
   /** Robofest team name (when set, PDF labels registration as Team name). */
   teamName?: string
+  /** Auto-assigned Robofest team number, e.g. BS#001 */
+  teamNumber?: string
   teamMembers?: BookingTeamMember[]
 }
 
@@ -657,6 +659,9 @@ async function generatePDFContent(
 
   if (isTeamRegistration) {
     y = drawRow('Team name', teamName || sanitizedBooking.name, y)
+    if (sanitizedBooking.teamNumber) {
+      y = drawRow('Team number', sanitizedBooking.teamNumber, y)
+    }
     y = drawRow('Primary school', sanitizedBooking.school, y)
     y = drawRow('Primary contact', sanitizedBooking.email, y)
     y = drawRow('Primary phone', sanitizedBooking.phone, y)
@@ -689,7 +694,9 @@ async function generatePDFContent(
     for (let i = 0; i < sanitizedBooking.teamMembers.length; i += 1) {
       if (y + 28 > flowSpaceBottom) break
       const member = sanitizedBooking.teamMembers[i]
-      const label = `${String(i + 1).padStart(2, '0')}. ${member.name || 'Member'}`
+      const label = `${
+        i === 0 ? '01 (Team Leader)' : String(i + 1).padStart(2, '0')
+      }. ${member.name || 'Member'}`
       const detail = [member.email, member.grade, member.school, member.phone]
         .filter(Boolean)
         .join(' · ')

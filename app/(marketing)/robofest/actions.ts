@@ -34,6 +34,7 @@ export type RobofestRegistrationResult = {
   warning?: string;
   registrationId?: string;
   registrationDocId?: string;
+  teamNumber?: string;
   checkoutUrl?: string;
 };
 

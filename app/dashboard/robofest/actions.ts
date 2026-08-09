@@ -240,6 +240,7 @@ export async function createRobofestRegistrationManual(
   warning?: string
   registrationId?: string
   registrationDocId?: string
+  teamNumber?: string
 }> {
   await requireAuth()
   if (!adminDb) {

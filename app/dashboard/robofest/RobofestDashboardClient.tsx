@@ -237,6 +237,8 @@ export default function RobofestDashboardClient({
       if (name) {
         const haystack = [
           r.name,
+          r.teamNumber,
+          r.registrationId,
           r.email,
           r.phone,
           r.school,
@@ -740,6 +742,9 @@ export default function RobofestDashboardClient({
                     <TableHead className="whitespace-nowrap w-[7.5rem]">
                       Reg ID
                     </TableHead>
+                    <TableHead className="whitespace-nowrap w-[6.5rem]">
+                      Team No.
+                    </TableHead>
                     <TableHead className="min-w-[9rem]">Team</TableHead>
                     <TableHead className="whitespace-nowrap">
                       Competition
@@ -761,7 +766,7 @@ export default function RobofestDashboardClient({
                   {filtered.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={10}
+                        colSpan={11}
                         className="text-center text-gray-500 py-12"
                       >
                         <p className="font-medium text-gray-700">
@@ -779,6 +784,9 @@ export default function RobofestDashboardClient({
                       <TableRow key={r.id} className="align-top">
                         <TableCell className="font-mono text-xs whitespace-nowrap">
                           {r.registrationId || '—'}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs whitespace-nowrap font-semibold text-cyan-800">
+                          {r.teamNumber || '—'}
                         </TableCell>
                         <TableCell className="min-w-[9rem] max-w-[14rem]">
                           <div className="font-medium leading-snug">{r.name}</div>

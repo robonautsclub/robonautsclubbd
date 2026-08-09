@@ -11,6 +11,7 @@ import {
 } from "@/lib/robofest-email";
 import { uploadPDFToStorage } from "@/lib/pdfStorage";
 import { generateRegistrationId } from "@/lib/registrationId";
+import { allocateRobofestTeamNumber } from "@/lib/robofest-team-number";
 import {
   ROBOFEST_REGISTRATIONS_COLLECTION,
   resolveRobofestRoundDateLabel,
@@ -49,6 +50,7 @@ export type RobofestRegistrationWriteResult = {
   warning?: string;
   registrationDocId?: string;
   registrationId?: string;
+  teamNumber?: string;
 };
 
 function formatMemberLine(member: RobofestTeamMember): string {
@@ -191,7 +193,6 @@ export async function createRobofestRegistrationAndSendEmail(
     };
   }
 
-  const name = formData.name.trim();
   const email = formData.email.trim().toLowerCase();
   const phone = formData.phone.trim().replace(/\s/g, "");
   const school = formData.school.trim();
@@ -225,6 +226,16 @@ export async function createRobofestRegistrationAndSendEmail(
   }
 
   const registrationId = generateRegistrationId();
+  const teamNumber = await allocateRobofestTeamNumber(category);
+  if (!teamNumber) {
+    return {
+      success: false,
+      error:
+        "Could not assign a team number for this competition. Please try again or contact support.",
+    };
+  }
+  // Team name is the auto-assigned team number (students cannot choose a name).
+  const name = teamNumber;
   const regRef = adminDb.collection(ROBOFEST_REGISTRATIONS_COLLECTION).doc();
   const now = new Date();
   const isPaid = Boolean(paymentMeta);
@@ -232,6 +243,7 @@ export async function createRobofestRegistrationAndSendEmail(
   const registrationData: Record<string, unknown> = {
     category,
     name,
+    teamNumber,
     email,
     phone,
     school,
@@ -274,6 +286,7 @@ export async function createRobofestRegistrationAndSendEmail(
       success: true,
       registrationDocId: regRef.id,
       registrationId,
+      teamNumber,
     };
   }
 
@@ -311,6 +324,7 @@ export async function createRobofestRegistrationAndSendEmail(
   const emailResult = await sendRobofestConfirmationEmail({
     recipients,
     teamName: name,
+    teamNumber,
     competition: category,
     division: roundCity,
     ageCategory,
@@ -374,6 +388,7 @@ export async function createRobofestRegistrationAndSendEmail(
       success: true,
       registrationDocId: regRef.id,
       registrationId,
+      teamNumber,
       warning: `Your registration was saved (ID: ${registrationId}), but we couldn't send the confirmation email. Please contact support.`,
     };
   }
@@ -383,6 +398,7 @@ export async function createRobofestRegistrationAndSendEmail(
       success: true,
       registrationDocId: regRef.id,
       registrationId,
+      teamNumber,
       warning: `Your registration was confirmed (ID: ${registrationId}), but we couldn't attach the confirmation PDF.`,
     };
   }
@@ -391,6 +407,7 @@ export async function createRobofestRegistrationAndSendEmail(
     success: true,
     registrationDocId: regRef.id,
     registrationId,
+    teamNumber,
   };
 }
 
@@ -448,6 +465,7 @@ export async function resendRobofestConfirmationEmail(
   const emailResult = await sendRobofestConfirmationEmail({
     recipients,
     teamName: registration.name,
+    teamNumber: registration.teamNumber,
     competition: registration.category,
     division: registration.roundCity,
     ageCategory,

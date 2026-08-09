@@ -22,6 +22,7 @@ export type RobofestEmailTeamMember = {
 export type RobofestConfirmationEmailProps = {
   recipients: string[]
   teamName: string
+  teamNumber?: string
   competition: string
   division: string
   ageCategory: string
@@ -110,7 +111,11 @@ function buildMemberRowsHtml(members: RobofestEmailTeamMember[]): string {
         <tr>
           <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0; vertical-align: top;">
             <div style="color: #0f172a; font-size: 14px; font-weight: 600;">
-              ${String(index + 1).padStart(2, '0')}. ${escapeHtml(member.name || 'Member')}
+              ${
+                index === 0
+                  ? '01 (Team Leader)'
+                  : String(index + 1).padStart(2, '0')
+              }. ${escapeHtml(member.name || 'Member')}
             </div>
             <div style="color: #0e7490; font-size: 13px; margin-top: 2px;">
               ${escapeHtml(member.email || '—')}
@@ -129,6 +134,7 @@ function buildMemberRowsHtml(members: RobofestEmailTeamMember[]): string {
 function buildRobofestEmailHtml({
   greetingName,
   teamName,
+  teamNumber,
   competition,
   division,
   ageCategoryLabel,
@@ -142,6 +148,7 @@ function buildRobofestEmailHtml({
 }: {
   greetingName: string
   teamName: string
+  teamNumber?: string
   competition: string
   division: string
   ageCategoryLabel: string
@@ -210,10 +217,18 @@ function buildRobofestEmailHtml({
                 </tr>
                 <tr>
                   <td style="padding: 18px;">
-                    <p style="margin: 0 0 14px; font-size: 15px;">
+                    <p style="margin: 0 0 8px; font-size: 15px;">
                       <span style="color:#64748b;">Team name:</span>
                       <strong style="color:#0f172a;">${escapeHtml(teamName)}</strong>
                     </p>
+                    ${
+                      teamNumber
+                        ? `<p style="margin: 0 0 14px; font-size: 15px;">
+                      <span style="color:#64748b;">Team number:</span>
+                      <strong style="color:#0f172a; font-family: ui-monospace, monospace;">${escapeHtml(teamNumber)}</strong>
+                    </p>`
+                        : '<div style="margin-bottom: 14px;"></div>'
+                    }
                     <p style="margin: 0 0 8px; font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Team members</p>
                     <table role="presentation" width="100%">
                       ${buildMemberRowsHtml(teamMembers)}
@@ -269,6 +284,7 @@ export async function sendRobofestConfirmationEmail(
   const {
     recipients,
     teamName,
+    teamNumber,
     competition,
     division,
     ageCategory,
@@ -324,6 +340,7 @@ export async function sendRobofestConfirmationEmail(
       bookingDetails: {
         name: teamName,
         teamName,
+        teamNumber,
         email: uniqueRecipients[0],
         school,
         phone,
@@ -379,6 +396,7 @@ export async function sendRobofestConfirmationEmail(
     const html = buildRobofestEmailHtml({
       greetingName,
       teamName,
+      teamNumber,
       competition,
       division,
       ageCategoryLabel,

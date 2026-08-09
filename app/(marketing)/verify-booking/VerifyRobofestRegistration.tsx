@@ -218,6 +218,16 @@ export default function VerifyRobofestRegistration({
                       {registration.name}
                     </p>
                   </div>
+                  {registration.teamNumber ? (
+                    <div className="bg-white rounded-xl p-4 border border-slate-200">
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                        Team number
+                      </p>
+                      <p className="text-base sm:text-lg font-bold font-mono text-cyan-800">
+                        {registration.teamNumber}
+                      </p>
+                    </div>
+                  ) : null}
                   <div className="bg-white rounded-xl p-4 border border-slate-200">
                     <div className="flex items-center gap-2 mb-1.5">
                       <School className="w-4 h-4 text-slate-500" />
@@ -306,7 +316,10 @@ export default function VerifyRobofestRegistration({
                       className="bg-white rounded-xl p-4 border border-slate-200"
                     >
                       <p className="font-bold text-slate-900">
-                        {String(index + 1).padStart(2, '0')}. {member.name}
+                        {index === 0
+                          ? '01 (Team Leader)'
+                          : String(index + 1).padStart(2, '0')}
+                        . {member.name}
                       </p>
                       <p className="text-sm text-cyan-800 mt-1 break-all">
                         {member.email || '—'}

@@ -95,6 +95,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     bookingDetails: {
       name: registration.name,
       teamName: registration.name,
+      teamNumber: registration.teamNumber,
       email: registration.email,
       school: registration.school,
       phone: registration.phone,
