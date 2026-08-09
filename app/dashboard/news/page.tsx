@@ -30,13 +30,13 @@ export default async function DashboardNewsPage() {
   const articles = await getNewsArticles()
 
   return (
-    <div className="max-w-7xl space-y-6">
+    <div className="w-full min-w-0 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">News</h2>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">Create and publish club news articles</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">News</h2>
+          <p className="text-sm sm:text-base text-slate-600 mt-1">Create and publish club news articles</p>
         </div>
-        <Button asChild className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
+        <Button asChild className="bg-cyan-700 hover:bg-cyan-800 text-white shadow-sm">
           <Link href="/dashboard/news/new" prefetch={false}>
             <Plus className="w-4 h-4" />
             New article
@@ -48,8 +48,8 @@ export default async function DashboardNewsPage() {
         <Card>
           <CardContent className="p-12 text-center">
             <Newspaper className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-600 mb-6">No articles yet.</p>
-            <Button asChild variant="link" className="text-indigo-600 hover:text-indigo-700 h-auto p-0">
+            <p className="text-slate-600 mb-6">No articles yet.</p>
+            <Button asChild variant="link" className="text-cyan-700 hover:text-cyan-800 h-auto p-0">
               <Link href="/dashboard/news/new" prefetch={false}>
                 Write the first article
               </Link>
@@ -74,16 +74,16 @@ export default async function DashboardNewsPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <h3 className="font-semibold text-gray-900 truncate">{a.title}</h3>
+                    <h3 className="font-semibold text-slate-900 truncate">{a.title}</h3>
                     {a.published ? (
                       <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-100">Published</Badge>
                     ) : (
                       <Badge variant="secondary" className="bg-amber-100 text-amber-800 hover:bg-amber-100">Draft</Badge>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500 font-mono truncate">/news/{a.slug}</p>
+                  <p className="text-xs text-slate-500 font-mono truncate">/news/{a.slug}</p>
                   {listDate ? (
-                    <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                    <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5 shrink-0" />
                       {listDate}
                     </p>
@@ -103,7 +103,7 @@ export default async function DashboardNewsPage() {
                       </Link>
                     </Button>
                   ) : null}
-                  <Button asChild variant="outline" size="sm" className="text-indigo-700 bg-indigo-50 border-indigo-200 hover:bg-indigo-100 hover:text-indigo-700">
+                  <Button asChild variant="outline" size="sm" className="text-cyan-800 bg-cyan-50 border-cyan-200 hover:bg-cyan-100 hover:text-cyan-800">
                     <Link href={`/dashboard/news/${a.id}/edit`} prefetch={false}>
                       Edit
                     </Link>

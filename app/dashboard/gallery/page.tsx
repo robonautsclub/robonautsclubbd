@@ -29,13 +29,13 @@ export default async function DashboardGalleryPage() {
   const groups = await getGalleryGroupsForDashboard()
 
   return (
-    <div className="max-w-7xl space-y-6">
+    <div className="w-full min-w-0 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Gallery</h2>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">Organize photo albums with a title and location</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Gallery</h2>
+          <p className="text-sm sm:text-base text-slate-600 mt-1">Organize photo albums with a title and location</p>
         </div>
-        <Button asChild className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
+        <Button asChild className="bg-cyan-700 hover:bg-cyan-800 text-white shadow-sm">
           <Link href="/dashboard/gallery/new" prefetch={false}>
             <Plus className="w-4 h-4" />
             New album
@@ -47,8 +47,8 @@ export default async function DashboardGalleryPage() {
         <Card>
           <CardContent className="p-12 text-center">
             <Images className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-600 mb-6">No albums yet.</p>
-            <Button asChild variant="link" className="text-indigo-600 hover:text-indigo-700 h-auto p-0">
+            <p className="text-slate-600 mb-6">No albums yet.</p>
+            <Button asChild variant="link" className="text-cyan-700 hover:text-cyan-800 h-auto p-0">
               <Link href="/dashboard/gallery/new" prefetch={false}>
                 Create the first album
               </Link>
@@ -66,17 +66,17 @@ export default async function DashboardGalleryPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
                       <span className="text-xs font-mono text-gray-400 bg-gray-50 px-2 py-0.5 rounded">#{g.sortOrder}</span>
-                      <h3 className="font-semibold text-gray-900 text-lg">{g.title}</h3>
+                      <h3 className="font-semibold text-slate-900 text-lg">{g.title}</h3>
                     </div>
                     {g.location ? (
-                      <p className="text-sm text-gray-600 flex items-start gap-2 mb-3">
-                        <MapPin className="w-4 h-4 shrink-0 text-indigo-600 mt-0.5" />
+                      <p className="text-sm text-slate-600 flex items-start gap-2 mb-3">
+                        <MapPin className="w-4 h-4 shrink-0 text-cyan-700 mt-0.5" />
                         <span className="whitespace-pre-wrap">{g.location}</span>
                       </p>
                     ) : null}
-                    <p className="text-sm text-gray-500">{g.images.length} image{g.images.length === 1 ? '' : 's'}</p>
+                    <p className="text-sm text-slate-500">{g.images.length} image{g.images.length === 1 ? '' : 's'}</p>
                     {listDate ? (
-                      <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                      <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
                         <Calendar className="w-3.5 h-3.5 shrink-0" />
                         {listDate}
                       </p>
@@ -94,7 +94,7 @@ export default async function DashboardGalleryPage() {
                         Public gallery
                       </Link>
                     </Button>
-                    <Button asChild variant="outline" size="sm" className="text-indigo-700 bg-indigo-50 border-indigo-200 hover:bg-indigo-100 hover:text-indigo-700">
+                    <Button asChild variant="outline" size="sm" className="text-cyan-800 bg-cyan-50 border-cyan-200 hover:bg-cyan-100 hover:text-cyan-800">
                       <Link href={`/dashboard/gallery/${g.id}/edit`} prefetch={false}>
                         Edit
                       </Link>
@@ -110,7 +110,7 @@ export default async function DashboardGalleryPage() {
                       </div>
                     ))}
                     {g.images.length > 8 ? (
-                      <div className="w-20 h-20 shrink-0 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center text-xs font-medium text-gray-600">
+                      <div className="w-20 h-20 shrink-0 rounded-lg bg-gray-100 border border-slate-200 flex items-center justify-center text-xs font-medium text-slate-600">
                         +{g.images.length - 8}
                       </div>
                     ) : null}

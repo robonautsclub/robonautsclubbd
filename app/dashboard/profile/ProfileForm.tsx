@@ -73,14 +73,14 @@ export default function ProfileForm({ session }: ProfileFormProps) {
 
   return (
     <Card className="shadow-sm overflow-hidden p-0">
-      <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-200 bg-linear-to-r from-indigo-50 to-blue-50">
+      <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-200 bg-linear-to-r from-cyan-50 to-blue-50">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-indigo-500 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-lg bg-cyan-500 flex items-center justify-center">
             <User className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="text-lg sm:text-xl font-bold text-gray-900">Profile Information</h3>
-            <p className="text-xs sm:text-sm text-gray-600 mt-0.5">Update your account details</p>
+            <h3 className="text-lg sm:text-xl font-bold text-slate-900">Profile Information</h3>
+            <p className="text-xs sm:text-sm text-slate-600 mt-0.5">Update your account details</p>
           </div>
         </div>
       </div>
@@ -108,7 +108,7 @@ export default function ProfileForm({ session }: ProfileFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                  <User className="w-4 h-4 text-indigo-600" />
+                  <User className="w-4 h-4 text-cyan-700" />
                   Display Name <span className="text-red-500">*</span>
                 </FormLabel>
                 <FormControl>
@@ -117,7 +117,7 @@ export default function ProfileForm({ session }: ProfileFormProps) {
                     type="text"
                     placeholder="Your display name"
                     disabled={loading}
-                    className="border-2 border-gray-200 rounded-xl py-3 h-auto"
+                    className="border-2 border-slate-200 rounded-xl py-3 h-auto"
                     {...field}
                   />
                 </FormControl>
@@ -128,7 +128,7 @@ export default function ProfileForm({ session }: ProfileFormProps) {
 
           <div className="space-y-2">
             <label htmlFor="email" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-              <Mail className="w-4 h-4 text-indigo-600" />
+              <Mail className="w-4 h-4 text-cyan-700" />
               Email Address
             </label>
             <Input
@@ -137,9 +137,9 @@ export default function ProfileForm({ session }: ProfileFormProps) {
               value={session.email}
               disabled
               placeholder="your.email@example.com"
-              className="border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-600 cursor-not-allowed opacity-100"
+              className="border-2 border-slate-200 rounded-xl bg-gray-50 text-slate-600 cursor-not-allowed opacity-100"
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-slate-500">
               Email address cannot be changed. Contact a Super Admin if you need to update your email.
             </p>
           </div>
@@ -150,7 +150,7 @@ export default function ProfileForm({ session }: ProfileFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                  <Lock className="w-4 h-4 text-indigo-600" />
+                  <Lock className="w-4 h-4 text-cyan-700" />
                   New Password (leave blank to keep current)
                 </FormLabel>
                 <FormControl>
@@ -159,11 +159,11 @@ export default function ProfileForm({ session }: ProfileFormProps) {
                     type="password"
                     placeholder="Enter new password (minimum 6 characters)"
                     disabled={loading}
-                    className="border-2 border-gray-200 rounded-xl py-3 h-auto"
+                    className="border-2 border-slate-200 rounded-xl py-3 h-auto"
                     {...field}
                   />
                 </FormControl>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-slate-500">
                   Only enter a new password if you want to change it. Leave blank to keep your current password.
                 </p>
                 <FormMessage />
@@ -171,28 +171,28 @@ export default function ProfileForm({ session }: ProfileFormProps) {
             )}
           />
 
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="bg-gray-50 border border-slate-200 rounded-lg p-4">
             <p className="text-sm text-gray-700 mb-2 flex items-center gap-2">
               <strong>Role:</strong>{' '}
               <Badge
                 variant="secondary"
                 className={
                   session.role === 'superAdmin'
-                    ? 'bg-purple-100 text-purple-800 hover:bg-purple-100'
+                    ? 'bg-slate-100 text-purple-800 hover:bg-slate-100'
                     : 'bg-blue-100 text-blue-800 hover:bg-blue-100'
                 }
               >
                 {session.role === 'superAdmin' ? 'Super Admin' : 'Admin'}
               </Badge>
             </p>
-            <p className="text-xs text-gray-500">Your role is managed by the system and cannot be changed here.</p>
+            <p className="text-xs text-slate-500">Your role is managed by the system and cannot be changed here.</p>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
             <Button
               type="submit"
               disabled={loading}
-              className="bg-indigo-500 hover:bg-indigo-600 text-white shadow-md hover:shadow-lg"
+              className="bg-cyan-500 hover:bg-cyan-700 text-white shadow-md hover:shadow-lg"
             >
               {loading ? (
                 <>

@@ -85,7 +85,7 @@ export default function TimePicker({ value, onChange, disabled }: TimePickerProp
     <div className="relative" ref={dropdownRef}>
       <div
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className="w-full px-4 py-3 pl-11 border-2 border-gray-200 rounded-xl focus-within:ring-2 focus-within:ring-indigo-400 focus-within:border-indigo-400 transition-all cursor-pointer bg-white flex items-center"
+        className="w-full px-4 py-3 pl-11 border-2 border-gray-200 rounded-xl focus-within:ring-2 focus-within:ring-cyan-400 focus-within:border-cyan-400 transition-all cursor-pointer bg-white flex items-center"
       >
         <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
         <span className={value ? 'text-gray-900' : 'text-gray-400'}>{displayValue}</span>
@@ -99,7 +99,7 @@ export default function TimePicker({ value, onChange, disabled }: TimePickerProp
               <select
                 value={startHour}
                 onChange={(e) => setStartHour(e.target.value)}
-                className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
               >
                 {hours.map((hour) => (
                   <option key={hour} value={hour}>
@@ -111,7 +111,7 @@ export default function TimePicker({ value, onChange, disabled }: TimePickerProp
               <select
                 value={startMinute}
                 onChange={(e) => setStartMinute(e.target.value)}
-                className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
               >
                 {minutes.map((minute) => (
                   <option key={minute} value={minute}>
@@ -122,7 +122,7 @@ export default function TimePicker({ value, onChange, disabled }: TimePickerProp
               <select
                 value={startPeriod}
                 onChange={(e) => setStartPeriod(e.target.value)}
-                className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
               >
                 {periods.map((period) => (
                   <option key={period} value={period}>
@@ -139,7 +139,7 @@ export default function TimePicker({ value, onChange, disabled }: TimePickerProp
               <select
                 value={endHour}
                 onChange={(e) => setEndHour(e.target.value)}
-                className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
               >
                 {hours.map((hour) => (
                   <option key={hour} value={hour}>
@@ -151,7 +151,7 @@ export default function TimePicker({ value, onChange, disabled }: TimePickerProp
               <select
                 value={endMinute}
                 onChange={(e) => setEndMinute(e.target.value)}
-                className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
               >
                 {minutes.map((minute) => (
                   <option key={minute} value={minute}>
@@ -162,7 +162,7 @@ export default function TimePicker({ value, onChange, disabled }: TimePickerProp
               <select
                 value={endPeriod}
                 onChange={(e) => setEndPeriod(e.target.value)}
-                className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
               >
                 {periods.map((period) => (
                   <option key={period} value={period}>
@@ -177,7 +177,7 @@ export default function TimePicker({ value, onChange, disabled }: TimePickerProp
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="w-full px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-lg transition-colors"
+              className="w-full px-4 py-2 bg-cyan-500 hover:bg-cyan-700 text-white font-medium rounded-lg transition-colors"
             >
               Done
             </button>

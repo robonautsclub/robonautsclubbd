@@ -69,7 +69,7 @@ export default function EventDetailsClient({ event, bookings }: Props) {
       <Card className="shadow-sm">
         <CardContent className="p-4 sm:p-6">
           <div className="flex items-center justify-between gap-3 mb-4">
-            <h3 className="text-xl sm:text-2xl font-bold text-gray-900">{event.title}</h3>
+            <h3 className="text-xl sm:text-2xl font-bold text-slate-900">{event.title}</h3>
             {eventDates.length > 0 && (
               <Badge
                 variant="secondary"
@@ -89,20 +89,20 @@ export default function EventDetailsClient({ event, bookings }: Props) {
               <Button
                 type="button"
                 variant="outline"
-                className="mb-3 text-indigo-700 bg-indigo-50 border-indigo-200 hover:bg-indigo-100 hover:text-indigo-700"
+                className="mb-3 text-cyan-800 bg-cyan-50 border-cyan-200 hover:bg-cyan-100 hover:text-cyan-800"
               >
                 {showDetails ? 'Hide details' : 'View details'}
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="space-y-3 sm:space-y-4">
-                <div className="flex items-start gap-3 p-4 rounded-lg bg-indigo-50 border border-indigo-100">
-                  <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
-                    <Calendar className="w-5 h-5 text-indigo-600" />
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-cyan-50 border border-cyan-100">
+                  <div className="w-10 h-10 rounded-lg bg-cyan-100 flex items-center justify-center shrink-0">
+                    <Calendar className="w-5 h-5 text-cyan-700" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500 mb-1">Date{eventDates.length > 1 ? 's' : ''}</p>
-                    <p className="font-semibold text-gray-900">{formatEventDates(eventDates, 'long')}</p>
+                    <p className="text-sm font-medium text-slate-500 mb-1">Date{eventDates.length > 1 ? 's' : ''}</p>
+                    <p className="font-semibold text-slate-900">{formatEventDates(eventDates, 'long')}</p>
                   </div>
                 </div>
 
@@ -112,20 +112,20 @@ export default function EventDetailsClient({ event, bookings }: Props) {
                       <Clock className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">Time</p>
-                      <p className="font-semibold text-gray-900">{event.time}</p>
+                      <p className="text-sm font-medium text-slate-500 mb-1">Time</p>
+                      <p className="font-semibold text-slate-900">{event.time}</p>
                     </div>
                   </div>
                 )}
 
                 {(event.venue || event.location) && (
-                  <div className="flex items-start gap-3 p-4 rounded-lg bg-purple-50 border border-purple-100">
-                    <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center shrink-0">
-                      <MapPin className="w-5 h-5 text-purple-600" />
+                  <div className="flex items-start gap-3 p-4 rounded-lg bg-slate-50 border border-slate-100">
+                    <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                      <MapPin className="w-5 h-5 text-slate-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">Venue</p>
-                      <p className="font-semibold text-gray-900">{event.venue || event.location}</p>
+                      <p className="text-sm font-medium text-slate-500 mb-1">Venue</p>
+                      <p className="font-semibold text-slate-900">{event.venue || event.location}</p>
                     </div>
                   </div>
                 )}
@@ -136,8 +136,8 @@ export default function EventDetailsClient({ event, bookings }: Props) {
                       <Users className="w-5 h-5 text-green-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">Eligibility</p>
-                      <p className="font-semibold text-gray-900">{event.eligibility}</p>
+                      <p className="text-sm font-medium text-slate-500 mb-1">Eligibility</p>
+                      <p className="font-semibold text-slate-900">{event.eligibility}</p>
                     </div>
                   </div>
                 )}
@@ -148,15 +148,15 @@ export default function EventDetailsClient({ event, bookings }: Props) {
                       <User className="w-5 h-5 text-amber-600" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-500 mb-1">Created By</p>
-                      <p className="font-semibold text-gray-900">{event.createdByName}</p>
-                      {event.createdByEmail && <p className="text-xs text-gray-500 mt-1">{event.createdByEmail}</p>}
+                      <p className="text-sm font-medium text-slate-500 mb-1">Created By</p>
+                      <p className="font-semibold text-slate-900">{event.createdByName}</p>
+                      {event.createdByEmail && <p className="text-xs text-slate-500 mt-1">{event.createdByEmail}</p>}
                     </div>
                   </div>
                 )}
 
                 <div>
-                  <p className="text-sm font-medium text-gray-500 mb-2">Description</p>
+                  <p className="text-sm font-medium text-slate-500 mb-2">Description</p>
                   <p className="text-gray-700 leading-relaxed">{event.fullDescription || event.description}</p>
                 </div>
               </div>
@@ -168,25 +168,25 @@ export default function EventDetailsClient({ event, bookings }: Props) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-gray-500">Total Registrations</p>
-            <p className="text-2xl font-bold text-gray-900">{bookings.length}</p>
+            <p className="text-xs text-slate-500">Total Registrations</p>
+            <p className="text-2xl font-bold text-slate-900">{bookings.length}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-gray-500">Filtered Registrations</p>
-            <p className="text-2xl font-bold text-gray-900">{filteredBookings.length}</p>
+            <p className="text-xs text-slate-500">Filtered Registrations</p>
+            <p className="text-2xl font-bold text-slate-900">{filteredBookings.length}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-gray-500">Paid Registrations</p>
-            <p className="text-2xl font-bold text-gray-900">{paidCount}</p>
+            <p className="text-xs text-slate-500">Paid Registrations</p>
+            <p className="text-2xl font-bold text-slate-900">{paidCount}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-gray-500">Money Collected</p>
+            <p className="text-xs text-slate-500">Money Collected</p>
             <p className="text-2xl font-bold text-green-700">BDT {totalCollected}</p>
           </CardContent>
         </Card>
@@ -195,13 +195,13 @@ export default function EventDetailsClient({ event, bookings }: Props) {
       {registrationsByCategory.length > 0 && (
         <Card>
           <CardContent className="p-4">
-            <p className="text-sm font-semibold text-gray-900 mb-3">Registrations by Category</p>
+            <p className="text-sm font-semibold text-slate-900 mb-3">Registrations by Category</p>
             <div className="flex flex-wrap gap-2">
               {registrationsByCategory.map(([category, count]) => (
                 <Badge
                   key={category}
                   variant="secondary"
-                  className="bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-50"
+                  className="bg-cyan-50 text-cyan-800 border border-cyan-200 hover:bg-cyan-50"
                 >
                   {category}: {count}
                 </Badge>
@@ -212,12 +212,12 @@ export default function EventDetailsClient({ event, bookings }: Props) {
       )}
 
       <Card className="shadow-sm overflow-hidden p-0">
-        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gray-50 space-y-3">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-200 bg-gray-50 space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center gap-2">
-              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
+            <h3 className="text-lg sm:text-xl font-semibold text-slate-900 flex items-center gap-2">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-700" />
               Registrations
-              <span className="text-xs sm:text-sm font-normal text-gray-500">({filteredBookings.length})</span>
+              <span className="text-xs sm:text-sm font-normal text-slate-500">({filteredBookings.length})</span>
             </h3>
             <ExportBookingsButton bookings={bookings} eventTitle={event.title} />
           </div>
@@ -227,13 +227,13 @@ export default function EventDetailsClient({ event, bookings }: Props) {
               value={nameFilter}
               onChange={(e) => setNameFilter(e.target.value)}
               placeholder="Filter by participant name"
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+              className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
             />
             {categoryOptions.length > 0 && (
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400"
               >
                 <option value="">All categories</option>
                 {categoryOptions.map((category) => (
@@ -251,8 +251,8 @@ export default function EventDetailsClient({ event, bookings }: Props) {
             <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
               <Users className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
             </div>
-            <h4 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">No registrations found</h4>
-            <p className="text-sm sm:text-base text-gray-600">Try changing filters or wait for new registrations.</p>
+            <h4 className="text-base sm:text-lg font-semibold text-slate-900 mb-2">No registrations found</h4>
+            <p className="text-sm sm:text-base text-slate-600">Try changing filters or wait for new registrations.</p>
           </div>
         ) : (
           <Table className="min-w-[640px]">
@@ -285,37 +285,37 @@ export default function EventDetailsClient({ event, bookings }: Props) {
                 return (
                   <TableRow key={booking.id} className="hover:bg-gray-50">
                     <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
-                      <div className="text-xs sm:text-sm font-mono font-semibold text-indigo-600">{booking.registrationId || 'N/A'}</div>
+                      <div className="text-xs sm:text-sm font-mono font-semibold text-cyan-700">{booking.registrationId || 'N/A'}</div>
                     </TableCell>
                     <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
-                      <div className="text-xs sm:text-sm font-medium text-gray-900">{booking.name}</div>
+                      <div className="text-xs sm:text-sm font-medium text-slate-900">{booking.name}</div>
                     </TableCell>
                     <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
-                      <div className="text-xs sm:text-sm text-gray-900">{booking.category || 'Unspecified'}</div>
+                      <div className="text-xs sm:text-sm text-slate-900">{booking.category || 'Unspecified'}</div>
                     </TableCell>
                     <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
-                      <div className="text-xs sm:text-sm text-gray-900">{booking.school}</div>
+                      <div className="text-xs sm:text-sm text-slate-900">{booking.school}</div>
                     </TableCell>
                     <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
-                      <div className="text-xs sm:text-sm text-gray-900 flex items-center gap-1">
+                      <div className="text-xs sm:text-sm text-slate-900 flex items-center gap-1">
                         <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
                         {booking.email}
                       </div>
                     </TableCell>
                     <TableCell className="px-3 sm:px-6 py-3 sm:py-4 hidden lg:table-cell">
-                      <div className="text-xs sm:text-sm text-gray-900">{booking.phone || 'N/A'}</div>
+                      <div className="text-xs sm:text-sm text-slate-900">{booking.phone || 'N/A'}</div>
                     </TableCell>
                     <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
-                      <div className="text-xs sm:text-sm text-gray-900 flex items-center gap-1">
+                      <div className="text-xs sm:text-sm text-slate-900 flex items-center gap-1">
                         <Banknote className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
                         {booking.amountPaid ? `BDT ${booking.amountPaid}` : '—'}
                       </div>
                     </TableCell>
                     <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
-                      <div className="text-xs sm:text-sm text-gray-500">{formattedDate}</div>
+                      <div className="text-xs sm:text-sm text-slate-500">{formattedDate}</div>
                     </TableCell>
                     <TableCell className="px-3 sm:px-6 py-3 sm:py-4 text-right">
-                      <BookingActions booking={booking} />
+                      <BookingActions booking={booking} event={event} />
                     </TableCell>
                   </TableRow>
                 )

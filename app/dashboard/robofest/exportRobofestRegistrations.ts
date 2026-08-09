@@ -175,9 +175,7 @@ export async function exportRobofestPdf(rows: RobofestRegistration[]) {
     ageLabel(r) || '—',
     [r.email, r.phone].filter(Boolean).join(' · ') || '—',
     r.status || '',
-    r.paymentStatus
-      ? `${r.paymentStatus}${r.amountPaid != null ? ` · BDT ${r.amountPaid}` : ''}`
-      : '—',
+    r.paymentStatus || '—',
   ])
 
   autoTable(doc, {

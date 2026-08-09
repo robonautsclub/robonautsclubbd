@@ -108,7 +108,7 @@ export default function MultiDatePicker({ value, onChange, disabled, required }:
           readOnly
           onClick={() => !disabled && setIsOpen(!isOpen)}
           required={required && selectedDates.length === 0}
-          className="w-full px-4 py-3 pl-11 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all cursor-pointer bg-white"
+          className="w-full px-4 py-3 pl-11 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all cursor-pointer bg-white"
           disabled={disabled}
           placeholder="Select date(s)"
         />
@@ -133,14 +133,14 @@ export default function MultiDatePicker({ value, onChange, disabled, required }:
           {selectedDates.map((dateString) => (
             <span
               key={dateString}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium"
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-100 text-cyan-800 rounded-lg text-sm font-medium"
             >
               {format(new Date(dateString), 'MMM d, yyyy')}
               {!disabled && (
                 <button
                   type="button"
                   onClick={(e) => handleRemoveDate(dateString, e)}
-                  className="hover:bg-indigo-200 rounded-full p-0.5 transition-colors"
+                  className="hover:bg-cyan-200 rounded-full p-0.5 transition-colors"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -208,9 +208,9 @@ export default function MultiDatePicker({ value, onChange, disabled, required }:
                   className={`
                     aspect-square flex items-center justify-center rounded-lg text-sm font-medium transition-all
                     ${isSelected
-                      ? 'bg-indigo-500 text-white shadow-md'
+                      ? 'bg-cyan-500 text-white shadow-md'
                       : isToday
-                      ? 'bg-indigo-100 text-indigo-700 font-semibold'
+                      ? 'bg-cyan-100 text-cyan-800 font-semibold'
                       : 'text-gray-700 hover:bg-gray-100'
                     }
                   `}
@@ -232,7 +232,7 @@ export default function MultiDatePicker({ value, onChange, disabled, required }:
                   onChange(newDates)
                 }
               }}
-              className="flex-1 px-3 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+              className="flex-1 px-3 py-2 text-sm font-medium text-cyan-700 hover:bg-cyan-50 rounded-lg transition-colors"
             >
               Add Today
             </button>
@@ -247,7 +247,7 @@ export default function MultiDatePicker({ value, onChange, disabled, required }:
                   onChange(newDates)
                 }
               }}
-              className="flex-1 px-3 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+              className="flex-1 px-3 py-2 text-sm font-medium text-cyan-700 hover:bg-cyan-50 rounded-lg transition-colors"
             >
               Add Tomorrow
             </button>

@@ -281,12 +281,12 @@ export default function CreateRobofestRegistrationForm({
         side="right"
         className="w-full sm:max-w-xl p-0 flex flex-col gap-0 overflow-hidden"
       >
-        <div className="flex items-start justify-between gap-3 bg-indigo-600 px-4 py-4 text-white">
+        <div className="flex items-start justify-between gap-3 bg-cyan-700 px-4 py-4 text-white">
           <div>
             <SheetTitle className="text-lg font-bold text-white">
               Add Robofest registration
             </SheetTitle>
-            <SheetDescription className="text-xs text-indigo-100 mt-1">
+            <SheetDescription className="text-xs text-cyan-100 mt-1">
               Create a team registration as admin (no bKash checkout).
             </SheetDescription>
           </div>

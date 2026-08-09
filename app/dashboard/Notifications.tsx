@@ -103,10 +103,10 @@ export default function Notifications() {
   }
 
   const typeBadge = (type: string) => {
-    if (type === 'profile_update') return 'bg-indigo-100 text-indigo-600'
+    if (type === 'profile_update') return 'bg-cyan-100 text-cyan-700'
     if (type.startsWith('event_')) return 'bg-green-100 text-green-600'
     if (type.startsWith('course_')) return 'bg-blue-100 text-blue-600'
-    if (type.startsWith('user_')) return 'bg-purple-100 text-purple-600'
+    if (type.startsWith('user_')) return 'bg-slate-100 text-slate-600'
     return 'bg-gray-100 text-gray-600'
   }
 
@@ -142,9 +142,9 @@ export default function Notifications() {
         sideOffset={8}
         className="w-80 sm:w-96 p-0 rounded-xl shadow-2xl border-gray-200 max-h-[600px] flex flex-col overflow-hidden"
       >
-        <div className="px-4 py-3 border-b border-gray-200 bg-linear-to-r from-indigo-50 to-blue-50 flex items-center justify-between">
+        <div className="px-4 py-3 border-b border-gray-200 bg-linear-to-r from-cyan-50 to-blue-50 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Bell className="size-5 text-indigo-600" />
+            <Bell className="size-5 text-cyan-700" />
             <h3 className="font-semibold text-gray-900">Notifications</h3>
             {unreadCount > 0 && (
               <Badge variant="destructive" className="rounded-full px-2 py-0.5 text-xs">
@@ -205,7 +205,7 @@ export default function Notifications() {
                             <Badge
                               key={idx}
                               variant="secondary"
-                              className="bg-indigo-100 text-indigo-700 hover:bg-indigo-100"
+                              className="bg-cyan-100 text-cyan-800 hover:bg-cyan-100"
                             >
                               {change}
                             </Badge>
@@ -250,7 +250,7 @@ export default function Notifications() {
                 variant="ghost"
                 size="sm"
                 onClick={() => void loadNotifications()}
-                className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+                className="text-cyan-700 hover:text-cyan-800 hover:bg-cyan-50"
               >
                 <RefreshCw className="size-3.5" />
                 Refresh

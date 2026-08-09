@@ -100,14 +100,14 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
         showCloseButton={false}
         className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[95vh]"
       >
-        <div className="bg-linear-to-r from-indigo-500 to-blue-600 px-4 sm:px-6 py-4 sm:py-5 flex justify-between items-center">
+        <div className="bg-linear-to-r from-cyan-500 to-blue-600 px-4 sm:px-6 py-4 sm:py-5 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center">
               <User className="w-5 h-5 text-white" />
             </div>
             <div>
               <DialogTitle className="text-lg sm:text-xl font-bold text-white">Edit User</DialogTitle>
-              <DialogDescription className="text-xs sm:text-sm text-indigo-100">Update user information</DialogDescription>
+              <DialogDescription className="text-xs sm:text-sm text-cyan-100">Update user information</DialogDescription>
             </div>
           </div>
           <Button
@@ -133,7 +133,7 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
 
               <div className="space-y-2">
                 <label htmlFor="email" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                  <Mail className="w-4 h-4 text-indigo-600" />
+                  <Mail className="w-4 h-4 text-cyan-700" />
                   Email Address
                 </label>
                 <Input
@@ -153,7 +153,7 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                      <User className="w-4 h-4 text-indigo-600" />
+                      <User className="w-4 h-4 text-cyan-700" />
                       Display Name
                     </FormLabel>
                     <FormControl>
@@ -176,7 +176,7 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                      <Lock className="w-4 h-4 text-indigo-600" />
+                      <Lock className="w-4 h-4 text-cyan-700" />
                       New Password (leave blank to keep current)
                     </FormLabel>
                     <FormControl>
@@ -221,7 +221,7 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
                     variant="secondary"
                     className={
                       user.role === 'superAdmin'
-                        ? 'bg-purple-100 text-purple-800 hover:bg-purple-100'
+                        ? 'bg-slate-100 text-purple-800 hover:bg-slate-100'
                         : 'bg-blue-100 text-blue-800 hover:bg-blue-100'
                     }
                   >
@@ -240,7 +240,7 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="bg-indigo-500 hover:bg-indigo-600 text-white shadow-md hover:shadow-lg"
+                  className="bg-cyan-500 hover:bg-cyan-700 text-white shadow-md hover:shadow-lg"
                 >
                   {loading ? (
                     <>

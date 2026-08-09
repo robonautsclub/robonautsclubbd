@@ -5,11 +5,16 @@ import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import {
   ChevronDown,
+  CreditCard,
   Download,
   FileSpreadsheet,
   FileText,
+  Filter,
+  Layers,
   Mail,
+  Search,
   Trophy,
+  Users,
 } from 'lucide-react'
 import type {
   RobofestContent,
@@ -30,6 +35,7 @@ import {
   exportRobofestExcel,
   exportRobofestPdf,
 } from './exportRobofestRegistrations'
+import { downloadPdfFromResponse } from '@/lib/downloadPdfBlob'
 import CreateRobofestRegistrationForm from './CreateRobofestRegistrationForm'
 import DatePicker from '@/app/dashboard/events/DatePicker'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -73,29 +79,29 @@ function ContentSection({
     <Collapsible open={open} onOpenChange={setOpen}>
       <Card
         className={cn(
-          'border-gray-200/80 shadow-sm py-0 gap-0',
+          'border-slate-200 shadow-sm py-0 gap-0',
           open ? 'overflow-visible relative z-10' : 'overflow-hidden',
         )}
       >
         <CollapsibleTrigger asChild>
           <button
             type="button"
-            className="flex w-full items-start justify-between gap-3 px-4 py-3.5 text-left hover:bg-gray-50/80 transition-colors"
+            className="flex w-full items-start justify-between gap-3 px-4 py-3.5 text-left hover:bg-cyan-50/50 transition-colors"
           >
             <div className="min-w-0">
-              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+              <h3 className="font-semibold text-slate-900 flex items-center gap-2">
                 {icon}
                 {title}
               </h3>
               {description ? (
-                <p className="text-xs text-gray-500 mt-0.5 font-normal">
+                <p className="text-xs text-slate-500 mt-0.5 font-normal">
                   {description}
                 </p>
               ) : null}
             </div>
             <ChevronDown
               className={cn(
-                'w-4 h-4 shrink-0 text-gray-400 mt-1 transition-transform duration-200',
+                'w-4 h-4 shrink-0 text-slate-400 mt-1 transition-transform duration-200',
                 open && 'rotate-180',
               )}
             />
@@ -104,7 +110,7 @@ function ContentSection({
         <CollapsibleContent className="overflow-visible">
           <CardContent
             className={cn(
-              'pt-3 pb-4 border-t border-gray-100 overflow-visible',
+              'pt-3 pb-4 border-t border-slate-100 overflow-visible',
               contentClassName,
             )}
           >
@@ -145,10 +151,10 @@ function CollapsibleTeamMembers({
   if (!members?.length) {
     return (
       <div className="text-xs">
-        <div className="font-medium text-gray-800">
+        <div className="font-medium text-slate-800">
           {count} member{count === 1 ? '' : 's'}
         </div>
-        <span className="text-gray-400">—</span>
+        <span className="text-slate-400">—</span>
       </div>
     )
   }
@@ -165,30 +171,30 @@ function CollapsibleTeamMembers({
       <CollapsibleTrigger asChild>
         <button
           type="button"
-          className="w-full text-left rounded-md border border-transparent hover:border-gray-200 hover:bg-gray-50/80 px-1.5 py-1 -mx-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-200"
+          className="w-full text-left rounded-md border border-transparent hover:border-slate-200 hover:bg-slate-50/80 px-1.5 py-1 -mx-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <div className="font-medium text-gray-800">
+              <div className="font-medium text-slate-800">
                 {count} member{count === 1 ? '' : 's'}
               </div>
-              <div className="text-[11px] text-gray-500 truncate mt-0.5">
+              <div className="text-[11px] text-slate-500 truncate mt-0.5">
                 {preview}
                 {remaining > 0 ? ` +${remaining}` : ''}
               </div>
             </div>
-            <ChevronDown className="w-3.5 h-3.5 shrink-0 text-gray-400 mt-0.5 transition-transform group-data-[state=open]/team:rotate-180" />
+            <ChevronDown className="w-3.5 h-3.5 shrink-0 text-slate-400 mt-0.5 transition-transform group-data-[state=open]/team:rotate-180" />
           </div>
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-2 space-y-1.5 data-[state=closed]:animate-none">
-        <ul className="space-y-1.5 rounded-md border border-gray-100 bg-gray-50/80 p-2 text-gray-600">
+        <ul className="space-y-1.5 rounded-md border border-slate-100 bg-slate-50/80 p-2 text-slate-600">
           {members.map((m, i) => (
             <li key={`${registrationId}-m-${i}`} className="leading-snug">
-              <span className="font-medium text-gray-800">
+              <span className="font-medium text-slate-800">
                 {String(i + 1).padStart(2, '0')}. {m.name}
               </span>
-              <div className="text-[11px] text-gray-500 break-words">
+              <div className="text-[11px] text-slate-500 break-words">
                 {[m.grade, m.school, m.branch, m.phone, m.email]
                   .filter(Boolean)
                   .join(' · ')}
@@ -215,25 +221,46 @@ export default function RobofestDashboardClient({
   const [categoryFilter, setCategoryFilter] = useState('')
   const [roundFilter, setRoundFilter] = useState('')
   const [ageCategoryFilter, setAgeCategoryFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+  const [statusTab, setStatusTab] =
+    useState<RobofestRegistrationStatus>('pending')
   const [nameFilter, setNameFilter] = useState('')
   const [exportPending, startExportTransition] = useTransition()
+
+  const statusCounts = useMemo(() => {
+    let pendingCount = 0
+    let confirmedCount = 0
+    let cancelledCount = 0
+    for (const r of registrations) {
+      if (r.status === 'confirmed') confirmedCount += 1
+      else if (r.status === 'cancelled') cancelledCount += 1
+      else pendingCount += 1
+    }
+    return {
+      pending: pendingCount,
+      confirmed: confirmedCount,
+      cancelled: cancelledCount,
+    }
+  }, [registrations])
+
+  const statusScopedCount = statusCounts[statusTab]
 
   const filtersActive = Boolean(
     categoryFilter ||
       roundFilter ||
       ageCategoryFilter ||
-      statusFilter ||
       nameFilter.trim(),
   )
 
   const filtered = useMemo(() => {
     const name = nameFilter.trim().toLowerCase()
     return registrations.filter((r) => {
+      const status = r.status === 'confirmed' || r.status === 'cancelled'
+        ? r.status
+        : 'pending'
+      if (status !== statusTab) return false
       if (categoryFilter && r.category !== categoryFilter) return false
       if (roundFilter && r.roundCity !== roundFilter) return false
       if (ageCategoryFilter && r.ageCategory !== ageCategoryFilter) return false
-      if (statusFilter && r.status !== statusFilter) return false
       if (name) {
         const haystack = [
           r.name,
@@ -259,23 +286,37 @@ export default function RobofestDashboardClient({
     })
   }, [
     registrations,
+    statusTab,
     categoryFilter,
     roundFilter,
     ageCategoryFilter,
-    statusFilter,
     nameFilter,
   ])
 
   const stats = useMemo(() => {
-    const source = filtersActive ? filtered : registrations
+    const source = filtered
     const byCategory = new Map<string, number>()
     const byAge = new Map<string, number>()
     let paidTotal = 0
     let paidCount = 0
+    let participants = 0
     for (const r of source) {
-      byCategory.set(r.category, (byCategory.get(r.category) || 0) + 1)
+      const memberCount =
+        typeof r.teamSize === 'number' && r.teamSize > 0
+          ? r.teamSize
+          : Array.isArray(r.teamMembers) && r.teamMembers.length > 0
+            ? r.teamMembers.length
+            : 1
+      participants += memberCount
+      byCategory.set(
+        r.category,
+        (byCategory.get(r.category) || 0) + memberCount,
+      )
       if (r.ageCategory) {
-        byAge.set(r.ageCategory, (byAge.get(r.ageCategory) || 0) + 1)
+        byAge.set(
+          r.ageCategory,
+          (byAge.get(r.ageCategory) || 0) + memberCount,
+        )
       }
       if (r.paymentStatus === 'paid' && typeof r.amountPaid === 'number') {
         paidTotal += r.amountPaid
@@ -283,19 +324,19 @@ export default function RobofestDashboardClient({
       }
     }
     return {
-      total: source.length,
+      total: participants,
+      registrations: source.length,
       byCategory: Array.from(byCategory.entries()),
       byAge: Array.from(byAge.entries()),
       paidTotal,
       paidCount,
     }
-  }, [registrations, filtered, filtersActive])
+  }, [filtered])
 
   const clearFilters = () => {
     setCategoryFilter('')
     setRoundFilter('')
     setAgeCategoryFilter('')
-    setStatusFilter('')
     setNameFilter('')
   }
 
@@ -395,18 +436,80 @@ export default function RobofestDashboardClient({
     })
   }
 
+  const downloadConfirmationPdf = (registration: RobofestRegistration) => {
+    if (!registration.registrationId) {
+      alert('Registration ID is missing.')
+      return
+    }
+    startTransition(async () => {
+      try {
+        const response = await fetch(
+          `/api/dashboard/robofest/registrations/${registration.id}/pdf`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ registration, content }),
+          },
+        )
+        await downloadPdfFromResponse(
+          response,
+          `Robofest-Confirmation-${registration.registrationId}.pdf`,
+        )
+      } catch (err) {
+        alert(err instanceof Error ? err.message : 'Failed to download PDF')
+      }
+    })
+  }
+
+  const statusEmptyCopy: Record<
+    RobofestRegistrationStatus,
+    { title: string; body: string }
+  > = {
+    pending: {
+      title: 'No pending registrations',
+      body: 'New teams awaiting review will appear here.',
+    },
+    confirmed: {
+      title: 'No confirmed registrations',
+      body: 'Confirmed teams will appear here.',
+    },
+    cancelled: {
+      title: 'No cancelled registrations',
+      body: 'Cancelled team registrations will appear here.',
+    },
+  }
+
+  const statusTone =
+    statusTab === 'confirmed'
+      ? {
+          badge: 'bg-emerald-100 text-emerald-800 ring-emerald-200/80',
+          bar: 'from-emerald-500 to-teal-500',
+          chip: 'bg-emerald-50 text-emerald-800',
+        }
+      : statusTab === 'cancelled'
+        ? {
+            badge: 'bg-rose-100 text-rose-800 ring-rose-200/80',
+            bar: 'from-rose-500 to-orange-400',
+            chip: 'bg-rose-50 text-rose-800',
+          }
+        : {
+            badge: 'bg-amber-100 text-amber-900 ring-amber-200/80',
+            bar: 'from-amber-500 to-cyan-500',
+            chip: 'bg-amber-50 text-amber-900',
+          }
+
   return (
     <Tabs defaultValue="registrations" className="space-y-5 w-full min-w-0">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
             Robofest
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-slate-500 mt-1">
             Local-round registrations, competition content, and exports.
           </p>
         </div>
-        <TabsList className="w-full sm:w-fit shrink-0">
+        <TabsList className="w-full sm:w-fit shrink-0 bg-slate-100/80">
           <TabsTrigger value="registrations" className="flex-1 sm:flex-none">
             Registrations
           </TabsTrigger>
@@ -417,83 +520,140 @@ export default function RobofestDashboardClient({
       </div>
 
       <TabsContent value="registrations" className="space-y-4 w-full min-w-0">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-gray-600">
-            Showing{' '}
-            <span className="font-semibold text-gray-900">{filtered.length}</span>
-            {filtersActive ? (
-              <>
-                {' '}
-                matching of{' '}
-                <span className="font-semibold text-gray-900">
-                  {registrations.length}
-                </span>{' '}
-                total
-              </>
-            ) : (
-              <> registrations</>
-            )}
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <CreateRobofestRegistrationForm
-              content={content}
-              schools={schools}
-            />
-            {filtersActive ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={clearFilters}
-              >
-                Clear filters
-              </Button>
-            ) : null}
-          </div>
-        </div>
+        <Tabs
+          value={statusTab}
+          onValueChange={(value) =>
+            setStatusTab(value as RobofestRegistrationStatus)
+          }
+          className="w-full space-y-4"
+        >
+          <TabsList className="bg-transparent border-b border-slate-200 rounded-none w-full justify-start h-auto p-0 gap-1 sm:gap-2 overflow-x-auto">
+            <TabsTrigger
+              value="pending"
+              className="data-[state=active]:bg-amber-50 data-[state=active]:text-amber-800 data-[state=active]:border-b-2 data-[state=active]:border-amber-500 data-[state=active]:shadow-none rounded-t-lg rounded-b-none px-3 sm:px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+            >
+              Pending ({statusCounts.pending})
+            </TabsTrigger>
+            <TabsTrigger
+              value="confirmed"
+              className="data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-800 data-[state=active]:border-b-2 data-[state=active]:border-emerald-600 data-[state=active]:shadow-none rounded-t-lg rounded-b-none px-3 sm:px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+            >
+              Confirmed ({statusCounts.confirmed})
+            </TabsTrigger>
+            <TabsTrigger
+              value="cancelled"
+              className="data-[state=active]:bg-rose-50 data-[state=active]:text-rose-800 data-[state=active]:border-b-2 data-[state=active]:border-rose-500 data-[state=active]:shadow-none rounded-t-lg rounded-b-none px-3 sm:px-4 py-2 text-sm font-medium border-b-2 border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+            >
+              Cancelled ({statusCounts.cancelled})
+            </TabsTrigger>
+          </TabsList>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-          <div className="lg:col-span-3 grid grid-cols-2 gap-3">
-            <Card className="border-gray-200/80 shadow-sm">
-              <CardContent className="p-3.5 sm:p-4">
-                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
-                  {filtersActive ? 'Matching' : 'Total'}
+        <div className="rounded-2xl border border-slate-200/90 bg-white/90 shadow-sm overflow-hidden">
+          <div className="relative px-4 sm:px-5 py-4 sm:py-5 border-b border-slate-100 bg-linear-to-br from-slate-50 via-white to-cyan-50/50">
+            <div className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-cyan-600 via-teal-500 to-slate-700" />
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 space-y-1.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span
+                    className={cn(
+                      'inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ring-1 ring-inset capitalize',
+                      statusTone.badge,
+                    )}
+                  >
+                    {statusTab}
+                  </span>
+                  {filtersActive ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                      <Filter className="w-3 h-3" />
+                      Filtered
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">
+                  <span className="tabular-nums text-cyan-800">
+                    {filtered.length}
+                  </span>{' '}
+                  {statusTab} registration
+                  {filtered.length === 1 ? '' : 's'}
+                  {filtersActive ? (
+                    <span className="ml-1.5 text-sm font-medium text-slate-500">
+                      of {statusScopedCount} in this tab
+                    </span>
+                  ) : null}
                 </p>
-                <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1 tabular-nums">
+              </div>
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                {filtersActive ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={clearFilters}
+                    className="border-slate-200 text-slate-700"
+                  >
+                    Clear filters
+                  </Button>
+                ) : null}
+                <CreateRobofestRegistrationForm
+                  content={content}
+                  schools={schools}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-12 gap-0 divide-y sm:divide-y-0 xl:divide-x divide-slate-100">
+            <div className="xl:col-span-2 sm:border-r border-slate-100 p-4 sm:p-5 space-y-4">
+              <div className="rounded-xl bg-slate-50/80 border border-slate-100 p-3.5">
+                <div className="flex items-center gap-2 text-slate-500 mb-2">
+                  <Users className="w-3.5 h-3.5 text-cyan-700" />
+                  <p className="text-[11px] font-semibold uppercase tracking-wide">
+                    Participants
+                  </p>
+                </div>
+                <p className="text-3xl font-bold tabular-nums text-slate-900 tracking-tight">
                   {stats.total}
                 </p>
-              </CardContent>
-            </Card>
-            <Card className="border-gray-200/80 shadow-sm">
-              <CardContent className="p-3.5 sm:p-4">
-                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
-                  Paid
+                <p className="text-xs font-medium text-slate-500 mt-1 tabular-nums">
+                  {stats.registrations} team
+                  {stats.registrations === 1 ? '' : 's'}
                 </p>
-                <p className="text-2xl sm:text-3xl font-bold text-emerald-700 mt-1 tabular-nums">
-                  {stats.paidCount}
-                </p>
-                <p className="text-xs text-gray-500 mt-0.5 tabular-nums">
+              </div>
+              <div className="rounded-xl bg-emerald-50/70 border border-emerald-100 p-3.5">
+                <div className="flex items-center gap-2 text-emerald-700/80 mb-2">
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <p className="text-[11px] font-semibold uppercase tracking-wide">
+                    Paid
+                  </p>
+                </div>
+                <p className="text-3xl font-bold tabular-nums text-emerald-800 tracking-tight">
                   BDT {stats.paidTotal.toLocaleString()}
                 </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="lg:col-span-5 border-gray-200/80 shadow-sm overflow-hidden">
-            <CardContent className="p-3.5 sm:p-4">
-              <div className="flex items-center justify-between gap-2 mb-3">
-                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
-                  By competition
+                <p className="text-xs font-medium text-emerald-700/80 mt-1 tabular-nums">
+                  {stats.paidCount} payment{stats.paidCount === 1 ? '' : 's'}
                 </p>
-                <span className="text-[11px] text-gray-400">
+              </div>
+            </div>
+
+            <div className="xl:col-span-5 p-4 sm:p-5">
+              <div className="flex items-center justify-between gap-2 mb-3.5">
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-3.5 h-3.5 text-cyan-700" />
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    By competition
+                  </p>
+                </div>
+                <span className="text-[11px] font-medium text-slate-400 tabular-nums">
                   {stats.byCategory.length}{' '}
                   {stats.byCategory.length === 1 ? 'event' : 'events'}
                 </span>
               </div>
               {stats.byCategory.length === 0 ? (
-                <p className="text-sm text-gray-400 py-2">No registrations yet</p>
+                <p className="text-sm text-slate-400 py-6 text-center">
+                  No registrations in this view
+                </p>
               ) : (
-                <ul className="space-y-2.5">
+                <ul className="space-y-3">
                   {stats.byCategory
                     .slice()
                     .sort((a, b) => b[1] - a[1])
@@ -504,23 +664,26 @@ export default function RobofestDashboardClient({
                           : 0
                       return (
                         <li key={name}>
-                          <div className="flex items-center justify-between gap-3 text-sm mb-1">
-                            <span className="font-medium text-gray-800 truncate">
+                          <div className="flex items-center justify-between gap-3 text-sm mb-1.5">
+                            <span className="font-medium text-slate-800 truncate">
                               {name}
                             </span>
-                            <span className="shrink-0 tabular-nums text-gray-600">
-                              <span className="font-semibold text-gray-900">
+                            <span className="shrink-0 tabular-nums">
+                              <span className="font-bold text-slate-900">
                                 {count}
                               </span>
-                              <span className="text-gray-400 text-xs ml-1">
+                              <span className="text-slate-400 text-xs ml-1.5">
                                 {pct}%
                               </span>
                             </span>
                           </div>
-                          <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                          <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
                             <div
-                              className="h-full rounded-full bg-indigo-500/80 transition-[width] duration-300"
-                              style={{ width: `${Math.max(pct, 4)}%` }}
+                              className={cn(
+                                'h-full rounded-full bg-linear-to-r transition-[width] duration-300',
+                                statusTone.bar,
+                              )}
+                              style={{ width: `${Math.max(pct, 6)}%` }}
                             />
                           </div>
                         </li>
@@ -528,20 +691,21 @@ export default function RobofestDashboardClient({
                     })}
                 </ul>
               )}
-            </CardContent>
-          </Card>
+            </div>
 
-          <Card className="lg:col-span-4 border-gray-200/80 shadow-sm overflow-hidden">
-            <CardContent className="p-3.5 sm:p-4">
-              <div className="flex items-center justify-between gap-2 mb-3">
-                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
+            <div className="xl:col-span-5 p-4 sm:p-5">
+              <div className="flex items-center gap-2 mb-3.5">
+                <Layers className="w-3.5 h-3.5 text-cyan-700" />
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                   By age category
                 </p>
               </div>
               {stats.byAge.length === 0 ? (
-                <p className="text-sm text-gray-400 py-2">No age data yet</p>
+                <p className="text-sm text-slate-400 py-6 text-center">
+                  No age data yet
+                </p>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {(['explorer', 'innovators'] as const).map((ageKey) => {
                     const count =
                       stats.byAge.find(([key]) => key === ageKey)?.[1] ?? 0
@@ -554,10 +718,10 @@ export default function RobofestDashboardClient({
                       <div
                         key={ageKey}
                         className={cn(
-                          'rounded-xl border px-3 py-2.5',
+                          'rounded-xl border px-3.5 py-3 transition-colors',
                           isExplorer
-                            ? 'border-violet-100 bg-violet-50/70'
-                            : 'border-sky-100 bg-sky-50/70',
+                            ? 'border-teal-100 bg-linear-to-br from-teal-50 to-white'
+                            : 'border-cyan-100 bg-linear-to-br from-cyan-50 to-white',
                         )}
                       >
                         <div className="flex items-start justify-between gap-2">
@@ -565,7 +729,7 @@ export default function RobofestDashboardClient({
                             <p
                               className={cn(
                                 'text-sm font-semibold',
-                                isExplorer ? 'text-violet-900' : 'text-sky-900',
+                                isExplorer ? 'text-teal-900' : 'text-cyan-900',
                               )}
                             >
                               {isExplorer ? 'Explorer' : 'Innovators'}
@@ -573,7 +737,7 @@ export default function RobofestDashboardClient({
                             <p
                               className={cn(
                                 'text-[11px] mt-0.5',
-                                isExplorer ? 'text-violet-600' : 'text-sky-600',
+                                isExplorer ? 'text-teal-600' : 'text-cyan-600',
                               )}
                             >
                               {isExplorer
@@ -584,13 +748,13 @@ export default function RobofestDashboardClient({
                           <div className="text-right shrink-0">
                             <p
                               className={cn(
-                                'text-xl font-bold tabular-nums leading-none',
-                                isExplorer ? 'text-violet-800' : 'text-sky-800',
+                                'text-2xl font-bold tabular-nums leading-none',
+                                isExplorer ? 'text-teal-800' : 'text-cyan-800',
                               )}
                             >
                               {count}
                             </p>
-                            <p className="text-[11px] text-gray-500 mt-0.5">
+                            <p className="text-[11px] text-slate-500 mt-1">
                               {pct}%
                             </p>
                           </div>
@@ -605,38 +769,49 @@ export default function RobofestDashboardClient({
                     .map(([name, count]) => (
                       <div
                         key={name}
-                        className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5 flex items-center justify-between gap-2"
+                        className="rounded-xl border border-slate-100 bg-slate-50 px-3.5 py-3 flex items-center justify-between gap-2 sm:col-span-2"
                       >
-                        <p className="text-sm font-medium text-gray-800 truncate">
+                        <p className="text-sm font-medium text-slate-800 truncate">
                           {formatAgeCategoryLabel(name)}
                         </p>
-                        <p className="text-lg font-bold tabular-nums text-gray-900">
+                        <p className="text-lg font-bold tabular-nums text-slate-900">
                           {count}
                         </p>
                       </div>
                     ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
 
-        <Card className="border-gray-200/80 shadow-sm">
-          <CardContent className="p-3 sm:p-4 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-              <div className="space-y-1 sm:col-span-2 xl:col-span-1">
-                <label className="text-xs text-gray-500">Search</label>
-                <Input
-                  value={nameFilter}
-                  onChange={(e) => setNameFilter(e.target.value)}
-                  placeholder="Team, member, email, CA…"
-                  className="w-full"
-                />
+          <div className="border-t border-slate-100 bg-slate-50/40 px-4 sm:px-5 py-4 space-y-3.5">
+            <div className="flex items-center gap-2 text-slate-500">
+              <Search className="w-3.5 h-3.5 text-cyan-700" />
+              <p className="text-[11px] font-semibold uppercase tracking-wide">
+                Filters & export
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
+                <label className="text-xs font-medium text-slate-600">
+                  Search
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                  <Input
+                    value={nameFilter}
+                    onChange={(e) => setNameFilter(e.target.value)}
+                    placeholder="Team, member, email, CA…"
+                    className="w-full pl-8 bg-white border-slate-200"
+                  />
+                </div>
               </div>
-              <div className="space-y-1">
-                <label className="text-xs text-gray-500">Competition</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-600">
+                  Competition
+                </label>
                 <select
-                  className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                  className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
                 >
@@ -648,10 +823,12 @@ export default function RobofestDashboardClient({
                   ))}
                 </select>
               </div>
-              <div className="space-y-1">
-                <label className="text-xs text-gray-500">Division</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-600">
+                  Division
+                </label>
                 <select
-                  className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                  className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
                   value={roundFilter}
                   onChange={(e) => setRoundFilter(e.target.value)}
                 >
@@ -663,10 +840,12 @@ export default function RobofestDashboardClient({
                   ))}
                 </select>
               </div>
-              <div className="space-y-1">
-                <label className="text-xs text-gray-500">Age category</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-600">
+                  Age category
+                </label>
                 <select
-                  className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                  className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
                   value={ageCategoryFilter}
                   onChange={(e) => setAgeCategoryFilter(e.target.value)}
                 >
@@ -677,31 +856,24 @@ export default function RobofestDashboardClient({
                   </option>
                 </select>
               </div>
-              <div className="space-y-1">
-                <label className="text-xs text-gray-500">Status</label>
-                <select
-                  className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option value="">All</option>
-                  <option value="pending">Pending</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
-              <p className="text-xs text-gray-500 mr-1 w-full sm:w-auto">
-                Export {filtered.length} matching
-              </p>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <span
+                className={cn(
+                  'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize',
+                  statusTone.chip,
+                )}
+              >
+                Export {filtered.length} {statusTab}
+              </span>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => runExport('csv')}
                 disabled={filtered.length === 0 || exportPending}
+                className="bg-white border-slate-200"
               >
                 <FileText className="w-3.5 h-3.5" />
                 CSV
@@ -709,7 +881,7 @@ export default function RobofestDashboardClient({
               <Button
                 type="button"
                 size="sm"
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 onClick={() => runExport('excel')}
                 disabled={filtered.length === 0 || exportPending}
               >
@@ -719,7 +891,7 @@ export default function RobofestDashboardClient({
               <Button
                 type="button"
                 size="sm"
-                className="bg-red-600 hover:bg-red-700 text-white"
+                className="bg-rose-600 hover:bg-rose-700 text-white"
                 onClick={() => runExport('pdf')}
                 disabled={filtered.length === 0 || exportPending}
               >
@@ -727,13 +899,13 @@ export default function RobofestDashboardClient({
                 PDF
               </Button>
               {exportPending ? (
-                <span className="text-xs text-gray-500">Exporting…</span>
+                <span className="text-xs text-slate-500">Exporting…</span>
               ) : null}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="border-gray-200/80 shadow-sm overflow-hidden w-full min-w-0">
+        <Card className="border-slate-200 shadow-sm overflow-hidden w-full min-w-0">
           <CardContent className="p-0">
             <div className="w-full overflow-x-auto overscroll-x-contain">
               <Table className="min-w-[980px] w-full table-auto">
@@ -767,15 +939,17 @@ export default function RobofestDashboardClient({
                     <TableRow>
                       <TableCell
                         colSpan={11}
-                        className="text-center text-gray-500 py-12"
+                        className="text-center text-slate-500 py-12"
                       >
-                        <p className="font-medium text-gray-700">
-                          No registrations found
+                        <p className="font-medium text-slate-700">
+                          {filtersActive
+                            ? 'No registrations found'
+                            : statusEmptyCopy[statusTab].title}
                         </p>
                         <p className="text-sm mt-1">
                           {filtersActive
                             ? 'Try clearing filters or adjusting search.'
-                            : 'New Robofest registrations will appear here.'}
+                            : statusEmptyCopy[statusTab].body}
                         </p>
                       </TableCell>
                     </TableRow>
@@ -790,7 +964,7 @@ export default function RobofestDashboardClient({
                         </TableCell>
                         <TableCell className="min-w-[9rem] max-w-[14rem]">
                           <div className="font-medium leading-snug">{r.name}</div>
-                          <div className="text-xs text-gray-500 flex items-center gap-1.5 flex-wrap mt-0.5">
+                          <div className="text-xs text-slate-500 flex items-center gap-1.5 flex-wrap mt-0.5">
                             <span className="truncate">{r.school || '—'}</span>
                             {r.schoolIsCustom ? (
                               <Badge
@@ -810,7 +984,7 @@ export default function RobofestDashboardClient({
                             </Badge>
                           ) : null}
                           {r.campusAmbassadorName ? (
-                            <div className="text-[11px] text-gray-500 mt-1 line-clamp-2">
+                            <div className="text-[11px] text-slate-500 mt-1 line-clamp-2">
                               CA: {r.campusAmbassadorName}
                               {r.campusAmbassadorSchool
                                 ? ` · ${r.campusAmbassadorSchool}`
@@ -833,7 +1007,7 @@ export default function RobofestDashboardClient({
                         </TableCell>
                         <TableCell className="text-xs min-w-[8rem]">
                           <div className="break-all">{r.email}</div>
-                          <div className="text-gray-500 whitespace-nowrap">
+                          <div className="text-slate-500 whitespace-nowrap">
                             {r.phone}
                           </div>
                         </TableCell>
@@ -851,7 +1025,7 @@ export default function RobofestDashboardClient({
                         <TableCell className="text-xs whitespace-nowrap">
                           <div>{r.paymentStatus || '—'}</div>
                           {r.amountPaid != null ? (
-                            <div className="text-gray-500">
+                            <div className="text-slate-500">
                               BDT {r.amountPaid}
                             </div>
                           ) : null}
@@ -901,15 +1075,15 @@ export default function RobofestDashboardClient({
                                 </span>
                               ) : null}
                             </Button>
-                            <Button asChild size="sm" variant="outline">
-                              <a
-                                href={`/api/dashboard/robofest/registrations/${r.id}/pdf`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                title="Download confirmation PDF"
-                              >
-                                <Download className="w-3.5 h-3.5" />
-                              </a>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={pending || !r.registrationId}
+                              onClick={() => downloadConfirmationPdf(r)}
+                              title="Download confirmation PDF"
+                            >
+                              <Download className="w-3.5 h-3.5" />
                             </Button>
                           </div>
                         </TableCell>
@@ -921,6 +1095,7 @@ export default function RobofestDashboardClient({
             </div>
           </CardContent>
         </Card>
+        </Tabs>
       </TabsContent>
 
       <TabsContent value="content" className="space-y-4">
@@ -933,7 +1108,7 @@ export default function RobofestDashboardClient({
         <ContentSection
           title="Event copy"
           description="Hero text, contact links, and info-strip date/venue lines."
-          icon={<Trophy className="w-4 h-4 text-indigo-500" />}
+          icon={<Trophy className="w-4 h-4 text-cyan-500" />}
           defaultOpen
           contentClassName="grid sm:grid-cols-2 gap-3"
         >
@@ -951,7 +1126,7 @@ export default function RobofestDashboardClient({
                 key={key}
                 className={`space-y-1 ${key === 'lead' ? 'sm:col-span-2' : ''}`}
               >
-                <label className="text-xs text-gray-500">{label}</label>
+                <label className="text-xs text-slate-500">{label}</label>
                 {key === 'lead' ? (
                   <Textarea
                     value={content[key] ?? ''}
@@ -971,7 +1146,7 @@ export default function RobofestDashboardClient({
               </div>
             ))}
             <div className="space-y-1 sm:col-span-2">
-              <label className="text-xs text-gray-500">
+              <label className="text-xs text-slate-500">
                 Date lines (one per line — shown in info strip)
               </label>
               <Textarea
@@ -989,7 +1164,7 @@ export default function RobofestDashboardClient({
               />
             </div>
             <div className="space-y-1 sm:col-span-2">
-              <label className="text-xs text-gray-500">
+              <label className="text-xs text-slate-500">
                 Venue lines (one per line — shown in info strip)
               </label>
               <Textarea
@@ -1016,7 +1191,7 @@ export default function RobofestDashboardClient({
             {(content.contactLines || []).map((line, index) => (
               <div
                 key={index}
-                className="grid sm:grid-cols-3 gap-2 border border-gray-100 rounded-lg p-3"
+                className="grid sm:grid-cols-3 gap-2 border border-slate-100 rounded-lg p-3"
               >
                 {(
                   [
@@ -1026,7 +1201,7 @@ export default function RobofestDashboardClient({
                   ] as const
                 ).map(([field, label]) => (
                   <div key={field} className="space-y-1">
-                    <label className="text-xs text-gray-500">{label}</label>
+                    <label className="text-xs text-slate-500">{label}</label>
                     <Input
                       value={line[field]}
                       onChange={(e) => {
@@ -1096,7 +1271,7 @@ export default function RobofestDashboardClient({
               Paid registration (global)
             </label>
             <div className="space-y-1">
-              <label className="text-xs text-gray-500">
+              <label className="text-xs text-slate-500">
                 Fee per member (BDT)
               </label>
               <Input
@@ -1112,7 +1287,7 @@ export default function RobofestDashboardClient({
                 className="w-36"
               />
             </div>
-            <p className="text-xs text-gray-500 max-w-md">
+            <p className="text-xs text-slate-500 max-w-md">
               Charged as fee × team size via bKash. Competition per-member
               override above 0 replaces the global fee.
             </p>
@@ -1125,7 +1300,7 @@ export default function RobofestDashboardClient({
           defaultOpen
         >
             <div className="space-y-1 min-w-56">
-              <label className="text-xs text-gray-500">Closing date</label>
+              <label className="text-xs text-slate-500">Closing date</label>
               <DatePicker
                 value={
                   content.registrationClosingDate
@@ -1149,7 +1324,7 @@ export default function RobofestDashboardClient({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-gray-500">Closing time</label>
+              <label className="text-xs text-slate-500">Closing time</label>
               <Input
                 type="time"
                 value={
@@ -1191,7 +1366,7 @@ export default function RobofestDashboardClient({
                 Clear deadline
               </Button>
             ) : null}
-            <p className="text-xs text-gray-500 w-full">
+            <p className="text-xs text-slate-500 w-full">
               Shown as a live countdown on the Robofest pages. Registration closes
               at the exact Bangladesh time (BST, UTC+6) you set.
             </p>
@@ -1205,7 +1380,7 @@ export default function RobofestDashboardClient({
             {content.rounds.map((round, index) => (
               <div
                 key={`${round.city}-${index}`}
-                className="grid sm:grid-cols-2 gap-2 border border-gray-100 rounded-lg p-3"
+                className="grid sm:grid-cols-2 gap-2 border border-slate-100 rounded-lg p-3"
               >
                 {(
                   [
@@ -1217,7 +1392,7 @@ export default function RobofestDashboardClient({
                   ] as const
                 ).map(([field, label]) => (
                   <div key={field} className="space-y-1">
-                    <label className="text-xs text-gray-500">{label}</label>
+                    <label className="text-xs text-slate-500">{label}</label>
                     <Input
                       value={round[field]}
                       onChange={(e) => {
@@ -1243,15 +1418,15 @@ export default function RobofestDashboardClient({
             {content.categories.map((category, index) => (
               <Collapsible
                 key={category.slug || index}
-                className="group/cat rounded-lg border border-gray-100 overflow-hidden"
+                className="group/cat rounded-lg border border-slate-100 overflow-hidden"
               >
                 <CollapsibleTrigger asChild>
                   <button
                     type="button"
-                    className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-gray-50/80 transition-colors"
+                    className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-slate-50/80 transition-colors"
                   >
                     <div className="flex min-w-0 flex-wrap items-center gap-2">
-                      <p className="font-medium text-gray-900 truncate">
+                      <p className="font-medium text-slate-900 truncate">
                         {category.name || `Competition ${index + 1}`}
                       </p>
                       <Badge
@@ -1260,16 +1435,16 @@ export default function RobofestDashboardClient({
                           'text-[10px] px-1.5 py-0',
                           category.active
                             ? 'bg-emerald-50 text-emerald-800'
-                            : 'bg-gray-100 text-gray-600',
+                            : 'bg-slate-100 text-slate-600',
                         )}
                       >
                         {category.active ? 'Active' : 'Inactive'}
                       </Badge>
                     </div>
-                    <ChevronDown className="w-4 h-4 shrink-0 text-gray-400 transition-transform group-data-[state=open]/cat:rotate-180" />
+                    <ChevronDown className="w-4 h-4 shrink-0 text-slate-400 transition-transform group-data-[state=open]/cat:rotate-180" />
                   </button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="border-t border-gray-100 px-3 py-3 space-y-3">
+                <CollapsibleContent className="border-t border-slate-100 px-3 py-3 space-y-3">
                 <div className="flex flex-wrap gap-3 items-center justify-between">
                   <label className="flex items-center gap-2 text-sm">
                     <input
@@ -1301,7 +1476,7 @@ export default function RobofestDashboardClient({
                     ] as const
                   ).map(([field, label]) => (
                     <div key={field} className="space-y-1">
-                      <label className="text-xs text-gray-500">{label}</label>
+                      <label className="text-xs text-slate-500">{label}</label>
                       <Input
                         value={category[field] ?? ''}
                         onChange={(e) => {
@@ -1319,7 +1494,7 @@ export default function RobofestDashboardClient({
                     </div>
                   ))}
                   <div className="space-y-1">
-                    <label className="text-xs text-gray-500">
+                    <label className="text-xs text-slate-500">
                       Fee per member override (BDT, blank = use global)
                     </label>
                     <Input
@@ -1341,7 +1516,7 @@ export default function RobofestDashboardClient({
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-gray-500">Short description</label>
+                  <label className="text-xs text-slate-500">Short description</label>
                   <Textarea
                     rows={2}
                     value={category.description}
@@ -1359,7 +1534,7 @@ export default function RobofestDashboardClient({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-gray-500">About</label>
+                  <label className="text-xs text-slate-500">About</label>
                   <Textarea
                     rows={3}
                     value={category.about}
@@ -1374,7 +1549,7 @@ export default function RobofestDashboardClient({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-gray-500">
+                  <label className="text-xs text-slate-500">
                     Highlights (one per line)
                   </label>
                   <Textarea
@@ -1397,7 +1572,7 @@ export default function RobofestDashboardClient({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-gray-500">Who should join</label>
+                  <label className="text-xs text-slate-500">Who should join</label>
                   <Textarea
                     rows={2}
                     value={category.whoShouldJoin}
@@ -1427,10 +1602,10 @@ export default function RobofestDashboardClient({
             {content.howItWorks.map((step, index) => (
               <div
                 key={index}
-                className="grid sm:grid-cols-3 gap-2 border border-gray-100 rounded-lg p-3"
+                className="grid sm:grid-cols-3 gap-2 border border-slate-100 rounded-lg p-3"
               >
                 <div className="space-y-1">
-                  <label className="text-xs text-gray-500">Icon</label>
+                  <label className="text-xs text-slate-500">Icon</label>
                   <Input
                     value={step.icon}
                     onChange={(e) => {
@@ -1444,7 +1619,7 @@ export default function RobofestDashboardClient({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-gray-500">Title</label>
+                  <label className="text-xs text-slate-500">Title</label>
                   <Input
                     value={step.title}
                     onChange={(e) => {
@@ -1461,7 +1636,7 @@ export default function RobofestDashboardClient({
                   />
                 </div>
                 <div className="space-y-1 sm:col-span-3">
-                  <label className="text-xs text-gray-500">Description</label>
+                  <label className="text-xs text-slate-500">Description</label>
                   <Textarea
                     rows={2}
                     value={step.description}

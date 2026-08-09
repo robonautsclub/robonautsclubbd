@@ -9,7 +9,7 @@ import {
   sendRobofestConfirmationEmail,
   uniqueMemberEmails,
 } from "@/lib/robofest-email";
-import { uploadPDFToStorage } from "@/lib/pdfStorage";
+import { generateBookingConfirmationPDF } from "@/lib/pdfGenerator";
 import { generateRegistrationId } from "@/lib/registrationId";
 import { allocateRobofestTeamNumber } from "@/lib/robofest-team-number";
 import {
@@ -144,6 +144,79 @@ export function buildRobofestEventForPdfEmail(
     createdAt: now,
     updatedAt: now,
     createdBy: "system",
+  };
+}
+
+/**
+ * Build a confirmation PDF from in-memory registration + content (no Firestore reads).
+ */
+export async function generateRobofestConfirmationPdfFromData(
+  registration: RobofestRegistration,
+  content: RobofestContent,
+  baseUrl?: string,
+): Promise<{ buffer: Buffer; filename: string } | { error: string }> {
+  if (!registration.registrationId) {
+    return { error: "Registration ID is missing." };
+  }
+
+  const ageCategory =
+    registration.ageCategory === "innovators" ? "innovators" : "explorer";
+  const teamMembers = registration.teamMembers || [];
+  const teamSize = registration.teamSize || teamMembers.length || 1;
+
+  const event = buildRobofestEventForPdfEmail(content, {
+    category: registration.category,
+    name: registration.name,
+    email: registration.email,
+    phone: registration.phone,
+    school: registration.school,
+    ageCategory,
+    teamSize,
+    teamMembers,
+    campusAmbassadorId: registration.campusAmbassadorId,
+    campusAmbassadorName: registration.campusAmbassadorName,
+    campusAmbassadorSchool: registration.campusAmbassadorSchool,
+    roundCity: registration.roundCity,
+    notes: registration.notes,
+  });
+
+  const infoParts = buildRegistrationInfoParts({
+    category: registration.category,
+    roundCity: registration.roundCity,
+    ageCategory,
+    teamSize,
+    teamMembers,
+    campusAmbassadorName: registration.campusAmbassadorName,
+    campusAmbassadorSchool: registration.campusAmbassadorSchool,
+    notes: registration.notes,
+    amountPaid: registration.amountPaid,
+    trxId: registration.trxId,
+    includeMembers: false,
+  });
+
+  const origin = (baseUrl || getBaseUrl()).replace(/\/$/, "");
+  const verificationUrl = `${origin}/verify-booking?registrationId=${encodeURIComponent(registration.registrationId)}`;
+
+  const buffer = await generateBookingConfirmationPDF({
+    registrationId: registration.registrationId,
+    bookingId: registration.id,
+    event,
+    bookingDetails: {
+      name: registration.name,
+      teamName: registration.name,
+      teamNumber: registration.teamNumber,
+      email: registration.email,
+      school: registration.school,
+      phone: registration.phone,
+      information: infoParts.join("\n"),
+      teamMembers,
+    },
+    verificationUrl,
+  });
+
+  return {
+    buffer,
+    filename: `Robofest-Confirmation-${registration.registrationId}.pdf`,
   };
 }
 
@@ -342,14 +415,6 @@ export async function createRobofestRegistrationAndSendEmail(
   try {
     const pdfUpdate: Record<string, unknown> = {};
     if (emailResult.pdfBuffer && emailResult.pdfBuffer.length > 0) {
-      const uploadedPdfUrl = await uploadPDFToStorage(
-        emailResult.pdfBuffer,
-        "robofest",
-        regRef.id,
-      );
-      if (uploadedPdfUrl) {
-        pdfUpdate.pdfUrl = uploadedPdfUrl;
-      }
       pdfUpdate.pdfGenerated = true;
       pdfUpdate.pdfGeneratedAt = new Date();
     } else {
@@ -486,14 +551,13 @@ export async function resendRobofestConfirmationEmail(
 
   const pdfUpdate: Record<string, unknown> = {};
   if (emailResult.pdfBuffer && emailResult.pdfBuffer.length > 0) {
-    const uploadedPdfUrl = await uploadPDFToStorage(
-      emailResult.pdfBuffer,
-      "robofest",
-      registration.id,
-    );
-    if (uploadedPdfUrl) pdfUpdate.pdfUrl = uploadedPdfUrl;
     pdfUpdate.pdfGenerated = true;
     pdfUpdate.pdfGeneratedAt = new Date();
+  } else {
+    pdfUpdate.pdfGenerated = false;
+    if (emailResult.pdfError) {
+      pdfUpdate.pdfError = emailResult.pdfError;
+    }
   }
 
   if (emailResult.success) {

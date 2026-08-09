@@ -6,7 +6,6 @@ import { adminDb } from '@/lib/firebase-admin'
 import { Event } from '@/types/event'
 import { Course } from '@/types/course'
 import { sendBookingConfirmationEmail } from '@/lib/email'
-import { uploadPDFToStorage } from '@/lib/pdfStorage'
 import { generateRegistrationId } from '@/lib/registrationId'
 import { isRegistrationOpen } from '@/lib/dateUtils'
 import {
@@ -364,14 +363,6 @@ async function createBookingRecordAndSendEmail(
     const pdfUpdate: Record<string, unknown> = {}
 
     if (emailResult.pdfBuffer && emailResult.pdfBuffer.length > 0) {
-      const uploadedPdfUrl = await uploadPDFToStorage(
-        emailResult.pdfBuffer,
-        formData.eventId,
-        bookingId
-      )
-      if (uploadedPdfUrl) {
-        pdfUpdate.pdfUrl = uploadedPdfUrl
-      }
       pdfUpdate.pdfGenerated = true
       pdfUpdate.pdfGeneratedAt = new Date()
     } else {
