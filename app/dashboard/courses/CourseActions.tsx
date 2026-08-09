@@ -72,7 +72,7 @@ export default function CourseActions({ course, currentUserId, userRole }: Cours
             variant="ghost"
             size="sm"
             onClick={() => setShowEditForm(true)}
-            className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+            className="text-cyan-700 hover:text-cyan-800 hover:bg-cyan-50"
             title="Edit course"
           >
             <Edit className="w-4 h-4" />

@@ -104,7 +104,7 @@ export default function CustomFormBuilder({ fields, onChange, disabled = false }
           size="sm"
           onClick={addField}
           disabled={disabled}
-          className="border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+          className="border-cyan-200 text-cyan-800 hover:bg-cyan-50"
         >
           <Plus className="w-4 h-4" />
           Add field
@@ -208,7 +208,7 @@ export default function CustomFormBuilder({ fields, onChange, disabled = false }
                     size="sm"
                     onClick={() => addOption(fieldIndex)}
                     disabled={disabled}
-                    className="border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                    className="border-cyan-200 text-cyan-800 hover:bg-cyan-50"
                   >
                     + Add option
                   </Button>

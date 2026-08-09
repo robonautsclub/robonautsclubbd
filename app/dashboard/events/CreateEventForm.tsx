@@ -230,7 +230,7 @@ export default function CreateEventForm() {
       <SheetTrigger asChild>
         <Button
           type="button"
-          className="bg-indigo-500 hover:bg-indigo-600 text-white shadow-md hover:shadow-lg"
+          className="bg-cyan-500 hover:bg-cyan-700 text-white shadow-md hover:shadow-lg"
         >
           <Plus className="w-5 h-5" />
           Create Event
@@ -242,14 +242,14 @@ export default function CreateEventForm() {
         className="w-full sm:max-w-3xl! p-0 gap-0 flex flex-col"
       >
         {/* Header */}
-        <div className="bg-linear-to-r from-indigo-500 to-blue-600 px-4 sm:px-6 py-4 sm:py-5 flex justify-between items-center">
+        <div className="bg-linear-to-r from-cyan-500 to-blue-600 px-4 sm:px-6 py-4 sm:py-5 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
               <SheetTitle className="text-lg sm:text-xl font-bold text-white">Create New Event</SheetTitle>
-              <SheetDescription className="text-xs sm:text-sm text-indigo-100">Fill in the details below to create an event</SheetDescription>
+              <SheetDescription className="text-xs sm:text-sm text-cyan-100">Fill in the details below to create an event</SheetDescription>
             </div>
           </div>
           <Button
@@ -276,7 +276,7 @@ export default function CreateEventForm() {
             {/* Event Name */}
             <div className="space-y-2">
               <label htmlFor="title" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <Sparkles className="w-4 h-4 text-indigo-600" />
+                <Sparkles className="w-4 h-4 text-cyan-700" />
                 Event Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -286,7 +286,7 @@ export default function CreateEventForm() {
                 onChange={(e) => form.setValue('title', e.target.value)}
                 required
                 placeholder="Enter event name"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all"
                 disabled={loading}
               />
             </div>
@@ -295,7 +295,7 @@ export default function CreateEventForm() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                  <Calendar className="w-4 h-4 text-indigo-600" />
+                  <Calendar className="w-4 h-4 text-cyan-700" />
                   Date(s) <span className="text-red-500">*</span>
                 </label>
                 <MultiDatePicker
@@ -309,7 +309,7 @@ export default function CreateEventForm() {
 
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                  <Clock className="w-4 h-4 text-indigo-600" />
+                  <Clock className="w-4 h-4 text-cyan-700" />
                   Time
                 </label>
                 <TimePicker
@@ -323,7 +323,7 @@ export default function CreateEventForm() {
             {/* Registration closes on (optional) */}
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <Calendar className="w-4 h-4 text-indigo-600" />
+                <Calendar className="w-4 h-4 text-cyan-700" />
                 Registration closes on
               </label>
               <MultiDatePicker
@@ -342,7 +342,7 @@ export default function CreateEventForm() {
             {/* Description */}
             <div className="space-y-2">
               <label htmlFor="description" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <FileText className="w-4 h-4 text-indigo-600" />
+                <FileText className="w-4 h-4 text-cyan-700" />
                 Description <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -352,7 +352,7 @@ export default function CreateEventForm() {
                 onChange={(e) => form.setValue('description', e.target.value)}
                 required
                 placeholder="Brief description of the event"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all resize-none"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all resize-none"
                 disabled={loading}
               />
             </div>
@@ -360,7 +360,7 @@ export default function CreateEventForm() {
             {/* Full Description */}
             <div className="space-y-2">
               <label htmlFor="fullDescription" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <FileText className="w-4 h-4 text-indigo-600" />
+                <FileText className="w-4 h-4 text-cyan-700" />
                 Full Description
               </label>
               <textarea
@@ -369,7 +369,7 @@ export default function CreateEventForm() {
                 value={formData.fullDescription}
                 onChange={(e) => form.setValue('fullDescription', e.target.value)}
                 placeholder="Detailed description of the event"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all resize-none"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all resize-none"
                 disabled={loading}
               />
             </div>
@@ -378,7 +378,7 @@ export default function CreateEventForm() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label htmlFor="location" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                  <MapPin className="w-4 h-4 text-indigo-600" />
+                  <MapPin className="w-4 h-4 text-cyan-700" />
                   Location
                 </label>
                 <input
@@ -387,14 +387,14 @@ export default function CreateEventForm() {
                   value={formData.location}
                   onChange={(e) => form.setValue('location', e.target.value)}
                   placeholder="Event location"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all"
                   disabled={loading}
                 />
               </div>
 
               <div className="space-y-2">
                 <label htmlFor="venue" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                  <MapPin className="w-4 h-4 text-indigo-600" />
+                  <MapPin className="w-4 h-4 text-cyan-700" />
                   Venue
                 </label>
                 <input
@@ -403,7 +403,7 @@ export default function CreateEventForm() {
                   value={formData.venue}
                   onChange={(e) => form.setValue('venue', e.target.value)}
                   placeholder="Specific venue name"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all"
                   disabled={loading}
                 />
               </div>
@@ -412,7 +412,7 @@ export default function CreateEventForm() {
             {/* Eligibility */}
             <div className="space-y-2">
               <label htmlFor="eligibility" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <Users className="w-4 h-4 text-indigo-600" />
+                <Users className="w-4 h-4 text-cyan-700" />
                 Eligibility
               </label>
               <input
@@ -421,7 +421,7 @@ export default function CreateEventForm() {
                 value={formData.eligibility}
                 onChange={(e) => form.setValue('eligibility', e.target.value)}
                 placeholder="e.g., Ages 10-18, Students in grades 3-12"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all"
                 disabled={loading}
               />
             </div>
@@ -429,7 +429,7 @@ export default function CreateEventForm() {
             {/* Categories */}
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <Tag className="w-4 h-4 text-indigo-600" />
+                <Tag className="w-4 h-4 text-cyan-700" />
                 Event Categories (optional)
               </label>
               <div className="space-y-2">
@@ -445,7 +445,7 @@ export default function CreateEventForm() {
                       }}
                       placeholder="Category name (e.g. Junior, Senior)"
                       disabled={loading}
-                      className="md:col-span-3 w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                      className="md:col-span-3 w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all"
                     />
                     <button
                       type="button"
@@ -468,7 +468,7 @@ export default function CreateEventForm() {
                     form.setValue('categories', [...form.getValues('categories'), { name: '', amount: '' }])
                   }
                   disabled={loading}
-                  className="px-4 py-2.5 border-2 border-indigo-200 text-indigo-700 rounded-xl hover:bg-indigo-50 transition-all text-sm font-medium"
+                  className="px-4 py-2.5 border-2 border-cyan-200 text-cyan-800 rounded-xl hover:bg-cyan-50 transition-all text-sm font-medium"
                 >
                   + Add Category
                 </button>
@@ -481,7 +481,7 @@ export default function CreateEventForm() {
             {/* Paid event */}
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <Banknote className="w-4 h-4 text-indigo-600" />
+                <Banknote className="w-4 h-4 text-cyan-700" />
                 Paid event
               </label>
               <label className="flex items-center gap-3 cursor-pointer">
@@ -503,7 +503,7 @@ export default function CreateEventForm() {
                     )
                   }}
                   disabled={loading}
-                  className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  className="w-4 h-4 rounded border-gray-300 text-cyan-700 focus:ring-cyan-500"
                 />
                 <span className="text-sm text-gray-700">This is a paid event</span>
               </label>
@@ -532,7 +532,7 @@ export default function CreateEventForm() {
                               }}
                               placeholder={`Amount for ${category.name.trim()}`}
                               disabled={loading}
-                              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all"
                             />
                           </div>
                         )
@@ -553,11 +553,11 @@ export default function CreateEventForm() {
                         }
                         placeholder="e.g. 500"
                         disabled={loading}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all"
                       />
                     </div>
                   )}
-                  <p className="text-xs text-indigo-600">
+                  <p className="text-xs text-cyan-700">
                     Category amount overrides base amount during checkout when categories exist.
                   </p>
                 </div>
@@ -567,7 +567,7 @@ export default function CreateEventForm() {
             {/* Agenda */}
             <div className="space-y-2">
               <label htmlFor="agenda" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <Clock className="w-4 h-4 text-indigo-600" />
+                <Clock className="w-4 h-4 text-cyan-700" />
                 Agenda
               </label>
               <textarea
@@ -576,7 +576,7 @@ export default function CreateEventForm() {
                 value={formData.agenda}
                 onChange={(e) => form.setValue('agenda', e.target.value)}
                 placeholder="Event schedule and timeline (one per line)"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all resize-none font-mono text-sm"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all resize-none font-mono text-sm"
                 disabled={loading}
               />
               <p className="text-xs text-gray-500">Tip: Use line breaks to separate agenda items</p>
@@ -585,22 +585,22 @@ export default function CreateEventForm() {
             {/* Tags */}
             <div className="space-y-2">
               <label htmlFor="tags" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <Tag className="w-4 h-4 text-indigo-600" />
+                <Tag className="w-4 h-4 text-cyan-700" />
                 Tags
               </label>
               <div className="space-y-2">
-                <div className="flex flex-wrap gap-2 p-3 min-h-12 border-2 border-gray-200 rounded-xl focus-within:ring-2 focus-within:ring-indigo-400 focus-within:border-indigo-400 transition-all bg-white">
+                <div className="flex flex-wrap gap-2 p-3 min-h-12 border-2 border-gray-200 rounded-xl focus-within:ring-2 focus-within:ring-cyan-400 focus-within:border-cyan-400 transition-all bg-white">
                   {formData.tags.map((tag, index) => (
                     <span
                       key={index}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-100 text-cyan-800 rounded-lg text-sm font-medium"
                     >
                       {tag}
                       <button
                         type="button"
                         onClick={() => handleRemoveTag(index)}
                         disabled={loading || uploading}
-                        className="hover:bg-indigo-200 rounded-full p-0.5 transition-colors disabled:opacity-50"
+                        className="hover:bg-cyan-200 rounded-full p-0.5 transition-colors disabled:opacity-50"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -629,7 +629,7 @@ export default function CreateEventForm() {
             {/* Image Upload */}
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <ImageIcon className="w-4 h-4 text-indigo-600" />
+                <ImageIcon className="w-4 h-4 text-cyan-700" />
                 Event Image
               </label>
               
@@ -700,13 +700,13 @@ export default function CreateEventForm() {
                     className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
                       loading || uploading
                         ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
-                        : 'border-gray-300 bg-gray-50 hover:border-indigo-400 hover:bg-indigo-50'
+                        : 'border-gray-300 bg-gray-50 hover:border-cyan-400 hover:bg-cyan-50'
                     }`}
                   >
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       <Upload className="w-8 h-8 mb-2 text-gray-400" />
                       <p className="mb-2 text-sm text-gray-500">
-                        <span className="font-semibold text-indigo-600">Click to upload</span> or drag and drop
+                        <span className="font-semibold text-cyan-700">Click to upload</span> or drag and drop
                       </p>
                       <p className="text-xs text-gray-500">PNG, JPG, WebP, or GIF (MAX. 5MB)</p>
                     </div>
@@ -717,7 +717,7 @@ export default function CreateEventForm() {
                 <p className="text-xs text-gray-500">
                   Upload an image from your device. It will be automatically optimized and converted to AVIF format.
                 </p>
-                <p className="text-xs text-indigo-600 font-medium">
+                <p className="text-xs text-cyan-700 font-medium">
                   Recommended size: 1200 × 800 pixels (3:2 aspect ratio) for best display quality
                 </p>
               </div>
@@ -726,7 +726,7 @@ export default function CreateEventForm() {
             {/* Contact person */}
             <div className="space-y-3">
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <Users className="w-4 h-4 text-indigo-600" />
+                <Users className="w-4 h-4 text-cyan-700" />
                 Contact Person (optional)
               </label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -735,7 +735,7 @@ export default function CreateEventForm() {
                   value={formData.contactPersonName}
                   onChange={(e) => form.setValue('contactPersonName', e.target.value)}
                   placeholder="Contact person name"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all"
                   disabled={loading}
                 />
                 <input
@@ -743,7 +743,7 @@ export default function CreateEventForm() {
                   value={formData.contactPersonDesignation}
                   onChange={(e) => form.setValue('contactPersonDesignation', e.target.value)}
                   placeholder="Designation"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all"
                   disabled={loading}
                 />
               </div>
@@ -752,7 +752,7 @@ export default function CreateEventForm() {
                 value={formData.contactPersonMobileOrEmail}
                 onChange={(e) => form.setValue('contactPersonMobileOrEmail', e.target.value)}
                 placeholder="Mobile number or email"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all"
                 disabled={loading}
               />
             </div>
@@ -850,7 +850,7 @@ export default function CreateEventForm() {
               <Button
                 type="submit"
                 disabled={loading}
-                className="bg-indigo-500 hover:bg-indigo-600 text-white shadow-md hover:shadow-lg"
+                className="bg-cyan-500 hover:bg-cyan-700 text-white shadow-md hover:shadow-lg"
               >
                 {loading ? (
                   <>

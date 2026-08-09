@@ -152,14 +152,14 @@ export default function EditCourseForm({ course, onClose }: EditCourseFormProps)
         showCloseButton={false}
         className="sm:max-w-3xl! max-h-[95vh] p-0 gap-0 overflow-hidden flex flex-col"
       >
-        <div className="bg-linear-to-r from-indigo-500 to-blue-600 px-4 sm:px-6 py-4 sm:py-5 flex justify-between items-center">
+        <div className="bg-linear-to-r from-cyan-500 to-blue-600 px-4 sm:px-6 py-4 sm:py-5 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center">
               <Edit className="w-5 h-5 text-white" />
             </div>
             <div>
               <DialogTitle className="text-lg sm:text-xl font-bold text-white">Edit Course</DialogTitle>
-              <DialogDescription className="text-xs sm:text-sm text-indigo-100">
+              <DialogDescription className="text-xs sm:text-sm text-cyan-100">
                 Update the course details below
               </DialogDescription>
             </div>
@@ -191,7 +191,7 @@ export default function EditCourseForm({ course, onClose }: EditCourseFormProps)
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                      <BookOpen className="w-4 h-4 text-indigo-600" />
+                      <BookOpen className="w-4 h-4 text-cyan-700" />
                       Course Title <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
@@ -214,7 +214,7 @@ export default function EditCourseForm({ course, onClose }: EditCourseFormProps)
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                      <GraduationCap className="w-4 h-4 text-indigo-600" />
+                      <GraduationCap className="w-4 h-4 text-cyan-700" />
                       Level <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
@@ -243,7 +243,7 @@ export default function EditCourseForm({ course, onClose }: EditCourseFormProps)
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                      <FileText className="w-4 h-4 text-indigo-600" />
+                      <FileText className="w-4 h-4 text-cyan-700" />
                       Description <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
@@ -267,7 +267,7 @@ export default function EditCourseForm({ course, onClose }: EditCourseFormProps)
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                      <LinkIcon className="w-4 h-4 text-indigo-600" />
+                      <LinkIcon className="w-4 h-4 text-cyan-700" />
                       Course Link (Optional)
                     </FormLabel>
                     <FormControl>
@@ -291,7 +291,7 @@ export default function EditCourseForm({ course, onClose }: EditCourseFormProps)
                 render={() => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                      <ImageIcon className="w-4 h-4 text-indigo-600" />
+                      <ImageIcon className="w-4 h-4 text-cyan-700" />
                       Course Image <span className="text-red-500">*</span>
                     </FormLabel>
                     {imageUrl ? (
@@ -310,7 +310,7 @@ export default function EditCourseForm({ course, onClose }: EditCourseFormProps)
                         {!imagePreview && (
                           <label
                             htmlFor="edit-course-image-upload"
-                            className="absolute bottom-2 right-2 p-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                            className="absolute bottom-2 right-2 p-2 bg-cyan-500 hover:bg-cyan-700 text-white rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                           >
                             <Upload className="w-4 h-4 inline mr-1" />
                             Change
@@ -341,14 +341,14 @@ export default function EditCourseForm({ course, onClose }: EditCourseFormProps)
                           htmlFor="edit-course-image-upload"
                           className={`flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
                             uploading
-                              ? 'border-indigo-400 bg-indigo-50'
-                              : 'border-gray-300 hover:border-indigo-400 hover:bg-gray-50'
+                              ? 'border-cyan-400 bg-cyan-50'
+                              : 'border-gray-300 hover:border-cyan-400 hover:bg-gray-50'
                           } ${loading || uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                           {uploading ? (
                             <div className="flex flex-col items-center gap-3">
-                              <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                              <p className="text-sm font-medium text-indigo-600">Uploading image...</p>
+                              <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+                              <p className="text-sm font-medium text-cyan-700">Uploading image...</p>
                             </div>
                           ) : (
                             <>
@@ -377,7 +377,7 @@ export default function EditCourseForm({ course, onClose }: EditCourseFormProps)
                 <Button
                   type="submit"
                   disabled={loading || uploading || !imageUrl}
-                  className="bg-indigo-500 hover:bg-indigo-600 text-white"
+                  className="bg-cyan-500 hover:bg-cyan-700 text-white"
                 >
                   {loading ? (
                     <>

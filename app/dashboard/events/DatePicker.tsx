@@ -209,9 +209,9 @@ export default function DatePicker({ value, onChange, disabled, required }: Date
               className={`
                 aspect-square flex items-center justify-center rounded-lg text-sm font-medium transition-all
                 ${isSelected
-                  ? 'bg-indigo-500 text-white shadow-md'
+                  ? 'bg-cyan-500 text-white shadow-md'
                   : isToday
-                    ? 'bg-indigo-100 text-indigo-700 font-semibold'
+                    ? 'bg-cyan-100 text-cyan-800 font-semibold'
                     : 'text-gray-700 hover:bg-gray-100'
                 }
               `}
@@ -226,7 +226,7 @@ export default function DatePicker({ value, onChange, disabled, required }: Date
         <button
           type="button"
           onClick={() => handleDateSelect(new Date())}
-          className="flex-1 px-3 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+          className="flex-1 px-3 py-2 text-sm font-medium text-cyan-700 hover:bg-cyan-50 rounded-lg transition-colors"
         >
           Today
         </button>
@@ -237,7 +237,7 @@ export default function DatePicker({ value, onChange, disabled, required }: Date
             tomorrow.setDate(tomorrow.getDate() + 1)
             handleDateSelect(tomorrow)
           }}
-          className="flex-1 px-3 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+          className="flex-1 px-3 py-2 text-sm font-medium text-cyan-700 hover:bg-cyan-50 rounded-lg transition-colors"
         >
           Tomorrow
         </button>
@@ -263,7 +263,7 @@ export default function DatePicker({ value, onChange, disabled, required }: Date
             }
           }}
           required={required}
-          className="w-full px-4 py-3 pl-11 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all cursor-pointer bg-white"
+          className="w-full px-4 py-3 pl-11 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all cursor-pointer bg-white"
           disabled={disabled}
           placeholder="Select date"
         />

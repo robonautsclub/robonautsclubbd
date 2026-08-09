@@ -8,11 +8,11 @@ export default async function ProfilePage() {
   const session = await requireAuth()
 
   return (
-    <div className="max-w-4xl space-y-6">
+    <div className="w-full min-w-0 max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">My Profile</h2>
-        <p className="text-sm sm:text-base text-gray-600 mt-1">Update your profile information</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">My Profile</h2>
+        <p className="text-sm sm:text-base text-slate-600 mt-1">Update your profile information</p>
       </div>
 
       {/* Profile Form */}

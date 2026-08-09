@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from '@/lib/auth'
-import { generateBookingConfirmationPDF } from '@/lib/pdfGenerator'
-import { getRobofestContentFresh } from '@/lib/robofest-content'
-import {
-  buildRobofestEventForPdfEmail,
-  getRobofestRegistrationById,
-} from '@/lib/robofest-registration'
-import { formatAgeCategoryLabel } from '@/lib/robofest-registration-options'
+import type { RobofestContent, RobofestRegistration } from '@/lib/robofest-content'
+import { generateRobofestConfirmationPdfFromData } from '@/lib/robofest-registration'
 import { SITE_CONFIG } from '@/lib/site-config'
 
 export const dynamic = 'force-dynamic'
@@ -27,7 +22,11 @@ function getBaseUrl(request: NextRequest): string {
   return baseUrl.replace(/\/$/, '')
 }
 
-export async function GET(request: NextRequest, context: RouteContext) {
+/**
+ * POST /api/dashboard/robofest/registrations/[id]/pdf
+ * Generate confirmation PDF from posted registration + content (no Firestore/Cloudinary).
+ */
+export async function POST(request: NextRequest, context: RouteContext) {
   const session = await getServerSession()
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -35,82 +34,48 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   const { id } = await context.params
 
-  const registration = await getRobofestRegistrationById(id)
-  if (!registration || !registration.registrationId) {
+  let body: {
+    registration?: RobofestRegistration
+    content?: RobofestContent
+  }
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+
+  const registration = body.registration
+  const content = body.content
+
+  if (!registration || !content) {
     return NextResponse.json(
-      { error: 'Registration not found' },
-      { status: 404 },
+      { error: 'registration and content are required' },
+      { status: 400 },
     )
   }
 
-  const ageCategory =
-    registration.ageCategory === 'innovators' ? 'innovators' : 'explorer'
-  const teamMembers = registration.teamMembers || []
-
-  const content = await getRobofestContentFresh()
-  const event = buildRobofestEventForPdfEmail(content, {
-    category: registration.category,
-    name: registration.name,
-    email: registration.email,
-    phone: registration.phone,
-    school: registration.school,
-    ageCategory,
-    teamSize: registration.teamSize || teamMembers.length || 1,
-    teamMembers,
-    campusAmbassadorId: registration.campusAmbassadorId,
-    campusAmbassadorName: registration.campusAmbassadorName,
-    campusAmbassadorSchool: registration.campusAmbassadorSchool,
-    roundCity: registration.roundCity,
-    notes: registration.notes,
-  })
-
-  const baseUrl = getBaseUrl(request)
-  const verificationUrl = `${baseUrl}/verify-booking?registrationId=${encodeURIComponent(registration.registrationId)}`
-
-  const infoParts = [
-    `Competition: ${registration.category}`,
-    `Division: ${registration.roundCity}`,
-    `Age category: ${formatAgeCategoryLabel(ageCategory)}`,
-    `Team size: ${registration.teamSize || teamMembers.length || 1}`,
-  ]
-  if (registration.campusAmbassadorName) {
-    infoParts.push(
-      `Campus ambassador: ${registration.campusAmbassadorName}${
-        registration.campusAmbassadorSchool
-          ? ` · ${registration.campusAmbassadorSchool}`
-          : ''
-      }`,
+  if (registration.id && registration.id !== id) {
+    return NextResponse.json(
+      { error: 'Registration id mismatch' },
+      { status: 400 },
     )
   }
-  if (registration.notes) infoParts.push(`Notes: ${registration.notes}`)
-  if (registration.amountPaid != null) {
-    infoParts.push(`Amount paid: BDT ${registration.amountPaid}`)
+
+  const result = await generateRobofestConfirmationPdfFromData(
+    { ...registration, id: registration.id || id },
+    content,
+    getBaseUrl(request),
+  )
+
+  if ('error' in result) {
+    return NextResponse.json({ error: result.error }, { status: 400 })
   }
-  if (registration.trxId) infoParts.push(`Trx ID: ${registration.trxId}`)
 
-  const pdfBuffer = await generateBookingConfirmationPDF({
-    registrationId: registration.registrationId,
-    bookingId: registration.id,
-    event,
-    bookingDetails: {
-      name: registration.name,
-      teamName: registration.name,
-      teamNumber: registration.teamNumber,
-      email: registration.email,
-      school: registration.school,
-      phone: registration.phone,
-      information: infoParts.join('\n'),
-      teamMembers,
-    },
-    verificationUrl,
-  })
-
-  const filename = `Robofest-Confirmation-${registration.registrationId}.pdf`
-  return new NextResponse(new Uint8Array(pdfBuffer), {
+  return new NextResponse(new Uint8Array(result.buffer), {
     status: 200,
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Disposition': `attachment; filename="${result.filename}"`,
       'Cache-Control': 'no-store',
     },
   })
