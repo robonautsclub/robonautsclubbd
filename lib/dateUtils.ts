@@ -1,7 +1,92 @@
 /**
  * Utility functions for handling event dates
  * Supports both single date strings and multiple dates (comma-separated or array)
+ *
+ * Registration closing times and calendar-day checks use Bangladesh Standard Time
+ * (Asia/Dhaka, UTC+6). Stored strings stay timezone-naive; wall-clock values mean BD.
  */
+
+export const BANGLADESH_TZ = 'Asia/Dhaka'
+/** Bangladesh has no DST; fixed offset from UTC. */
+export const BANGLADESH_OFFSET_MS = 6 * 60 * 60 * 1000
+
+export type BangladeshCalendarDate = {
+  year: number
+  /** 0-indexed month (Date convention) */
+  month: number
+  day: number
+}
+
+/**
+ * Convert a Bangladesh wall-clock date/time to a real UTC Date instant.
+ * `month` is 0-indexed (January = 0).
+ */
+export function bdWallTimeToUtcDate(
+  year: number,
+  month: number,
+  day: number,
+  hour = 0,
+  minute = 0,
+  second = 0,
+  ms = 0,
+): Date {
+  return new Date(
+    Date.UTC(year, month, day, hour, minute, second, ms) - BANGLADESH_OFFSET_MS,
+  )
+}
+
+/**
+ * Current calendar date in Asia/Dhaka.
+ */
+export function getBangladeshCalendarDate(now: Date = new Date()): BangladeshCalendarDate {
+  const shifted = new Date(now.getTime() + BANGLADESH_OFFSET_MS)
+  return {
+    year: shifted.getUTCFullYear(),
+    month: shifted.getUTCMonth(),
+    day: shifted.getUTCDate(),
+  }
+}
+
+/**
+ * Current time shifted so local Date getters reflect Bangladesh wall clock
+ * (same approach as the previous RealtimeEventsList BST helper).
+ */
+export function getBangladeshNow(now: Date = new Date()): Date {
+  const utcAsLocal = now.getTime() + now.getTimezoneOffset() * 60_000
+  return new Date(utcAsLocal + BANGLADESH_OFFSET_MS)
+}
+
+/**
+ * YYYY-MM-DD as a Date shifted for Bangladesh calendar-day comparisons
+ * with `getBangladeshNow` / date-fns differenceInDays.
+ */
+export function getEventDateInBangladesh(dateString: string): Date {
+  const [year, month, day] = dateString.split('-').map(Number)
+  const utcMidnight = Date.UTC(year, month - 1, day, 0, 0, 0, 0)
+  return new Date(utcMidnight + BANGLADESH_OFFSET_MS)
+}
+
+/**
+ * True UTC instant for midnight at the start of a YYYY-MM-DD day in Bangladesh.
+ */
+export function getEventMidnightUtcInBangladesh(dateString: string): Date {
+  const [year, month, day] = dateString.split('-').map(Number)
+  return bdWallTimeToUtcDate(year, month - 1, day, 0, 0, 0, 0)
+}
+
+function calendarDateKey({ year, month, day }: BangladeshCalendarDate): number {
+  return year * 10_000 + (month + 1) * 100 + day
+}
+
+function parseIsoCalendarDate(dateString: string): BangladeshCalendarDate | null {
+  const match = dateString.trim().match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!match) return null
+  return {
+    year: Number(match[1]),
+    month: Number(match[2]) - 1,
+    day: Number(match[3]),
+  }
+}
 
 /**
  * Parse event date(s) - handles both string and array formats
@@ -91,39 +176,46 @@ export function getLastEventDate(date: string | string[] | undefined): Date | nu
 }
 
 /**
- * Check if event has passed (all dates are in the past)
+ * Check if event has passed (all dates are before today in Bangladesh).
  */
 export function hasEventPassed(date: string | string[] | undefined): boolean {
   const dates = parseEventDates(date)
   if (dates.length === 0) return false
-  const now = new Date()
-  now.setHours(0, 0, 0, 0)
-  return dates.every(d => {
-    const eventDate = new Date(d)
-    eventDate.setHours(0, 0, 0, 0)
-    return eventDate < now
+  const todayKey = calendarDateKey(getBangladeshCalendarDate())
+  return dates.every((d) => {
+    const parsed = parseIsoCalendarDate(d)
+    if (!parsed) {
+      const eventDate = new Date(d)
+      if (Number.isNaN(eventDate.getTime())) return false
+      return calendarDateKey(getBangladeshCalendarDate(eventDate)) < todayKey
+    }
+    return calendarDateKey(parsed) < todayKey
   })
 }
 
 /**
- * Check if event is upcoming (at least one date is today or in the future)
+ * Check if event is upcoming (at least one date is today or in the future in Bangladesh).
  */
 export function isEventUpcoming(date: string | string[] | undefined): boolean {
   const dates = parseEventDates(date)
   if (dates.length === 0) return false
-  const now = new Date()
-  now.setHours(0, 0, 0, 0)
-  return dates.some(d => {
-    const eventDate = new Date(d)
-    eventDate.setHours(0, 0, 0, 0)
-    return eventDate >= now
+  const todayKey = calendarDateKey(getBangladeshCalendarDate())
+  return dates.some((d) => {
+    const parsed = parseIsoCalendarDate(d)
+    if (!parsed) {
+      const eventDate = new Date(d)
+      if (Number.isNaN(eventDate.getTime())) return false
+      return calendarDateKey(getBangladeshCalendarDate(eventDate)) >= todayKey
+    }
+    return calendarDateKey(parsed) >= todayKey
   })
 }
 
 /**
- * Parse a registration closing value into a local Date.
- * Supports `YYYY-MM-DDTHH:mm[:ss]` (exact instant) and `YYYY-MM-DD`
- * (end of that local calendar day).
+ * Parse a registration closing value into a UTC Date instant.
+ * Wall-clock values are interpreted as Bangladesh Standard Time (Asia/Dhaka).
+ * Supports `YYYY-MM-DDTHH:mm[:ss]` (exact BD instant) and `YYYY-MM-DD`
+ * (end of that Bangladesh calendar day).
  */
 export function parseRegistrationClosingInstant(
   registrationClosingDate?: string | null,
@@ -138,7 +230,7 @@ export function parseRegistrationClosingInstant(
   )
   if (dtMatch) {
     const [, y, mo, d, h, mi, s] = dtMatch
-    return new Date(
+    return bdWallTimeToUtcDate(
       Number(y),
       Number(mo) - 1,
       Number(d),
@@ -152,7 +244,7 @@ export function parseRegistrationClosingInstant(
   const dateMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/)
   if (dateMatch) {
     const [, y, mo, d] = dateMatch
-    return new Date(Number(y), Number(mo) - 1, Number(d), 23, 59, 59, 999)
+    return bdWallTimeToUtcDate(Number(y), Number(mo) - 1, Number(d), 23, 59, 59, 999)
   }
 
   const parsed = new Date(raw)
@@ -160,9 +252,41 @@ export function parseRegistrationClosingInstant(
 }
 
 /**
+ * Format a registration closing deadline for display in Bangladesh time.
+ * Example: "Sep 1, 2026 · 11:59 PM BST"
+ */
+export function formatRegistrationClosingLabel(
+  registrationClosingDate?: string | null,
+): string {
+  if (!registrationClosingDate || String(registrationClosingDate).trim() === '') {
+    return ''
+  }
+  const raw = registrationClosingDate.trim()
+  const instant = parseRegistrationClosingInstant(raw)
+  if (!instant) return raw
+
+  const hasTime = raw.includes('T')
+  const datePart = instant.toLocaleDateString('en-US', {
+    timeZone: BANGLADESH_TZ,
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+  if (!hasTime) return datePart
+
+  const timePart = instant.toLocaleTimeString('en-US', {
+    timeZone: BANGLADESH_TZ,
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  })
+  return `${datePart} · ${timePart} BST`
+}
+
+/**
  * Check if registration is closed by the optional closing date/datetime.
  * If registrationClosingDate is missing/empty, returns false (not closed by date).
- * Date-only values stay open through that calendar day; datetimes close at the exact time.
+ * Date-only values stay open through that Bangladesh calendar day; datetimes close at the exact BD time.
  */
 export function isRegistrationClosedByDate(registrationClosingDate?: string): boolean {
   const closing = parseRegistrationClosingInstant(registrationClosingDate)
@@ -184,4 +308,3 @@ export function isRegistrationOpen(event: {
   if (hasEventPassed(event.date)) return false
   return true
 }
-

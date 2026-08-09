@@ -56,7 +56,7 @@ export type Event = {
   contactPersonName?: string
   contactPersonDesignation?: string
   contactPersonMobileOrEmail?: string
-  registrationClosingDate?: string // Optional ISO date (YYYY-MM-DD); registration closes at end of this day
+  registrationClosingDate?: string // Optional ISO date (YYYY-MM-DD); registration closes at end of this day in Asia/Dhaka (BST)
   registrationDisabled?: boolean // When true, registration is closed regardless of date (Super Admin or event creator can toggle)
   customFormFields?: EventCustomFormField[]
   defaultRegistrationFields?: EventDefaultRegistrationFields

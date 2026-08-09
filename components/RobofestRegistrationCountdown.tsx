@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { parseRegistrationClosingInstant } from "@/lib/dateUtils";
+import {
+  formatRegistrationClosingLabel,
+  parseRegistrationClosingInstant,
+} from "@/lib/dateUtils";
 
 type Remaining = {
   days: number;
@@ -55,12 +57,10 @@ export default function RobofestRegistrationCountdown({
     [closingDate, now],
   );
 
-  const dateLabel = useMemo(() => {
-    const instant = parseRegistrationClosingInstant(closingDate);
-    if (!instant) return closingDate;
-    const hasTime = closingDate.includes("T");
-    return format(instant, hasTime ? "MMM d, yyyy · h:mm a" : "MMM d, yyyy");
-  }, [closingDate]);
+  const dateLabel = useMemo(
+    () => formatRegistrationClosingLabel(closingDate) || closingDate,
+    [closingDate],
+  );
 
   if (remaining.expired) {
     return (

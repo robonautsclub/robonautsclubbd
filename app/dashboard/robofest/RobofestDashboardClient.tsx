@@ -1120,7 +1120,7 @@ export default function RobofestDashboardClient({
 
         <ContentSection
           title="Registration deadline"
-          description="Public registration closes at this date and time. Leave empty for no deadline."
+          description="Public registration closes at this date and time in Bangladesh Standard Time (UTC+6). Leave empty for no deadline."
           contentClassName="flex flex-wrap items-end gap-3"
           defaultOpen
         >
@@ -1193,7 +1193,7 @@ export default function RobofestDashboardClient({
             ) : null}
             <p className="text-xs text-gray-500 w-full">
               Shown as a live countdown on the Robofest pages. Registration closes
-              at the exact date and time you set.
+              at the exact Bangladesh time (BST, UTC+6) you set.
             </p>
         </ContentSection>
 

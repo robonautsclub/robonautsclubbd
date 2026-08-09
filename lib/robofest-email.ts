@@ -165,6 +165,7 @@ function buildRobofestEmailHtml({
   const facebookUrl = SITE_CONFIG.social.facebook
   const instagramUrl = SITE_CONFIG.social.instagram
   const contactEmail = 'events@robonautsltd.com'
+  const logoUrl = `${resolveBaseUrl()}${SITE_CONFIG.assets.logo}`
 
   return `
 <!DOCTYPE html>
@@ -181,6 +182,7 @@ function buildRobofestEmailHtml({
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);">
           <tr>
             <td style="background: linear-gradient(135deg, #0e7490 0%, #155e75 55%, #0f172a 100%); padding: 40px 32px; text-align: center;">
+              <img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(SITE_CONFIG.metadata.defaultImageAlt)}" width="72" height="72" style="display: block; margin: 0 auto 16px; width: 72px; height: 72px; border-radius: 16px; background-color: #ffffff; border: 0; outline: none; text-decoration: none;" />
               <p style="margin: 0 0 8px; color: rgba(255,255,255,0.85); font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600;">RoboFest Bangladesh 2026</p>
               <h1 style="margin: 0 0 8px; color: #ffffff; font-size: 28px; font-weight: 700;">Registration Confirmed</h1>
               <p style="margin: 0; color: rgba(255,255,255,0.9); font-size: 15px;">You’re in — Official RoboFest Bangladesh Qualifier</p>
@@ -195,7 +197,7 @@ function buildRobofestEmailHtml({
                 Thank you for Registering for <strong style="color: #0e7490;">RoboFest Bangladesh 2026</strong>!
               </p>
               <p style="margin: 0 0 24px; font-size: 15px; color: #475569;">
-                We’re excited to confirm that your registration has been successfully completed and your payment has been received. You are now officially confirmed as a participant of the Official RoboFest Bangladesh Qualifier, organized by Robonauts Ltd.
+                We’re excited to confirm that your registration has been successfully completed and your payment has been received. You are now officially confirmed as a participant of the <strong style="color: #0f172a;">Official RoboFest Bangladesh</strong> Qualifier, organized by <strong style="color: #0f172a;">Robonauts Ltd</strong>.
               </p>
 
               <table role="presentation" width="100%" style="border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 20px;">
@@ -263,7 +265,7 @@ function buildRobofestEmailHtml({
                       <strong>Please save and remember your Team ID</strong> (<span style="font-family: ui-monospace, monospace; font-weight: 700;">${escapeHtml(teamId)}</span>), as it will be used for all future references, communications, and competition-related matters.
                     </p>
                     <p style="margin: 0; font-size: 14px; color: #475569;">
-                      Please keep this E-Mail for your records. A PDF confirmation with your team roster is attached. Further information regarding Competition Schedules, Venue Arrangements, and other important instructions will be shared through our Official Channels.
+                      Please keep this E-Mail for your records. Further information regarding Competition Schedules, Venue Arrangements, and other important instructions will be shared through our Official Channels.
                     </p>
                   </td>
                 </tr>
