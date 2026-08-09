@@ -1,7 +1,16 @@
 'use client'
 
 import { useMemo, memo, useState } from 'react'
-import { parseEventDates, formatEventDates, isEventUpcoming, hasEventPassed, getFirstEventDate } from '@/lib/dateUtils'
+import {
+  parseEventDates,
+  formatEventDates,
+  isEventUpcoming,
+  hasEventPassed,
+  getFirstEventDate,
+  getBangladeshNow,
+  getEventDateInBangladesh,
+  bdWallTimeToUtcDate,
+} from '@/lib/dateUtils'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Calendar, Clock, MapPin, ArrowRight } from 'lucide-react'
@@ -13,47 +22,19 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
 /**
- * Get current time in Bangladesh Standard Time (BST = UTC+6)
- */
-function getBSTTime(): Date {
-  const now = new Date()
-  // Convert to BST (UTC+6)
-  // Get UTC timestamp
-  const utcTimestamp = now.getTime() + (now.getTimezoneOffset() * 60000)
-  // Add 6 hours for BST (UTC+6)
-  const bstTimestamp = utcTimestamp + (6 * 3600000)
-  return new Date(bstTimestamp)
-}
-
-/**
- * Convert event date string to Date object in BST
- * Event dates are stored as 'YYYY-MM-DD' and should be treated as BST midnight
- */
-function getEventDateInBST(dateString: string): Date {
-  // Parse the date string (YYYY-MM-DD)
-  const [year, month, day] = dateString.split('-').map(Number)
-  // Create date at midnight BST (UTC+6)
-  // We create it as UTC midnight, then add 6 hours to get BST midnight
-  const utcDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0))
-  // Convert to BST by adding 6 hours
-  const bstDate = new Date(utcDate.getTime() + (6 * 3600000))
-  return bstDate
-}
-
-/**
  * Check if an event is currently going on
- * Returns true if current date/time is within the event's date and time
+ * Returns true if current date/time is within the event's date and time (Bangladesh)
  */
 function isEventGoingOn(event: Event): boolean {
-  const bstNow = getBSTTime()
+  const bstNow = getBangladeshNow()
   const eventDates = parseEventDates(event.date)
 
   if (eventDates.length === 0) return false
 
   // Check if today is within the event date range
   const sortedDates = [...eventDates].sort()
-  const firstEventDate = getEventDateInBST(sortedDates[0])
-  const lastEventDate = getEventDateInBST(sortedDates[sortedDates.length - 1])
+  const firstEventDate = getEventDateInBangladesh(sortedDates[0])
+  const lastEventDate = getEventDateInBangladesh(sortedDates[sortedDates.length - 1])
 
   const daysFromStart = differenceInDays(bstNow, firstEventDate)
   const daysFromEnd = differenceInDays(bstNow, lastEventDate)
@@ -66,7 +47,7 @@ function isEventGoingOn(event: Event): boolean {
   // Find which event date matches today
   let matchedEventDate: string | null = null
   for (const eventDateStr of sortedDates) {
-    const eventDateBST = getEventDateInBST(eventDateStr)
+    const eventDateBST = getEventDateInBangladesh(eventDateStr)
     const daysDiff = differenceInDays(eventDateBST, bstNow)
     if (daysDiff === 0) {
       matchedEventDate = eventDateStr
@@ -118,17 +99,21 @@ function isEventGoingOn(event: Event): boolean {
         }
       }
 
-      // Get the matched event date in BST and create datetime
-      const eventDateBST = getEventDateInBST(matchedEventDate)
-      const eventDateTime = new Date(eventDateBST)
-      eventDateTime.setHours(eventHours, eventMinutes, 0, 0)
+      const [year, month, day] = matchedEventDate.split('-').map(Number)
+      const eventStartUtc = bdWallTimeToUtcDate(
+        year,
+        month - 1,
+        day,
+        eventHours,
+        eventMinutes,
+        0,
+        0,
+      )
+      // Assume event runs for 8 hours
+      const eventEndUtc = new Date(eventStartUtc.getTime() + 8 * 60 * 60 * 1000)
+      const nowMs = Date.now()
 
-      // Check if current time is past or equal to event start time
-      // Assume event runs for 8 hours (full day event) - adjust as needed
-      const eventEndTime = new Date(eventDateTime)
-      eventEndTime.setHours(eventEndTime.getHours() + 8)
-
-      return bstNow >= eventDateTime && bstNow <= eventEndTime
+      return nowMs >= eventStartUtc.getTime() && nowMs <= eventEndUtc.getTime()
     } catch {
       // If time parsing fails, assume event is going on if it's today
       return true
@@ -162,7 +147,7 @@ const EventCard = memo(({ event }: { event: Event }) => {
     if (isEventGoingOn(event)) {
       timeDisplay = 'Event going on'
     } else {
-      const bstNow = getBSTTime()
+      const bstNow = getBangladeshNow()
       // Parse the event date string and convert to BST
       const eventDateStr = Array.isArray(event.date)
         ? event.date[0]
@@ -171,7 +156,7 @@ const EventCard = memo(({ event }: { event: Event }) => {
         : event.date || ''
 
       if (eventDateStr) {
-        const eventDateBST = getEventDateInBST(eventDateStr)
+        const eventDateBST = getEventDateInBangladesh(eventDateStr)
         const hoursUntil = differenceInHours(eventDateBST, bstNow)
         const daysUntil = differenceInDays(eventDateBST, bstNow)
 
