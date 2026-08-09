@@ -5,7 +5,7 @@ import { SITE_CONFIG } from "@/lib/site-config";
 const title = "Robofest Bangladesh 2026 Local Round";
 const description =
   "Register for Robofest Bangladesh 2026 local rounds in Chittagong (11 Sep) and Dhaka (18 Sep). Compete in BottleSumo, Buildathon, Line Following Bot, or Robo Exhibition—hosted by Robonauts Ltd. Path to the World Championship 2027 in South Korea.";
-const ogImage = "/robofest/dhaka.jpg";
+const ogImage = "/robofest/robofest.jpg";
 
 export const metadata: Metadata = {
   title,
