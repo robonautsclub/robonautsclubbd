@@ -468,8 +468,14 @@ async function generatePDFContent(
   const sanitizedEvent = sanitizeEventForPDF(event)
   const sanitizedBooking = sanitizeBookingDetailsForPDF(bookingDetails)
   const sanitizedRegistrationId = sanitizeTextForPDF(registrationId)
+  const isTeamRegistration = Boolean(
+    sanitizedBooking.teamName ||
+      sanitizedBooking.teamNumber ||
+      (sanitizedBooking.teamMembers && sanitizedBooking.teamMembers.length > 0),
+  )
 
   // ---------- Design tokens ----------
+  // Team/Robofest confirmations get a modest body/label bump for readability.
   const theme = {
     color: {
       ink: '#0f172a',          // slate-900 — primary body text
@@ -491,9 +497,9 @@ async function generatePDFContent(
       sectionLabel: 9,
       regIdLabel: 8.5,
       regIdValue: 22,
-      label: 9.5,
-      value: 10.5,
-      body: 10,
+      label: isTeamRegistration ? 10.5 : 9.5,
+      value: isTeamRegistration ? 11.5 : 10.5,
+      body: isTeamRegistration ? 11 : 10,
       caption: 8.5,
       micro: 7.5,
       footer: 8,
@@ -503,7 +509,7 @@ async function generatePDFContent(
       pageMarginBottom: 38,
       headerHeight: 76,
       logoSize: 40,
-      labelColW: 120,
+      labelColW: isTeamRegistration ? 134 : 120,
       sectionGap: 22,
       rowGap: 8,
       qrSize: 110,
@@ -638,8 +644,10 @@ async function generatePDFContent(
   y = drawRow('Event Name', sanitizeTextForPDF(sanitizedEvent.title || 'Event'), y)
   y = drawRow('Date', sanitizeTextForPDF(formattedDate || 'TBA'), y)
   if (sanitizedEvent.time) y = drawRow('Time', sanitizedEvent.time, y)
-  const venue = sanitizedEvent.venue || sanitizedEvent.location
-  if (venue) y = drawRow('Venue', venue, y)
+  if (!isTeamRegistration) {
+    const venue = sanitizedEvent.venue || sanitizedEvent.location
+    if (venue) y = drawRow('Venue', venue, y)
+  }
   if (sanitizedEvent.eligibility) y = drawRow('Eligibility', sanitizedEvent.eligibility, y)
 
   y += theme.metric.sectionGap - theme.metric.rowGap
@@ -647,24 +655,16 @@ async function generatePDFContent(
   // ---------- Registration Information ----------
   y = drawSectionHeader('Registration Information', y)
 
-  const teamName =
-    sanitizedBooking.teamName ||
-    (sanitizedBooking.teamMembers && sanitizedBooking.teamMembers.length > 0
-      ? sanitizedBooking.name
-      : '')
-  const isTeamRegistration = Boolean(
-    sanitizedBooking.teamName ||
-      (sanitizedBooking.teamMembers && sanitizedBooking.teamMembers.length > 0),
-  )
-
   if (isTeamRegistration) {
-    y = drawRow('Team name', teamName || sanitizedBooking.name, y)
-    if (sanitizedBooking.teamNumber) {
-      y = drawRow('Team number', sanitizedBooking.teamNumber, y)
+    const teamId = sanitizedBooking.teamNumber || sanitizedBooking.teamName
+    const teamLeaderName = sanitizedBooking.teamMembers?.[0]?.name?.trim() || ''
+
+    y = drawRow('Team ID', teamId, y)
+    if (teamLeaderName) {
+      y = drawRow('Team leader contact', teamLeaderName, y)
     }
-    y = drawRow('Primary school', sanitizedBooking.school, y)
-    y = drawRow('Primary contact', sanitizedBooking.email, y)
-    y = drawRow('Primary phone', sanitizedBooking.phone, y)
+    y = drawRow('Team lead mail', sanitizedBooking.email, y)
+    y = drawRow('Team lead phone', sanitizedBooking.phone, y)
   } else {
     y = drawRow('Name', sanitizedBooking.name, y)
     y = drawRow('School', sanitizedBooking.school, y)
@@ -769,10 +769,17 @@ async function generatePDFContent(
   }
 
   doc.font(theme.font.regular).fontSize(theme.size.caption).fillColor(theme.color.mute)
-  doc.text('Scan to verify your registration', left, qrY + qrSize + 14, {
-    width: contentWidth,
-    align: 'center',
-  })
+  doc.text(
+    isTeamRegistration
+      ? 'Scan to verify the registration'
+      : 'Scan to verify your registration',
+    left,
+    qrY + qrSize + 14,
+    {
+      width: contentWidth,
+      align: 'center',
+    },
+  )
 
   // URL — split at query string if long, otherwise let it wrap naturally
   const urlY = qrY + qrSize + 30
