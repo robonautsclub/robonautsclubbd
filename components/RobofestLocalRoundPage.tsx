@@ -523,55 +523,7 @@ export default async function RobofestLocalRoundPage() {
                     ) : null}
                   </div>
 
-                  <div className="mt-6 rounded-xl border border-red-200 bg-red-50/80 px-4 py-4 sm:px-5">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-red-100 bg-white text-red-600 shadow-sm">
-                        <MaterialIcon name="mail" className="text-xl" />
-                      </div>
-                      <ul className="min-w-0 list-disc space-y-2 pl-5 text-sm font-medium text-red-700 leading-relaxed marker:text-red-600">
-                        <li>
-                          After you complete registration and payment, you will
-                          receive a confirmation email with your registration
-                          PDF.
-                        </li>
-                        <li>
-                          Bring this PDF for entry at the event.
-                        </li>
-                        <li>
-                          If you registered and paid but did not receive the
-                          email or PDF, check your junk/spam folder. If it is
-                          still missing, contact us
-                          {contactEmail ? (
-                            <>
-                              {" "}
-                              at{" "}
-                              <a
-                                href={`mailto:${contactEmail}`}
-                                className="font-semibold text-red-800 underline underline-offset-2 hover:text-red-900"
-                              >
-                                {contactEmail}
-                              </a>
-                            </>
-                          ) : null}
-                          {registrationContact?.phone ? (
-                            <>
-                              {contactEmail ? " or " : " at "}
-                              <a
-                                href={`tel:${registrationContact.phone.replace(/\s/g, "")}`}
-                                className="font-semibold text-red-800 underline underline-offset-2 hover:text-red-900"
-                              >
-                                {registrationContact.phone}
-                              </a>
-                              {registrationContact.note
-                                ? ` (${registrationContact.note})`
-                                : null}
-                            </>
-                          ) : null}
-                          .
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
+
                 </div>
 
                 <div className="lg:col-span-2 border-t lg:border-t-0 lg:border-l border-slate-200 bg-slate-50/80 px-6 py-8 sm:px-8 sm:py-12">
