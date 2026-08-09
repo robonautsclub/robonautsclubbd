@@ -7,6 +7,7 @@ import { adminDb } from '@/lib/firebase-admin'
 import type { GalleryGroup, GalleryImage } from '@/types/gallery'
 import { sanitizeGalleryLocation, sanitizeGalleryTitle } from '@/lib/multilingualText'
 import { parseDateInputToTimestamp, timestampUtcNoonToday } from '@/lib/dateInput'
+import { PUBLIC_GALLERY_TAG } from '@/lib/public-cache-tags'
 
 const DASHBOARD_GALLERY_LIST_TAG = 'dashboard-gallery-list'
 
@@ -122,6 +123,7 @@ export async function createGalleryGroup(input: {
   revalidatePath('/gallery')
   revalidatePath('/')
   revalidateTag(DASHBOARD_GALLERY_LIST_TAG, 'max')
+  revalidateTag(PUBLIC_GALLERY_TAG, 'max')
 }
 
 export async function updateGalleryGroup(
@@ -168,6 +170,7 @@ export async function updateGalleryGroup(
   revalidatePath('/gallery')
   revalidatePath('/')
   revalidateTag(DASHBOARD_GALLERY_LIST_TAG, 'max')
+  revalidateTag(PUBLIC_GALLERY_TAG, 'max')
 }
 
 export async function deleteGalleryGroup(id: string) {
@@ -188,4 +191,5 @@ export async function deleteGalleryGroup(id: string) {
   revalidatePath('/gallery')
   revalidatePath('/')
   revalidateTag(DASHBOARD_GALLERY_LIST_TAG, 'max')
+  revalidateTag(PUBLIC_GALLERY_TAG, 'max')
 }

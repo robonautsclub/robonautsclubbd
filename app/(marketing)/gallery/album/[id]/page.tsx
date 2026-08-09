@@ -7,7 +7,7 @@ import { effectiveGalleryDisplayRaw } from '@/lib/publicContentDates'
 import { getPublicGalleryGroupById } from '../../actions'
 import ImageLightboxGallery from '@/components/ImageLightboxGallery'
 
-export const revalidate = 600
+export const revalidate = 1800
 
 type Props = { params: Promise<{ id: string }> }
 

@@ -16,20 +16,7 @@ import {
 } from "@/lib/seo";
 import { SITE_CONFIG } from "@/lib/site-config";
 import RobofestRegistrationCountdown from "@/components/RobofestRegistrationCountdown";
-
-function MaterialIcon({
-  name,
-  className = "",
-}: {
-  name: string;
-  className?: string;
-}) {
-  return (
-    <span className={`material-symbols-outlined ${className}`} aria-hidden>
-      {name}
-    </span>
-  );
-}
+import RobofestIcon from "@/components/RobofestIcon";
 
 function CircuitBackdrop({ className = "" }: { className?: string }) {
   return (
@@ -63,7 +50,7 @@ function SectionHeading({
   return (
     <div className="text-center mb-10 sm:mb-14">
       <p className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-800 mb-4">
-        <MaterialIcon name="smart_toy" className="text-sm" />
+        <RobofestIcon name="smart_toy" className="text-sm" />
         {eyebrow}
       </p>
       <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-3 text-slate-900">
@@ -174,7 +161,7 @@ export default async function RobofestLocalRoundPage() {
 
         <div className="relative z-10 max-w-7xl mx-auto text-center animate-fade-in-up">
           <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/35 bg-white/15 backdrop-blur-md shadow-sm mb-5 sm:mb-7">
-            <MaterialIcon
+            <RobofestIcon
               name="precision_manufacturing"
               className="text-base sm:text-lg text-white"
             />
@@ -201,7 +188,7 @@ export default async function RobofestLocalRoundPage() {
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-200/80">
               <div className="p-5 sm:p-6 text-left bg-cyan-50/50">
                 <div className="flex items-center gap-2.5 text-cyan-700 mb-3">
-                  <MaterialIcon name="calendar_month" className="text-2xl sm:text-[1.75rem]" />
+                  <RobofestIcon name="calendar_month" className="text-2xl sm:text-[1.75rem]" />
                   <span className="text-xs sm:text-sm font-bold uppercase tracking-[0.14em] text-cyan-800/80">
                     Date
                   </span>
@@ -220,7 +207,7 @@ export default async function RobofestLocalRoundPage() {
 
               <div className="p-5 sm:p-6 text-left bg-cyan-50/50">
                 <div className="flex items-center gap-2.5 text-cyan-700 mb-3">
-                  <MaterialIcon name="location_on" className="text-2xl sm:text-[1.75rem]" />
+                  <RobofestIcon name="location_on" className="text-2xl sm:text-[1.75rem]" />
                   <span className="text-xs sm:text-sm font-bold uppercase tracking-[0.14em] text-cyan-800/80">
                     Venue
                   </span>
@@ -239,7 +226,7 @@ export default async function RobofestLocalRoundPage() {
 
               <div className="p-5 sm:p-6 text-left">
                 <div className="flex items-center gap-2.5 text-cyan-700 mb-3">
-                  <MaterialIcon name="apartment" className="text-2xl sm:text-[1.75rem]" />
+                  <RobofestIcon name="apartment" className="text-2xl sm:text-[1.75rem]" />
                   <span className="text-xs sm:text-sm font-bold uppercase tracking-[0.14em] text-cyan-800/80">
                     Host
                   </span>
@@ -251,7 +238,7 @@ export default async function RobofestLocalRoundPage() {
 
               <div className="p-4 sm:p-5 text-left">
                 <div className="flex items-center gap-2 text-cyan-700 mb-2">
-                  <MaterialIcon name="call" className="text-xl" />
+                  <RobofestIcon name="call" className="text-xl" />
                   <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                     Contact
                   </span>
@@ -324,7 +311,7 @@ export default async function RobofestLocalRoundPage() {
                       {String(index + 1).padStart(2, "0")}
                     </span>
                     <div className="w-11 h-11 rounded-xl border border-cyan-100 bg-white text-cyan-700 flex items-center justify-center shadow-sm transition-transform duration-300 group-hover:scale-110">
-                      <MaterialIcon name={step.icon} />
+                      <RobofestIcon name={step.icon} />
                     </div>
                   </div>
                   <h3 className="text-base sm:text-lg font-semibold text-slate-900 mb-2">
@@ -364,7 +351,7 @@ export default async function RobofestLocalRoundPage() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2"
                   >
-                    <MaterialIcon name="open_in_new" className="text-xl" />
+                    <RobofestIcon name="open_in_new" className="text-xl" />
                     View General Rules &amp; Regulations
                   </a>
                 </Button>
@@ -393,7 +380,7 @@ export default async function RobofestLocalRoundPage() {
                           {String(index + 1).padStart(2, "0")}
                         </span>
                         <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-white/20 text-white backdrop-blur-sm shadow-lg">
-                          <MaterialIcon
+                          <RobofestIcon
                             name={category.icon}
                             className="text-xl"
                           />
@@ -417,10 +404,11 @@ export default async function RobofestLocalRoundPage() {
                         >
                           <Link
                             href={getRobofestCategoryHref(category.slug)}
+                            prefetch={false}
                             className="inline-flex items-center justify-center gap-1.5"
                           >
                             View &amp; register
-                            <MaterialIcon name="arrow_forward" className="text-base" />
+                            <RobofestIcon name="arrow_forward" className="text-base" />
                           </Link>
                         </Button>
                       </div>
@@ -439,7 +427,7 @@ export default async function RobofestLocalRoundPage() {
               <div className="grid lg:grid-cols-5">
                 <div className="lg:col-span-3 px-6 py-8 sm:px-10 sm:py-12 bg-linear-to-br from-cyan-50/90 via-white to-white">
                   <p className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-800 mb-5">
-                    <MaterialIcon name="rocket_launch" className="text-sm" />
+                    <RobofestIcon name="rocket_launch" className="text-sm" />
                     Local Round
                   </p>
                   <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 mb-4 tracking-tight">
@@ -468,7 +456,7 @@ export default async function RobofestLocalRoundPage() {
                           key={`${line}-${index}`}
                           className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5"
                         >
-                          <MaterialIcon
+                          <RobofestIcon
                             name="calendar_month"
                             className="text-lg text-cyan-700 shrink-0 mt-0.5"
                           />
@@ -529,7 +517,7 @@ export default async function RobofestLocalRoundPage() {
                 <div className="lg:col-span-2 border-t lg:border-t-0 lg:border-l border-slate-200 bg-slate-50/80 px-6 py-8 sm:px-8 sm:py-12">
                   <div className="flex items-center gap-2 text-cyan-700 mb-5">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-100 bg-white text-cyan-700 shadow-sm">
-                      <MaterialIcon name="call" className="text-xl" />
+                      <RobofestIcon name="call" className="text-xl" />
                     </div>
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
@@ -546,7 +534,7 @@ export default async function RobofestLocalRoundPage() {
                       href={`mailto:${contactEmail}`}
                       className="group mb-4 flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-colors hover:border-cyan-300 hover:bg-cyan-50/40"
                     >
-                      <MaterialIcon
+                      <RobofestIcon
                         name="mail"
                         className="text-xl text-cyan-700 mt-0.5"
                       />
@@ -568,7 +556,7 @@ export default async function RobofestLocalRoundPage() {
                           href={`tel:${line.phone.replace(/\s/g, "")}`}
                           className="group flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-3 transition-colors hover:border-cyan-300 hover:bg-cyan-50/40"
                         >
-                          <MaterialIcon
+                          <RobofestIcon
                             name="phone_in_talk"
                             className="text-xl text-cyan-700 mt-0.5"
                           />
