@@ -329,7 +329,7 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
                 }
                 disabled={loading || uploading}
               />
-              <p className="text-xs text-gray-500">Optional. Select one date to close registration; leave empty to keep registration open until the event date.</p>
+              <p className="text-xs text-gray-500">Optional. Select one date to close registration at end of that day in Bangladesh time (BST, UTC+6); leave empty to keep registration open until the event date.</p>
             </div>
 
             <div className="space-y-2">

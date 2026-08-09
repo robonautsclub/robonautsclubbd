@@ -138,7 +138,7 @@ export type RobofestContent = {
   howItWorks: RobofestHowItWorksStep[];
   isPaid: boolean;
   amount: number;
-  /** YYYY-MM-DDTHH:mm (local) or legacy YYYY-MM-DD. Null = no deadline. */
+  /** YYYY-MM-DDTHH:mm (Asia/Dhaka) or legacy YYYY-MM-DD. Null = no deadline. */
   registrationClosingDate: string | null;
   updatedAt?: string | null;
   updatedBy?: string | null;
