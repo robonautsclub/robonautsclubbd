@@ -13,7 +13,10 @@ import { format } from 'date-fns'
 import Image from 'next/image'
 import Link from 'next/link'
 import type { RobofestContent, RobofestRegistration } from '@/lib/robofest-content'
-import { resolveRobofestRoundVenueLabel } from '@/lib/robofest-content'
+import {
+  resolveRobofestRoundDateLabel,
+  resolveRobofestRoundVenueLabel,
+} from '@/lib/robofest-content'
 import { formatAgeCategoryLabel } from '@/lib/robofest-registration-options'
 import { SITE_CONFIG } from '@/lib/site-config'
 import { Badge } from '@/components/ui/badge'
@@ -38,7 +41,10 @@ export default function VerifyRobofestRegistration({
   const ageLabel = registration.ageCategory
     ? formatAgeCategoryLabel(registration.ageCategory)
     : null
-  const eventDate = content.dateLabel || 'TBA'
+  const eventDate = resolveRobofestRoundDateLabel(
+    content,
+    registration.roundCity || '',
+  )
   const roundVenue = resolveRobofestRoundVenueLabel(
     content,
     registration.roundCity || '',
@@ -254,8 +260,7 @@ export default function VerifyRobofestRegistration({
                         Registered on
                       </p>
                       <p className="text-sm font-bold text-cyan-950">
-                        {format(registeredAt, 'MMMM d, yyyy')} at{' '}
-                        {format(registeredAt, 'h:mm a')}
+                        {format(registeredAt, 'MMMM d, yyyy')}
                       </p>
                     </div>
                   ) : null}

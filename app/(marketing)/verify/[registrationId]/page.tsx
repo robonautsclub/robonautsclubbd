@@ -1,5 +1,5 @@
 import { CheckCircle, XCircle, Calendar, MapPin, Clock, User, Mail, Phone, School } from 'lucide-react'
-import { formatEventDates, parseEventDates } from '@/lib/dateUtils'
+import { formatEventDateLabel } from '@/lib/dateUtils'
 import { generateQRCodeDataURL } from '@/lib/qrCode'
 import { adminDb } from '@/lib/firebase-admin'
 import type { Booking } from '@/types/booking'
@@ -100,7 +100,7 @@ export async function generateMetadata({
   }
 
   const title = `Registration Verified - ${event.title} | Robonauts Club`
-  const description = `Your registration for ${event.title} is verified. Event date: ${formatEventDates(parseEventDates(event.date), 'long')}.`
+  const description = `Your registration for ${event.title} is verified. Event date: ${formatEventDateLabel(event.date, 'long')}.`
 
   const ogImage =
     event.image && event.image.startsWith('http')
@@ -179,8 +179,7 @@ export default async function VerificationPage({ params }: VerificationPageProps
     )
   }
 
-  const eventDates = parseEventDates(event!.date)
-  const formattedDate = eventDates.length > 0 ? formatEventDates(eventDates, 'long') : 'TBA'
+  const formattedDate = formatEventDateLabel(event!.date, 'long')
   const bookingDate = booking!.createdAt instanceof Date 
     ? booking!.createdAt 
     : new Date(booking!.createdAt)
@@ -314,7 +313,7 @@ export default async function VerificationPage({ params }: VerificationPageProps
                     <div>
                       <p className="text-sm font-medium text-gray-600 mb-1">Registered On</p>
                       <p className="text-base text-gray-900">
-                        {format(bookingDate, 'MMMM d, yyyy HH:mm')}
+                        {format(bookingDate, 'MMMM d, yyyy')}
                       </p>
                     </div>
                   </div>

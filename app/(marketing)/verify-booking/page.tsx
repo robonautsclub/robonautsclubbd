@@ -1,5 +1,5 @@
 import { CheckCircle, XCircle, Calendar, MapPin, Clock, User, Mail, Phone, School, ShieldCheck, QrCode } from 'lucide-react'
-import { formatEventDates, parseEventDates } from '@/lib/dateUtils'
+import { formatEventDateLabel } from '@/lib/dateUtils'
 import { generateQRCodeDataURL } from '@/lib/qrCode'
 import { adminDb } from '@/lib/firebase-admin'
 import type { Booking } from '@/types/booking'
@@ -288,8 +288,7 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
   const event = result.event
 
   // Success State: Registration found and verified
-  const eventDates = parseEventDates(event.date)
-  const formattedDate = eventDates.length > 0 ? formatEventDates(eventDates, 'long') : 'TBA'
+  const formattedDate = formatEventDateLabel(event.date, 'long')
   const bookingDate = booking.createdAt instanceof Date 
     ? booking.createdAt 
     : new Date(booking.createdAt)
@@ -490,7 +489,7 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
                   <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-200">
                     <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wider mb-1.5">Registered On</p>
                     <p className="text-sm font-bold text-indigo-900">
-                      {format(bookingDate, 'MMMM d, yyyy')} at {format(bookingDate, 'h:mm a')}
+                      {format(bookingDate, 'MMMM d, yyyy')}
                     </p>
                   </div>
                 </div>
