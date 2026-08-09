@@ -291,9 +291,16 @@ function normalizeCategory(
       ? null
       : asNumber(amountRaw, fallback?.amount ?? 0);
 
+  const slug = asString(raw.slug, fallback?.slug ?? "");
+  let name = asString(raw.name, fallback?.name ?? "");
+  // Official branding is BuildAthon (capital A).
+  if (slug === "buildathon" || /^buildathon$/i.test(name.trim())) {
+    name = "BuildAthon";
+  }
+
   return {
-    slug: asString(raw.slug, fallback?.slug ?? ""),
-    name: asString(raw.name, fallback?.name ?? ""),
+    slug,
+    name,
     icon: asString(raw.icon, fallback?.icon ?? "smart_toy"),
     image: raw.image
       ? asString(raw.image)

@@ -80,11 +80,11 @@ export const ROBOFEST_CATEGORIES = [
   },
   {
     slug: "buildathon",
-    name: "Buildathon",
+    name: "BuildAthon",
     icon: "construction",
     image: "/robofest/builathon.jpeg",
     description:
-      "Design, build, and present a robotics project under buildathon constraints.",
+      "Design, build, and present a robotics project under BuildAthon constraints.",
     skillLevel: "Intermediate",
     format: "Project build + presentation",
     about:
