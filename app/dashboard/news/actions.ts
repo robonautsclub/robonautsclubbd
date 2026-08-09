@@ -11,6 +11,7 @@ import {
   slugifyForUrl,
 } from '@/lib/multilingualText'
 import { parseDateInputToTimestamp, timestampUtcNoonToday } from '@/lib/dateInput'
+import { PUBLIC_NEWS_TAG } from '@/lib/public-cache-tags'
 
 const DASHBOARD_NEWS_LIST_TAG = 'dashboard-news-list'
 
@@ -150,6 +151,7 @@ export async function createNewsArticle(input: {
   revalidatePath('/news')
   revalidatePath('/')
   revalidateTag(DASHBOARD_NEWS_LIST_TAG, 'max')
+  revalidateTag(PUBLIC_NEWS_TAG, 'max')
 }
 
 export async function updateNewsArticle(
@@ -218,6 +220,7 @@ export async function updateNewsArticle(
   revalidatePath(`/news/${slug}`)
   revalidatePath('/')
   revalidateTag(DASHBOARD_NEWS_LIST_TAG, 'max')
+  revalidateTag(PUBLIC_NEWS_TAG, 'max')
 }
 
 export async function deleteNewsArticle(id: string) {
@@ -239,4 +242,5 @@ export async function deleteNewsArticle(id: string) {
   revalidatePath(`/news/${String(data.slug)}`)
   revalidatePath('/')
   revalidateTag(DASHBOARD_NEWS_LIST_TAG, 'max')
+  revalidateTag(PUBLIC_NEWS_TAG, 'max')
 }

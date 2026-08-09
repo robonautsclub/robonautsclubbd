@@ -6,7 +6,7 @@ import { SITE_CONFIG } from '@/lib/site-config'
 import { getNewsArticleBySlug } from '../../actions'
 import ImageLightboxGallery from '@/components/ImageLightboxGallery'
 
-export const revalidate = 600
+export const revalidate = 1800
 
 type Props = { params: Promise<{ slug: string }> }
 

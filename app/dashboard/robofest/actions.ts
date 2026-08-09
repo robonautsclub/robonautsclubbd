@@ -13,7 +13,6 @@ import {
   getRobofestCategoryByName,
   getRobofestContentFresh,
   mapRobofestContentDoc,
-  mapRobofestRegistrationDoc,
   type RobofestContent,
   type RobofestRegistration,
   type RobofestRegistrationStatus,
@@ -28,6 +27,7 @@ import {
   type RobofestRegistrationInput,
 } from '@/lib/robofest-registration-input'
 import { computeRobofestRegistrationTotal, resolveRobofestFee } from '@/lib/robofest-fee'
+import { loadRobofestRegistrationsCached } from './registrations-data'
 
 function revalidateRobofestPublic() {
   revalidateTag(ROBOFEST_CONTENT_CACHE_TAG, 'max')
@@ -153,20 +153,7 @@ export async function updateRobofestContent(
 
 export async function getRobofestRegistrations(): Promise<RobofestRegistration[]> {
   await requireAuth()
-  if (!adminDb) return []
-
-  const snap = await adminDb.collection(ROBOFEST_REGISTRATIONS_COLLECTION).get()
-  const items = snap.docs.map((doc) =>
-    mapRobofestRegistrationDoc(doc.id, doc.data() as Record<string, unknown>),
-  )
-
-  items.sort((a, b) => {
-    const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0
-    const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0
-    return tb - ta
-  })
-
-  return items
+  return loadRobofestRegistrationsCached()
 }
 
 export async function updateRobofestRegistrationStatus(

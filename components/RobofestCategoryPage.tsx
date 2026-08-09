@@ -13,20 +13,7 @@ import RobofestCategoryRegistrationForm from "@/components/RobofestCategoryRegis
 import RobofestRegistrationCountdown from "@/components/RobofestRegistrationCountdown";
 import { isRegistrationClosedByDate } from "@/lib/dateUtils";
 import { Button } from "@/components/ui/button";
-
-function MaterialIcon({
-  name,
-  className = "",
-}: {
-  name: string;
-  className?: string;
-}) {
-  return (
-    <span className={`material-symbols-outlined ${className}`} aria-hidden>
-      {name}
-    </span>
-  );
-}
+import RobofestIcon from "@/components/RobofestIcon";
 
 function RulesViewButton({
   href,
@@ -48,7 +35,7 @@ function RulesViewButton({
         rel="noopener noreferrer"
         className="inline-flex items-center gap-1.5"
       >
-        <MaterialIcon name="open_in_new" className="text-base" />
+        <RobofestIcon name="open_in_new" className="text-base" />
         {label}
       </a>
     </Button>
@@ -111,15 +98,16 @@ export default function RobofestCategoryPage({
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-14 md:py-16">
           <Link
             href="/robofest"
+            prefetch={false}
             className="inline-flex items-center gap-1.5 text-sm text-white/80 hover:text-white mb-5 sm:mb-7 transition-colors"
           >
-            <MaterialIcon name="arrow_back" className="text-base" />
+            <RobofestIcon name="arrow_back" className="text-base" />
             All competitions
           </Link>
 
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/25 flex items-center justify-center shrink-0 shadow-lg">
-              <MaterialIcon
+              <RobofestIcon
                 name={category.icon}
                 className="text-2xl sm:text-3xl text-cyan-100"
               />
@@ -166,7 +154,7 @@ export default function RobofestCategoryPage({
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="rounded-xl border border-slate-200 bg-white/80 px-4 py-3.5">
                 <div className="flex items-center gap-2 text-cyan-700 mb-1">
-                  <MaterialIcon name="signal_cellular_alt" className="text-xl" />
+                  <RobofestIcon name="signal_cellular_alt" className="text-xl" />
                   <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                     Skill level
                   </span>
@@ -177,7 +165,7 @@ export default function RobofestCategoryPage({
               </div>
               <div className="rounded-xl border border-slate-200 bg-white/80 px-4 py-3.5">
                 <div className="flex items-center gap-2 text-cyan-700 mb-1">
-                  <MaterialIcon name="sports_esports" className="text-xl" />
+                  <RobofestIcon name="sports_esports" className="text-xl" />
                   <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                     Format
                   </span>
@@ -196,7 +184,7 @@ export default function RobofestCategoryPage({
                 {category.highlights.map((item) => (
                   <li key={item} className="flex items-start gap-3">
                     <span className="mt-0.5 w-6 h-6 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-100 flex items-center justify-center shrink-0">
-                      <MaterialIcon name="check" className="text-base" />
+                      <RobofestIcon name="check" className="text-base" />
                     </span>
                     <p className="text-sm text-slate-600 leading-relaxed">
                       {item}
@@ -221,7 +209,7 @@ export default function RobofestCategoryPage({
                     : []
                 ).map((line) => (
                   <p key={line} className="flex items-center gap-1.5">
-                    <MaterialIcon
+                    <RobofestIcon
                       name="calendar_month"
                       className="text-cyan-700"
                     />
@@ -235,7 +223,7 @@ export default function RobofestCategoryPage({
                     : []
                 ).map((line) => (
                   <p key={line} className="flex items-center gap-1.5">
-                    <MaterialIcon name="location_on" className="text-cyan-700" />
+                    <RobofestIcon name="location_on" className="text-cyan-700" />
                     {line}
                   </p>
                 ))}

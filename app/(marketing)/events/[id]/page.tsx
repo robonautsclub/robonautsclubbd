@@ -7,7 +7,6 @@ import { Event } from '@/types/event'
 import { notFound } from 'next/navigation'
 import BookingForm from './BookingForm'
 import EventImage from './EventImage'
-import AutoRefresh from '../AutoRefresh'
 import { getEventSchema, getBreadcrumbSchema, absoluteSiteUrl } from '@/lib/seo'
 import { parseEventDates, formatEventDates, hasEventPassed, isRegistrationOpen } from '@/lib/dateUtils'
 import { Card, CardContent } from '@/components/ui/card'
@@ -250,7 +249,6 @@ export default async function EventDetailPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
-      <AutoRefresh />
       {/* Compact Header Section */}
       <section className="relative overflow-hidden">
         {/* Background decoration */}

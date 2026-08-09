@@ -8,6 +8,44 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  // Self-reference required for ISR revalidation queue
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "robonautsclubbd"
+    }
+  ],
+  // Create once: npx wrangler r2 bucket create robonautsclub-next-cache
+  "r2_buckets": [
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "robonautsclub-next-cache"
+    }
+  ],
+  // Durable Object queue for time-based ISR revalidation
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "NEXT_CACHE_DO_QUEUE",
+        "class_name": "DOQueueHandler"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["DOQueueHandler"]
+    }
+  ],
+  // Create once: npx wrangler d1 create robonautsclub-next-tag-cache
+  // Then paste the printed database_id below (replace REPLACE_WITH_D1_DATABASE_ID).
+  "d1_databases": [
+    {
+      "binding": "NEXT_TAG_CACHE_D1",
+      "database_name": "robonautsclub-next-tag-cache",
+      "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+    }
+  ],
   "vars": {
     "NODE_ENV": "production",
     "NEXT_PUBLIC_BASE_URL": "https://robonautsclub.com",

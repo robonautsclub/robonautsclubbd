@@ -19,7 +19,8 @@ import {
 import { SITE_CONFIG } from "@/lib/site-config";
 import RobofestCategoryPage from "@/components/RobofestCategoryPage";
 
-export const dynamic = "force-dynamic";
+// ISR: align with other marketing pages; content updates call revalidatePath/Tag
+export const revalidate = 1800;
 
 type PageProps = {
   params: Promise<{ slug: string }>;
