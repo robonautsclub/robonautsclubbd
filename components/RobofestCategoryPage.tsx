@@ -70,7 +70,13 @@ export default function RobofestCategoryPage({
   const rules = getRobofestCategoryRules(category.slug);
   const heroImage = getRobofestCategoryImage(category);
   const showPdf = Boolean(rulesPdf);
-
+  const contactEmail = content.contactEmail?.trim() || "";
+  const registrationContact =
+    content.contactLines?.find((line) =>
+      /registrations?\s*related/i.test(line.note || ""),
+    ) ||
+    content.contactLines?.[1] ||
+    content.contactLines?.[0];
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col text-slate-900">
       <header className="relative isolate overflow-hidden text-white min-h-[18rem] sm:min-h-[20rem]">
@@ -270,11 +276,55 @@ export default function RobofestCategoryPage({
                 <h2 className="text-lg font-bold text-slate-900 tracking-tight">
                   Register for {category.name}
                 </h2>
-                <p className="text-sm text-slate-500 mt-1 leading-relaxed">
-                  {fee.isPaid
-                    ? `Registration fee: BDT ${fee.amount} per member (e.g. 3 members = BDT ${fee.amount * 3}). Pay via bKash to confirm. After payment, do not close or leave the page until you see the registration successful message. Confirmation will be emailed after successful payment.`
-                    : "Enter team details for the local round. Confirmation will be emailed after submit."}
-                </p>
+                <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm font-medium text-red-700 leading-relaxed marker:text-red-600">
+                  {fee.isPaid ? (
+                    <li>
+                      Registration fee: BDT {fee.amount} per member (e.g. 3
+                      members = BDT {fee.amount * 3}). Pay via bKash to confirm.
+                      After payment, do not close or leave the page until you
+                      see the registration successful message.
+                    </li>
+                  ) : (
+                    <li>Enter team details for the local round.</li>
+                  )}
+                  <li>
+                    After you complete registration and payment, you will
+                    receive a confirmation email with your registration PDF.
+                  </li>
+                  <li>Bring this PDF for entry at the event.</li>
+                  <li>
+                    If you registered and paid but did not receive the email or
+                    PDF, check your junk/spam folder. If it is still missing,
+                    contact us
+                    {contactEmail ? (
+                      <>
+                        {" "}
+                        at{" "}
+                        <a
+                          href={`mailto:${contactEmail}`}
+                          className="font-semibold text-red-800 underline underline-offset-2 hover:text-red-900"
+                        >
+                          {contactEmail}
+                        </a>
+                      </>
+                    ) : null}
+                    {registrationContact?.phone ? (
+                      <>
+                        {contactEmail ? " or " : " at "}
+                        <a
+                          href={`tel:${registrationContact.phone.replace(/\s/g, "")}`}
+                          className="font-semibold text-red-800 underline underline-offset-2 hover:text-red-900"
+                        >
+                          {registrationContact.phone}
+                        </a>
+                        {registrationContact.note
+                          ? ` (${registrationContact.note})`
+                          : null}
+                      </>
+                    ) : null}
+                    .
+                  </li>
+                </ul>
                 {content.registrationClosingDate ? (
                   <RobofestRegistrationCountdown
                     closingDate={content.registrationClosingDate}

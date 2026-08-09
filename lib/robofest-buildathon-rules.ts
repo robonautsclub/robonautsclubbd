@@ -1,5 +1,5 @@
 /**
- * Buildathon local-round rules (RF26.CMP.03) for on-page display.
+ * BuildAthon local-round rules (RF26.CMP.03) for on-page display.
  * Full document: public/robofest/BuildAthon Competition.pdf
  */
 

@@ -94,6 +94,12 @@ export default async function RobofestLocalRoundPage() {
   const contactEmail = content.contactEmail ?? "";
   const contactLines = content.contactLines ?? [];
   const generalRulesPdf = content.generalRulesPdf ?? "";
+  const registrationContact =
+    contactLines.find((line) =>
+      /registrations?\s*related/i.test(line.note || ""),
+    ) ||
+    contactLines[1] ||
+    contactLines[0];
 
   const itemListSchema = {
     "@context": "https://schema.org",
@@ -516,6 +522,8 @@ export default async function RobofestLocalRoundPage() {
                       </Button>
                     ) : null}
                   </div>
+
+
                 </div>
 
                 <div className="lg:col-span-2 border-t lg:border-t-0 lg:border-l border-slate-200 bg-slate-50/80 px-6 py-8 sm:px-8 sm:py-12">
