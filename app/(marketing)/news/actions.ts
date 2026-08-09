@@ -1,8 +1,8 @@
-'use server'
-
 import { cache } from 'react'
+import { unstable_cache } from 'next/cache'
 import { adminDb } from '@/lib/firebase-admin'
 import type { NewsArticle } from '@/types/news'
+import { PUBLIC_NEWS_TAG } from '@/lib/public-cache-tags'
 
 function toIso(v: unknown): string | null {
   if (v == null) return null
@@ -38,6 +38,33 @@ function newsSortTime(a: NewsArticle): number {
   return Number.isNaN(t) ? 0 : t
 }
 
+async function fetchPublishedNewsFromDb(): Promise<NewsArticle[]> {
+  const db = adminDb!
+  const snap = await db.collection('news').where('published', '==', true).get()
+  const items: NewsArticle[] = []
+  snap.forEach((doc) => {
+    items.push(mapNewsDoc(doc.id, doc.data() as Record<string, unknown>))
+  })
+
+  items.sort((a, b) => {
+    const da = newsSortTime(a)
+    const dbSort = newsSortTime(b)
+    if (dbSort !== da) return dbSort - da
+    const pa = a.publishedAt ? new Date(a.publishedAt).getTime() : 0
+    const pb = b.publishedAt ? new Date(b.publishedAt).getTime() : 0
+    if (pb !== pa) return pb - pa
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  })
+
+  return items
+}
+
+const getCachedPublishedNews = unstable_cache(
+  fetchPublishedNewsFromDb,
+  [PUBLIC_NEWS_TAG],
+  { tags: [PUBLIC_NEWS_TAG], revalidate: 3600 },
+)
+
 export const getPublishedNews = cache(async (): Promise<NewsArticle[]> => {
   if (!adminDb) {
     console.warn('Firebase Admin SDK not available. Cannot fetch news.')
@@ -45,25 +72,7 @@ export const getPublishedNews = cache(async (): Promise<NewsArticle[]> => {
   }
 
   try {
-    const snap = await adminDb.collection('news').get()
-    const items: NewsArticle[] = []
-    snap.forEach((doc) => {
-      const data = doc.data()
-      if (!data.published) return
-      items.push(mapNewsDoc(doc.id, data))
-    })
-
-    items.sort((a, b) => {
-      const da = newsSortTime(a)
-      const db = newsSortTime(b)
-      if (db !== da) return db - da
-      const pa = a.publishedAt ? new Date(a.publishedAt).getTime() : 0
-      const pb = b.publishedAt ? new Date(b.publishedAt).getTime() : 0
-      if (pb !== pa) return pb - pa
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    })
-
-    return items
+    return await getCachedPublishedNews()
   } catch (e) {
     console.error('Error fetching published news:', e)
     return []
@@ -77,12 +86,22 @@ export const getNewsArticleBySlug = cache(async (slug: string | null | undefined
   }
 
   try {
-    const snap = await adminDb.collection('news').where('slug', '==', normalizedSlug).limit(1).get()
-    if (snap.empty) return null
-    const doc = snap.docs[0]
-    const data = doc.data()
-    if (!data.published) return null
-    return mapNewsDoc(doc.id, data)
+    return await unstable_cache(
+      async () => {
+        const snap = await adminDb!
+          .collection('news')
+          .where('slug', '==', normalizedSlug)
+          .limit(1)
+          .get()
+        if (snap.empty) return null
+        const doc = snap.docs[0]
+        const data = doc.data()
+        if (!data.published) return null
+        return mapNewsDoc(doc.id, data)
+      },
+      [PUBLIC_NEWS_TAG, 'by-slug', normalizedSlug],
+      { tags: [PUBLIC_NEWS_TAG], revalidate: 3600 },
+    )()
   } catch (e) {
     console.error('Error fetching news by slug:', e)
     return null
