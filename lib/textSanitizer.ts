@@ -123,6 +123,7 @@ export function sanitizeBookingDetailsForPDF(bookingDetails: {
   bkashNumber?: string
   information?: string
   teamName?: string
+  teamNumber?: string
   teamMembers?: Array<{
     name?: string
     email?: string
@@ -139,6 +140,7 @@ export function sanitizeBookingDetailsForPDF(bookingDetails: {
   bkashNumber: string
   information: string
   teamName: string
+  teamNumber: string
   teamMembers: Array<{
     name: string
     email: string
@@ -167,6 +169,7 @@ export function sanitizeBookingDetailsForPDF(bookingDetails: {
     bkashNumber: sanitizeTextForPDF(bookingDetails.bkashNumber) || '',
     information: sanitizeTextForPDF(bookingDetails.information) || '',
     teamName: sanitizeTextForPDF(bookingDetails.teamName) || '',
+    teamNumber: sanitizeTextForPDF(bookingDetails.teamNumber) || '',
     teamMembers,
   }
 }

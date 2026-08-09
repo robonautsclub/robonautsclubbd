@@ -48,7 +48,6 @@ type TeamMemberForm = {
 
 type FormState = {
   category: string
-  name: string
   division: string
   ageCategory: RobofestAgeCategory | ''
   teamSize: number
@@ -119,7 +118,6 @@ export default function CreateRobofestRegistrationForm({
     const total = computeRobofestRegistrationTotal(fee.amount || 300, 1)
     return {
       category: defaultCategory,
-      name: '',
       division: defaultDivision,
       ageCategory: '',
       teamSize: 1,
@@ -227,7 +225,7 @@ export default function CreateRobofestRegistrationForm({
       const amountPaid = Number(form.amountPaid)
       const result = await createRobofestRegistrationManual({
         category: form.category,
-        name: form.name,
+        name: '',
         division: form.division,
         ageCategory: form.ageCategory,
         teamSize: form.teamSize,
@@ -258,7 +256,9 @@ export default function CreateRobofestRegistrationForm({
 
       setMessage(
         result.warning ||
-          `Registration created${result.registrationId ? ` (${result.registrationId})` : ''}.`,
+          `Registration created${
+            result.registrationId ? ` (${result.registrationId})` : ''
+          }${result.teamNumber ? ` · Team ${result.teamNumber}` : ''}.`,
       )
       router.refresh()
       setTimeout(() => handleOpenChange(false), 800)
@@ -328,16 +328,9 @@ export default function CreateRobofestRegistrationForm({
             </select>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs text-gray-500">Team name</label>
-            <Input
-              value={form.name}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, name: e.target.value }))
-              }
-              required
-            />
-          </div>
+          <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+            Team number is assigned automatically and used as the team name.
+          </p>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
@@ -396,7 +389,9 @@ export default function CreateRobofestRegistrationForm({
               className="rounded-lg border border-gray-100 p-3 space-y-2"
             >
               <p className="text-sm font-medium text-gray-800">
-                Member {String(index + 1).padStart(2, '0')}
+                {index === 0
+                  ? 'Team Member 01 (Team Leader)'
+                  : `Team Member ${String(index + 1).padStart(2, '0')}`}
               </p>
               <div className="grid sm:grid-cols-2 gap-2">
                 <Input

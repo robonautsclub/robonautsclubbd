@@ -27,7 +27,8 @@ export type RobofestMemberInput = {
 
 export type RobofestRegistrationInput = {
   category: string;
-  name: string;
+  /** Ignored — server assigns team number as the team name. */
+  name?: string;
   division: string;
   ageCategory: string;
   teamSize: number;
@@ -45,7 +46,6 @@ export async function validateRobofestRegistrationInput(
   | { ok: false; error: string }
 > {
   const category = formData.category?.trim() ?? "";
-  const name = formData.name?.trim() ?? "";
   const division = formData.division?.trim() ?? "";
   const ageCategoryRaw = formData.ageCategory?.trim() ?? "";
   const ageCategory: RobofestAgeCategory | null =
@@ -53,7 +53,7 @@ export async function validateRobofestRegistrationInput(
       ? ageCategoryRaw
       : null;
 
-  if (!category || !name || !division || !ageCategory) {
+  if (!category || !division || !ageCategory) {
     return { ok: false, error: "All required fields must be filled." };
   }
 
@@ -166,7 +166,8 @@ export async function validateRobofestRegistrationInput(
     ok: true,
     data: {
       category,
-      name,
+      // Placeholder until create allocates team number and overwrites name.
+      name: "",
       email: primary.email,
       phone: primary.phone || "",
       school: primary.school || "",

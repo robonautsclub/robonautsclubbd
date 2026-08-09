@@ -37,7 +37,6 @@ type TeamMemberForm = {
 };
 
 type FormState = {
-  name: string;
   division: string;
   ageCategory: RobofestAgeCategory | "";
   teamSize: number;
@@ -56,7 +55,6 @@ const emptyMember = (): TeamMemberForm => ({
 });
 
 const emptyForm = (division: string): FormState => ({
-  name: "",
   division,
   ageCategory: "",
   teamSize: 1,
@@ -110,6 +108,7 @@ export default function RobofestCategoryRegistrationForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [registrationId, setRegistrationId] = useState<string | null>(null);
+  const [teamNumber, setTeamNumber] = useState<string | null>(null);
   const [warning, setWarning] = useState("");
   const [error, setError] = useState("");
   const [understood, setUnderstood] = useState(false);
@@ -188,7 +187,7 @@ export default function RobofestCategoryRegistrationForm({
 
     const payload = {
       category,
-      name: form.name,
+      name: "",
       division: form.division,
       ageCategory: form.ageCategory,
       teamSize: form.teamSize,
@@ -222,6 +221,7 @@ export default function RobofestCategoryRegistrationForm({
       }
 
       setRegistrationId(result.registrationId ?? null);
+      setTeamNumber(result.teamNumber ?? null);
       if (result.warning) setWarning(result.warning);
       setIsSubmitted(true);
       setForm(emptyForm(defaultDivision));
@@ -258,6 +258,11 @@ export default function RobofestCategoryRegistrationForm({
               ID: {registrationId}
             </p>
           ) : null}
+          {teamNumber ? (
+            <p className="font-mono text-sm font-semibold text-cyan-800">
+              Team number: {teamNumber}
+            </p>
+          ) : null}
           {warning ? <p className="text-amber-800 text-sm">{warning}</p> : null}
         </AlertDescription>
         <Button
@@ -269,6 +274,7 @@ export default function RobofestCategoryRegistrationForm({
             setError("");
             setWarning("");
             setRegistrationId(null);
+            setTeamNumber(null);
           }}
         >
           Register another team
@@ -294,22 +300,10 @@ export default function RobofestCategoryRegistrationForm({
         />
       </div>
 
-      <div className="space-y-1.5">
-        <label
-          htmlFor={fieldId("team-name")}
-          className="text-sm font-medium text-gray-700"
-        >
-          Team name
-        </label>
-        <Input
-          id={fieldId("team-name")}
-          value={form.name}
-          onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-          placeholder="Team Robonauts"
-          required
-          autoComplete="organization"
-        />
-      </div>
+      <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 leading-relaxed">
+        Team number is assigned automatically after registration (e.g. BS#001)
+        and is used as your team name.
+      </p>
 
       <div className="space-y-1.5">
         <label
@@ -388,7 +382,9 @@ export default function RobofestCategoryRegistrationForm({
             className="space-y-3 rounded-lg border border-gray-200 bg-gray-50/70 p-3"
           >
             <legend className="px-1 text-sm font-semibold text-gray-800">
-              Team member {String(index + 1).padStart(2, "0")}
+              {index === 0
+                ? "Team Member 01 (Team Leader)"
+                : `Team Member ${String(index + 1).padStart(2, "0")}`}
             </legend>
 
             <div className="space-y-1.5">

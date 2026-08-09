@@ -5,7 +5,6 @@ import {
   Users,
   Mail,
   Phone,
-  School,
   ShieldCheck,
   QrCode,
   Trophy,
@@ -14,10 +13,7 @@ import { format } from 'date-fns'
 import Image from 'next/image'
 import Link from 'next/link'
 import type { RobofestContent, RobofestRegistration } from '@/lib/robofest-content'
-import {
-  resolveRobofestRoundDateLabel,
-  resolveRobofestRoundVenueLabel,
-} from '@/lib/robofest-content'
+import { resolveRobofestRoundVenueLabel } from '@/lib/robofest-content'
 import { formatAgeCategoryLabel } from '@/lib/robofest-registration-options'
 import { SITE_CONFIG } from '@/lib/site-config'
 import { Badge } from '@/components/ui/badge'
@@ -42,14 +38,12 @@ export default function VerifyRobofestRegistration({
   const ageLabel = registration.ageCategory
     ? formatAgeCategoryLabel(registration.ageCategory)
     : null
-  const roundDate = resolveRobofestRoundDateLabel(
-    content,
-    registration.roundCity || '',
-  )
+  const eventDate = content.dateLabel || 'TBA'
   const roundVenue = resolveRobofestRoundVenueLabel(
     content,
     registration.roundCity || '',
   )
+  const teamNumber = registration.teamNumber || registration.name
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 via-cyan-50 to-slate-100 py-8 sm:py-12 px-4">
@@ -66,7 +60,7 @@ export default function VerifyRobofestRegistration({
                 <CheckCircle className="w-14 h-14 sm:w-16 sm:h-16 text-white" />
               </div>
               <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-cyan-100 mb-2">
-                Robofest Bangladesh Local Round
+                RoboFest Bangladesh 2026
               </p>
               <h1 className="text-3xl sm:text-4xl font-extrabold text-white mb-2 tracking-tight">
                 Team Registration Verified
@@ -146,7 +140,7 @@ export default function VerifyRobofestRegistration({
                       Event
                     </p>
                     <p className="text-base sm:text-lg font-bold text-slate-900">
-                      {content.headline || 'Robofest Bangladesh'}
+                      {content.headline || 'RoboFest Bangladesh 2026'}
                     </p>
                   </div>
                   <div className="bg-white rounded-xl p-4 border border-slate-200">
@@ -179,11 +173,11 @@ export default function VerifyRobofestRegistration({
                     <div className="flex items-center gap-2 mb-1.5">
                       <Calendar className="w-4 h-4 text-slate-500" />
                       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                        Local round dates
+                        Event date
                       </p>
                     </div>
                     <p className="text-base font-semibold text-slate-900">
-                      {roundDate}
+                      {eventDate}
                     </p>
                   </div>
                   <div className="bg-white rounded-xl p-4 border border-slate-200">
@@ -212,28 +206,17 @@ export default function VerifyRobofestRegistration({
                 <div className="space-y-4">
                   <div className="bg-white rounded-xl p-4 border border-slate-200">
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-                      Team name
+                      Team number
                     </p>
-                    <p className="text-base sm:text-lg font-bold text-slate-900">
-                      {registration.name}
-                    </p>
-                  </div>
-                  <div className="bg-white rounded-xl p-4 border border-slate-200">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <School className="w-4 h-4 text-slate-500" />
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                        Primary school
-                      </p>
-                    </div>
-                    <p className="text-base font-semibold text-slate-900">
-                      {registration.school || '—'}
+                    <p className="text-base sm:text-lg font-bold font-mono text-cyan-800">
+                      {teamNumber}
                     </p>
                   </div>
                   <div className="bg-white rounded-xl p-4 border border-slate-200">
                     <div className="flex items-center gap-2 mb-1.5">
                       <Mail className="w-4 h-4 text-slate-500" />
                       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                        Primary contact email
+                        Team lead email
                       </p>
                     </div>
                     <p className="text-base font-semibold text-slate-900 break-all">
@@ -244,7 +227,7 @@ export default function VerifyRobofestRegistration({
                     <div className="flex items-center gap-2 mb-1.5">
                       <Phone className="w-4 h-4 text-slate-500" />
                       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                        Primary phone
+                        Team lead phone
                       </p>
                     </div>
                     <p className="text-base font-semibold text-slate-900">
@@ -306,7 +289,10 @@ export default function VerifyRobofestRegistration({
                       className="bg-white rounded-xl p-4 border border-slate-200"
                     >
                       <p className="font-bold text-slate-900">
-                        {String(index + 1).padStart(2, '0')}. {member.name}
+                        {index === 0
+                          ? '01 (Team Leader)'
+                          : String(index + 1).padStart(2, '0')}
+                        . {member.name}
                       </p>
                       <p className="text-sm text-cyan-800 mt-1 break-all">
                         {member.email || '—'}
