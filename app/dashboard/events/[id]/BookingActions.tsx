@@ -3,19 +3,23 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { cancelBooking } from '../../actions'
-import { Trash2, FileText, ExternalLink } from 'lucide-react'
+import { Trash2, FileText } from 'lucide-react'
 import DeleteConfirmation from '../DeleteConfirmation'
 import type { Booking } from '@/types/booking'
+import type { Event } from '@/types/event'
 import { Button } from '@/components/ui/button'
+import { downloadPdfFromResponse } from '@/lib/downloadPdfBlob'
 
 interface BookingActionsProps {
   booking: Booking
+  event: Event
 }
 
-export default function BookingActions({ booking }: BookingActionsProps) {
+export default function BookingActions({ booking, event }: BookingActionsProps) {
   const router = useRouter()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
 
   const handleCancel = async () => {
     setDeleting(true)
@@ -35,27 +39,45 @@ export default function BookingActions({ booking }: BookingActionsProps) {
     }
   }
 
-  const pdfUrl = `/api/dashboard/registrations/${booking.id}/pdf`
+  const handleDownloadPdf = async () => {
+    setDownloadingPdf(true)
+    try {
+      const response = await fetch(
+        `/api/dashboard/registrations/${booking.id}/pdf`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ booking, event }),
+        },
+      )
+      await downloadPdfFromResponse(
+        response,
+        `Registration-Confirmation-${booking.registrationId || booking.id}.pdf`,
+      )
+    } catch (error) {
+      console.error('Error downloading PDF:', error)
+      alert(error instanceof Error ? error.message : 'Failed to download PDF')
+    } finally {
+      setDownloadingPdf(false)
+    }
+  }
 
   return (
     <>
       <div className="flex items-center gap-2">
         <Button
-          asChild
+          type="button"
           variant="ghost"
           size="sm"
+          disabled={downloadingPdf}
+          onClick={handleDownloadPdf}
           className="text-cyan-700 hover:text-cyan-800 hover:bg-cyan-50"
           title="Download confirmation PDF"
         >
-          <a
-            href={pdfUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <FileText className="w-4 h-4" />
-            <span className="hidden sm:inline">PDF</span>
-            <ExternalLink className="w-3 h-3 hidden sm:inline" />
-          </a>
+          <FileText className="w-4 h-4" />
+          <span className="hidden sm:inline">
+            {downloadingPdf ? '…' : 'PDF'}
+          </span>
         </Button>
         <Button
           type="button"
@@ -82,4 +104,3 @@ export default function BookingActions({ booking }: BookingActionsProps) {
     </>
   )
 }
-

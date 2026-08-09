@@ -315,7 +315,7 @@ export default function EventDetailsClient({ event, bookings }: Props) {
                       <div className="text-xs sm:text-sm text-slate-500">{formattedDate}</div>
                     </TableCell>
                     <TableCell className="px-3 sm:px-6 py-3 sm:py-4 text-right">
-                      <BookingActions booking={booking} />
+                      <BookingActions booking={booking} event={event} />
                     </TableCell>
                   </TableRow>
                 )

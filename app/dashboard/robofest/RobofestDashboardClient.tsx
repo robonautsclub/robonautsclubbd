@@ -35,6 +35,7 @@ import {
   exportRobofestExcel,
   exportRobofestPdf,
 } from './exportRobofestRegistrations'
+import { downloadPdfFromResponse } from '@/lib/downloadPdfBlob'
 import CreateRobofestRegistrationForm from './CreateRobofestRegistrationForm'
 import DatePicker from '@/app/dashboard/events/DatePicker'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -432,6 +433,31 @@ export default function RobofestDashboardClient({
           : 'Confirmation email resent.',
       )
       router.refresh()
+    })
+  }
+
+  const downloadConfirmationPdf = (registration: RobofestRegistration) => {
+    if (!registration.registrationId) {
+      alert('Registration ID is missing.')
+      return
+    }
+    startTransition(async () => {
+      try {
+        const response = await fetch(
+          `/api/dashboard/robofest/registrations/${registration.id}/pdf`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ registration, content }),
+          },
+        )
+        await downloadPdfFromResponse(
+          response,
+          `Robofest-Confirmation-${registration.registrationId}.pdf`,
+        )
+      } catch (err) {
+        alert(err instanceof Error ? err.message : 'Failed to download PDF')
+      }
     })
   }
 
@@ -1049,15 +1075,15 @@ export default function RobofestDashboardClient({
                                 </span>
                               ) : null}
                             </Button>
-                            <Button asChild size="sm" variant="outline">
-                              <a
-                                href={`/api/dashboard/robofest/registrations/${r.id}/pdf`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                title="Download confirmation PDF"
-                              >
-                                <Download className="w-3.5 h-3.5" />
-                              </a>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={pending || !r.registrationId}
+                              onClick={() => downloadConfirmationPdf(r)}
+                              title="Download confirmation PDF"
+                            >
+                              <Download className="w-3.5 h-3.5" />
                             </Button>
                           </div>
                         </TableCell>
