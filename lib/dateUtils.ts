@@ -103,25 +103,59 @@ export function parseEventDates(date: string | string[] | undefined): string[] {
 }
 
 /**
+ * Format a single stored date string for display in Asia/Dhaka.
+ * YYYY-MM-DD values are treated as Bangladesh calendar days (no UTC off-by-one).
+ */
+function formatStoredDatePart(
+  value: string,
+  options: Intl.DateTimeFormatOptions,
+): string {
+  const iso = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (iso) {
+    const instant = bdWallTimeToUtcDate(
+      Number(iso[1]),
+      Number(iso[2]) - 1,
+      Number(iso[3]),
+      12,
+      0,
+      0,
+      0,
+    )
+    return instant.toLocaleDateString('en-US', {
+      timeZone: BANGLADESH_TZ,
+      ...options,
+    })
+  }
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleDateString('en-US', {
+    timeZone: BANGLADESH_TZ,
+    ...options,
+  })
+}
+
+/**
  * Format dates for display
  * Returns formatted string for single or multiple dates
  */
 export function formatEventDates(dates: string[], formatType: 'short' | 'long' = 'long'): string {
   if (dates.length === 0) return 'No date set'
+  const longOpts: Intl.DateTimeFormatOptions =
+    formatType === 'short'
+      ? { month: 'short', day: 'numeric', year: 'numeric' }
+      : { month: 'long', day: 'numeric', year: 'numeric' }
+  const shortOpts: Intl.DateTimeFormatOptions = {
+    month: 'short',
+    day: 'numeric',
+  }
+
   if (dates.length === 1) {
-    const date = new Date(dates[0])
-    return formatType === 'short' 
-      ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-      : date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    return formatStoredDatePart(dates[0], longOpts)
   }
   if (dates.length === 2) {
-    const date1 = new Date(dates[0])
-    const date2 = new Date(dates[dates.length - 1])
-    return `${date1.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${date2.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+    return `${formatStoredDatePart(dates[0], shortOpts)} - ${formatStoredDatePart(dates[dates.length - 1], longOpts)}`
   }
-  const firstDate = new Date(dates[0])
-  const lastDate = new Date(dates[dates.length - 1])
-  return `${firstDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${lastDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} (${dates.length} dates)`
+  return `${formatStoredDatePart(dates[0], shortOpts)} - ${formatStoredDatePart(dates[dates.length - 1], longOpts)} (${dates.length} dates)`
 }
 
 /**
