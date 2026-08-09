@@ -19,6 +19,19 @@ function createdLabel(r: RobofestRegistration) {
   }
 }
 
+function membersLabel(r: RobofestRegistration) {
+  const members = r.teamMembers?.filter((m) => m?.name) || []
+  if (members.length === 0) {
+    return [r.name, r.email, r.phone].filter(Boolean).join(' · ') || '—'
+  }
+  return members
+    .map((m, i) => {
+      const detail = [m.email, m.phone, m.school].filter(Boolean).join(' · ')
+      return `${i + 1}. ${m.name}${detail ? ` (${detail})` : ''}`
+    })
+    .join('\n')
+}
+
 function memberCells(r: RobofestRegistration) {
   return [0, 1, 2, 3].flatMap((i) => {
     const m = r.teamMembers?.[i]
@@ -168,12 +181,11 @@ export async function exportRobofestPdf(rows: RobofestRegistration[]) {
 
   const body = rows.map((r, index) => [
     String(index + 1),
-    r.registrationId || '—',
     r.name || '',
     r.category || '',
     r.roundCity || '',
     ageLabel(r) || '—',
-    [r.email, r.phone].filter(Boolean).join(' · ') || '—',
+    membersLabel(r),
     r.status || '',
     r.paymentStatus || '—',
   ])
@@ -183,12 +195,11 @@ export async function exportRobofestPdf(rows: RobofestRegistration[]) {
     head: [
       [
         'No.',
-        'Reg ID',
         'Team',
         'Competition',
         'Division',
         'Age',
-        'Contact',
+        'Team members',
         'Status',
         'Payment',
       ],
