@@ -72,7 +72,7 @@ export default function CreateUserForm() {
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
       <DialogTrigger asChild>
-        <Button type="button" className="bg-indigo-500 hover:bg-indigo-600 text-white shadow-md hover:shadow-lg">
+        <Button type="button" className="bg-cyan-500 hover:bg-cyan-700 text-white shadow-md hover:shadow-lg">
           <Plus className="w-5 h-5" />
           Create User
         </Button>
@@ -81,14 +81,14 @@ export default function CreateUserForm() {
         showCloseButton={false}
         className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[95vh]"
       >
-        <div className="bg-linear-to-r from-indigo-500 to-blue-600 px-4 sm:px-6 py-4 sm:py-5 flex justify-between items-center">
+        <div className="bg-linear-to-r from-cyan-500 to-blue-600 px-4 sm:px-6 py-4 sm:py-5 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
               <DialogTitle className="text-lg sm:text-xl font-bold text-white">Create New User</DialogTitle>
-              <DialogDescription className="text-xs sm:text-sm text-indigo-100">
+              <DialogDescription className="text-xs sm:text-sm text-cyan-100">
                 Add a new admin user to the system
               </DialogDescription>
             </div>
@@ -120,7 +120,7 @@ export default function CreateUserForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                      <Mail className="w-4 h-4 text-indigo-600" />
+                      <Mail className="w-4 h-4 text-cyan-700" />
                       Email Address <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
@@ -143,7 +143,7 @@ export default function CreateUserForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                      <Lock className="w-4 h-4 text-indigo-600" />
+                      <Lock className="w-4 h-4 text-cyan-700" />
                       Password <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
@@ -167,7 +167,7 @@ export default function CreateUserForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                      <User className="w-4 h-4 text-indigo-600" />
+                      <User className="w-4 h-4 text-cyan-700" />
                       Display Name
                     </FormLabel>
                     <FormControl>
@@ -198,7 +198,7 @@ export default function CreateUserForm() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="bg-indigo-500 hover:bg-indigo-600 text-white shadow-md hover:shadow-lg"
+                  className="bg-cyan-500 hover:bg-cyan-700 text-white shadow-md hover:shadow-lg"
                 >
                   {loading ? (
                     <>

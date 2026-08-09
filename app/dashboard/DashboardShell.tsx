@@ -68,8 +68,8 @@ export default function DashboardShell({
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100">
-      <nav className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-20">
+    <div className="h-dvh flex flex-col overflow-hidden bg-linear-to-br from-slate-50 to-cyan-50/40">
+      <nav className="shrink-0 bg-white/95 backdrop-blur border-b border-slate-200 z-20">
         <div className="px-3 sm:px-4 lg:px-6 xl:px-8">
           <div className="flex justify-between items-center h-14 sm:h-16">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -79,7 +79,7 @@ export default function DashboardShell({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="lg:hidden shrink-0"
+                    className="lg:hidden shrink-0 text-slate-600"
                     aria-label="Open navigation menu"
                   >
                     <Menu className="h-5 w-5" />
@@ -89,7 +89,7 @@ export default function DashboardShell({
                   side="left"
                   className="w-[min(20rem,85vw)] p-0 flex flex-col gap-0"
                 >
-                  <SheetHeader className="px-4 py-3 border-b border-gray-100 text-left">
+                  <SheetHeader className="px-4 py-3 border-b border-slate-100 text-left">
                     <SheetTitle>Navigation</SheetTitle>
                   </SheetHeader>
                   <nav className="flex-1 overflow-y-auto p-3 space-y-1">
@@ -105,15 +105,15 @@ export default function DashboardShell({
                           className={cn(
                             'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                             isActive
-                              ? 'bg-indigo-50 text-indigo-600'
-                              : 'text-gray-700 hover:bg-gray-50',
+                              ? 'bg-cyan-50 text-cyan-800'
+                              : 'text-slate-700 hover:bg-slate-50',
                           )}
                           aria-current={isActive ? 'page' : undefined}
                         >
                           <Icon
                             className={cn(
                               'h-5 w-5 shrink-0',
-                              isActive ? 'text-indigo-600' : 'text-gray-500',
+                              isActive ? 'text-cyan-700' : 'text-slate-500',
                             )}
                           />
                           {item.label}
@@ -124,14 +124,14 @@ export default function DashboardShell({
                 </SheetContent>
               </Sheet>
 
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-linear-to-br from-indigo-500 to-blue-600 flex items-center justify-center shrink-0">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-linear-to-br from-cyan-600 to-slate-800 flex items-center justify-center shrink-0">
                 <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-base sm:text-lg font-bold text-gray-900 truncate">
+                <h1 className="text-base sm:text-lg font-bold text-slate-900 truncate">
                   Admin Dashboard
                 </h1>
-                <p className="text-xs text-gray-500 hidden sm:block truncate">
+                <p className="text-xs text-slate-500 hidden sm:block truncate">
                   {SITE_CONFIG.name}
                 </p>
               </div>
@@ -139,10 +139,10 @@ export default function DashboardShell({
 
             <div className="flex items-center gap-2 sm:gap-4 shrink-0">
               <div className="hidden sm:block text-right">
-                <p className="text-xs sm:text-sm font-medium text-gray-900 truncate max-w-[120px] sm:max-w-[200px]">
+                <p className="text-xs sm:text-sm font-medium text-slate-900 truncate max-w-[120px] sm:max-w-[200px]">
                   {userName}
                 </p>
-                <p className="text-xs text-gray-500 truncate max-w-[120px] sm:max-w-[200px]">
+                <p className="text-xs text-slate-500 truncate max-w-[120px] sm:max-w-[200px]">
                   {userEmail}
                 </p>
               </div>
@@ -152,14 +152,14 @@ export default function DashboardShell({
         </div>
       </nav>
 
-      <div className="flex flex-col lg:flex-row w-full min-w-0">
+      <div className="flex flex-1 min-h-0 w-full min-w-0 flex-col lg:flex-row">
         <Sidebar
           role={role}
           collapsed={collapsed}
           onToggleCollapsed={toggleCollapsed}
         />
-        <main className="flex-1 min-w-0 w-full p-3 sm:p-5 lg:p-6 xl:p-8 overflow-x-hidden">
-          {children}
+        <main className="flex-1 min-h-0 min-w-0 w-full p-3 sm:p-5 lg:p-6 xl:p-8 overflow-y-auto overflow-x-hidden">
+          <div className="w-full min-w-0 max-w-full">{children}</div>
         </main>
       </div>
     </div>

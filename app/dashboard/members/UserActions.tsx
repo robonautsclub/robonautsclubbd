@@ -64,7 +64,7 @@ export default function UserActions({ user, currentUserUid }: UserActionsProps) 
 
   return (
     <>
-      <div className="flex items-center gap-2">
+      <div className="inline-flex items-center justify-end gap-1 shrink-0">
         <Button
           type="button"
           variant="ghost"
@@ -72,9 +72,10 @@ export default function UserActions({ user, currentUserUid }: UserActionsProps) 
           onClick={() => setShowEditForm(true)}
           disabled={disableActions}
           className={cn(
+            'h-8 px-2 sm:px-3',
             disableActions
-              ? 'text-gray-400'
-              : 'text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50'
+              ? 'text-slate-400'
+              : 'text-cyan-700 hover:text-cyan-800 hover:bg-cyan-50'
           )}
           title={
             disableActions
@@ -85,7 +86,7 @@ export default function UserActions({ user, currentUserUid }: UserActionsProps) 
           }
         >
           <Edit className="w-4 h-4" />
-          Edit
+          <span className="hidden sm:inline">Edit</span>
         </Button>
         <Button
           type="button"
@@ -94,14 +95,15 @@ export default function UserActions({ user, currentUserUid }: UserActionsProps) 
           onClick={() => setShowDeleteConfirm(true)}
           disabled={disableActions}
           className={cn(
+            'h-8 px-2 sm:px-3',
             disableActions
-              ? 'text-gray-400'
+              ? 'text-slate-400'
               : 'text-red-600 hover:text-red-700 hover:bg-red-50'
           )}
           title={disableActions ? 'Super Admin accounts cannot be deleted' : 'Delete user'}
         >
           <Trash2 className="w-4 h-4" />
-          Delete
+          <span className="hidden sm:inline">Delete</span>
         </Button>
       </div>
 

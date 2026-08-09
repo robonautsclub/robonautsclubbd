@@ -23,7 +23,7 @@ export default async function EventDetailsPage({
   }
 
   return (
-    <div className="max-w-7xl space-y-4 sm:space-y-6">
+    <div className="w-full min-w-0 max-w-7xl mx-auto space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>

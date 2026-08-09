@@ -153,7 +153,7 @@ export default function GalleryGroupForm({ group }: Props) {
         <Link
           href="/dashboard/gallery"
           prefetch={false}
-          className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-800"
+          className="inline-flex items-center gap-2 text-sm font-medium text-cyan-700 hover:text-cyan-900"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to gallery
@@ -171,7 +171,7 @@ export default function GalleryGroupForm({ group }: Props) {
           render={({ field }) => (
             <FormItem>
               <FormLabel className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-indigo-600" />
+                <Calendar className="w-4 h-4 text-cyan-700" />
                 Display date
               </FormLabel>
               <FormControl>
@@ -205,7 +205,7 @@ export default function GalleryGroupForm({ group }: Props) {
           render={({ field }) => (
             <FormItem>
               <FormLabel className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-indigo-600" />
+                <MapPin className="w-4 h-4 text-cyan-700" />
                 Location
               </FormLabel>
               <FormControl>
@@ -244,7 +244,7 @@ export default function GalleryGroupForm({ group }: Props) {
 
         <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
           <p className="text-sm font-medium text-gray-900 flex items-center gap-2">
-            <Images className="w-4 h-4 text-indigo-600" />
+            <Images className="w-4 h-4 text-cyan-700" />
             Photos
           </p>
           <input
@@ -259,7 +259,7 @@ export default function GalleryGroupForm({ group }: Props) {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            className="bg-cyan-700 hover:bg-cyan-800 text-white"
           >
             {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
             {uploading ? 'Uploading…' : 'Upload images'}
@@ -289,7 +289,7 @@ export default function GalleryGroupForm({ group }: Props) {
         </div>
 
         <div className="flex flex-wrap gap-3 pt-2">
-          <Button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+          <Button type="submit" disabled={loading} className="bg-cyan-700 hover:bg-cyan-800 text-white">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             {isEdit ? 'Save album' : 'Create album'}
           </Button>

@@ -26,12 +26,12 @@ export default async function EventsPage() {
   })
 
   return (
-    <div className="max-w-7xl space-y-4 sm:space-y-6">
+    <div className="w-full min-w-0 max-w-7xl mx-auto space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Events Management</h2>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">Manage and view all your events</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Events Management</h2>
+          <p className="text-sm sm:text-base text-slate-600 mt-1">Manage and view all your events</p>
         </div>
         <CreateEventForm />
       </div>
@@ -42,11 +42,11 @@ export default async function EventsPage() {
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm text-gray-600 mb-1">Total Events</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900">{events.length}</p>
+                <p className="text-xs sm:text-sm text-slate-600 mb-1">Total Events</p>
+                <p className="text-xl sm:text-2xl font-bold text-slate-900">{events.length}</p>
               </div>
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
-                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-cyan-100 flex items-center justify-center">
+                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-700" />
               </div>
             </div>
           </CardContent>
@@ -55,7 +55,7 @@ export default async function EventsPage() {
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm text-gray-600 mb-1">Upcoming</p>
+                <p className="text-xs sm:text-sm text-slate-600 mb-1">Upcoming</p>
                 <p className="text-xl sm:text-2xl font-bold text-green-600">{upcomingEvents.length}</p>
               </div>
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-green-100 flex items-center justify-center">
@@ -68,11 +68,11 @@ export default async function EventsPage() {
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm text-gray-600 mb-1">Past Events</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-600">{pastEvents.length}</p>
+                <p className="text-xs sm:text-sm text-slate-600 mb-1">Past Events</p>
+                <p className="text-xl sm:text-2xl font-bold text-slate-600">{pastEvents.length}</p>
               </div>
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gray-100 flex items-center justify-center">
-                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
+                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600" />
               </div>
             </div>
           </CardContent>
@@ -85,8 +85,8 @@ export default async function EventsPage() {
             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
               <Calendar className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
             </div>
-            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">No events yet</h3>
-            <p className="text-sm sm:text-base text-gray-600 mb-6">Create your first event to get started</p>
+            <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">No events yet</h3>
+            <p className="text-sm sm:text-base text-slate-600 mb-6">Create your first event to get started</p>
             <CreateEventForm />
           </CardContent>
         </Card>
@@ -95,14 +95,14 @@ export default async function EventsPage() {
           {/* Upcoming Events Section */}
           {upcomingEvents.length > 0 && (
             <Card className="shadow-sm overflow-hidden p-0">
-              <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
+              <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-200 bg-gradient-to-r from-green-50 to-emerald-50">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-green-500 flex items-center justify-center">
                     <Calendar className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg sm:text-xl font-bold text-gray-900">Upcoming Events</h3>
-                    <p className="text-xs sm:text-sm text-gray-600 mt-0.5">{upcomingEvents.length} active {upcomingEvents.length === 1 ? 'event' : 'events'}</p>
+                    <h3 className="text-lg sm:text-xl font-bold text-slate-900">Upcoming Events</h3>
+                    <p className="text-xs sm:text-sm text-slate-600 mt-0.5">{upcomingEvents.length} active {upcomingEvents.length === 1 ? 'event' : 'events'}</p>
                   </div>
                 </div>
               </div>
@@ -138,20 +138,20 @@ export default async function EventsPage() {
                           <Link
                             href={`/dashboard/events/${event.id}`}
                             prefetch={false}
-                            className="text-sm font-semibold text-gray-900 mb-1 hover:text-indigo-600 transition-colors block"
+                            className="text-sm font-semibold text-slate-900 mb-1 hover:text-cyan-700 transition-colors block"
                           >
                             {event.title}
                           </Link>
-                          <div className="text-xs text-gray-500 line-clamp-1 max-w-md">{event.description}</div>
+                          <div className="text-xs text-slate-500 line-clamp-1 max-w-md">{event.description}</div>
                         </TableCell>
                         <TableCell className="px-3 sm:px-6 py-4">
                           {eventDates.length > 0 ? (
                             <div className="space-y-1">
-                              <div className="text-sm font-medium text-gray-900">
+                              <div className="text-sm font-medium text-slate-900">
                                 {formatEventDates(eventDates, 'short')}
                               </div>
                               {event.time && (
-                                <div className="text-xs text-gray-500 flex items-center gap-1">
+                                <div className="text-xs text-slate-500 flex items-center gap-1">
                                   <Clock className="w-3 h-3" />
                                   {event.time}
                                 </div>
@@ -163,7 +163,7 @@ export default async function EventsPage() {
                         </TableCell>
                         <TableCell className="px-3 sm:px-6 py-4">
                           {event.location ? (
-                            <div className="text-sm text-gray-900 flex items-center gap-1 max-w-xs">
+                            <div className="text-sm text-slate-900 flex items-center gap-1 max-w-xs">
                               <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
                               <span className="truncate">{event.location}</span>
                             </div>
@@ -173,13 +173,13 @@ export default async function EventsPage() {
                         </TableCell>
                         <TableCell className="px-3 sm:px-6 py-4 hidden md:table-cell">
                           {event.createdByName ? (
-                            <div className="text-sm text-gray-900">
+                            <div className="text-sm text-slate-900">
                               <div className="flex items-center gap-1.5 mb-1">
                                 <User className="w-4 h-4 text-gray-400" />
                                 <span className="font-medium">{event.createdByName}</span>
                               </div>
                               {event.createdByEmail && (
-                                <div className="text-xs text-gray-500 truncate max-w-xs">
+                                <div className="text-xs text-slate-500 truncate max-w-xs">
                                   {event.createdByEmail}
                                 </div>
                               )}
@@ -206,15 +206,15 @@ export default async function EventsPage() {
 
           {/* Archive Section for Past Events */}
           {pastEvents.length > 0 && (
-            <Card className="bg-gradient-to-br from-gray-50 to-slate-50 shadow-sm border border-gray-300 overflow-hidden p-0">
-              <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-300 bg-gradient-to-r from-slate-100 to-gray-100">
+            <Card className="bg-gradient-to-br from-gray-50 to-slate-50 shadow-sm border border-slate-300 overflow-hidden p-0">
+              <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-300 bg-gradient-to-r from-slate-100 to-gray-100">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-slate-600 flex items-center justify-center">
                     <Archive className="w-5 h-5 text-white" />
                   </div>
                   <div>
                     <h3 className="text-lg sm:text-xl font-bold text-gray-800">Archive</h3>
-                    <p className="text-xs sm:text-sm text-gray-600 mt-0.5">{pastEvents.length} past {pastEvents.length === 1 ? 'event' : 'events'}</p>
+                    <p className="text-xs sm:text-sm text-slate-600 mt-0.5">{pastEvents.length} past {pastEvents.length === 1 ? 'event' : 'events'}</p>
                   </div>
                 </div>
               </div>
@@ -250,11 +250,11 @@ export default async function EventsPage() {
                           <Link
                             href={`/dashboard/events/${event.id}`}
                             prefetch={false}
-                            className="text-sm font-semibold text-gray-700 mb-1 hover:text-indigo-600 transition-colors block"
+                            className="text-sm font-semibold text-gray-700 mb-1 hover:text-cyan-700 transition-colors block"
                           >
                             {event.title}
                           </Link>
-                          <div className="text-xs text-gray-500 line-clamp-1 max-w-md">{event.description}</div>
+                          <div className="text-xs text-slate-500 line-clamp-1 max-w-md">{event.description}</div>
                         </TableCell>
                         <TableCell className="px-3 sm:px-6 py-4">
                           {eventDates.length > 0 ? (
@@ -263,7 +263,7 @@ export default async function EventsPage() {
                                 {formatEventDates(eventDates, 'short')}
                               </div>
                               {event.time && (
-                                <div className="text-xs text-gray-500 flex items-center gap-1">
+                                <div className="text-xs text-slate-500 flex items-center gap-1">
                                   <Clock className="w-3 h-3" />
                                   {event.time}
                                 </div>
@@ -291,7 +291,7 @@ export default async function EventsPage() {
                                 <span className="font-medium">{event.createdByName}</span>
                               </div>
                               {event.createdByEmail && (
-                                <div className="text-xs text-gray-500 truncate max-w-xs">
+                                <div className="text-xs text-slate-500 truncate max-w-xs">
                                   {event.createdByEmail}
                                 </div>
                               )}
@@ -323,8 +323,8 @@ export default async function EventsPage() {
                 <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
                   <Calendar className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" />
                 </div>
-                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">No events yet</h3>
-                <p className="text-sm sm:text-base text-gray-600 mb-6">Create your first event to get started</p>
+                <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">No events yet</h3>
+                <p className="text-sm sm:text-base text-slate-600 mb-6">Create your first event to get started</p>
                 <CreateEventForm />
               </CardContent>
             </Card>

@@ -166,7 +166,7 @@ export default function NewsArticleForm({ article }: Props) {
         <Link
           href="/dashboard/news"
           prefetch={false}
-          className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-800"
+          className="inline-flex items-center gap-2 text-sm font-medium text-cyan-700 hover:text-cyan-900"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to news
@@ -184,7 +184,7 @@ export default function NewsArticleForm({ article }: Props) {
           render={({ field }) => (
             <FormItem>
               <FormLabel className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-indigo-600" />
+                <Calendar className="w-4 h-4 text-cyan-700" />
                 Display date
               </FormLabel>
               <FormControl>
@@ -248,7 +248,7 @@ export default function NewsArticleForm({ article }: Props) {
 
         <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
           <p className="text-sm font-medium text-gray-900 flex items-center gap-2">
-            <ImageIcon className="w-4 h-4 text-indigo-600" />
+            <ImageIcon className="w-4 h-4 text-cyan-700" />
             Cover image
           </p>
           <input
@@ -263,7 +263,7 @@ export default function NewsArticleForm({ article }: Props) {
               type="button"
               onClick={() => coverInputRef.current?.click()}
               disabled={uploadingCover}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              className="bg-cyan-700 hover:bg-cyan-800 text-white"
             >
               {uploadingCover ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
               Upload cover
@@ -287,7 +287,7 @@ export default function NewsArticleForm({ article }: Props) {
 
         <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
           <p className="text-sm font-medium text-gray-900 flex items-center gap-2">
-            <Plus className="w-4 h-4 text-indigo-600" />
+            <Plus className="w-4 h-4 text-cyan-700" />
             Extra photos (shown below the article)
           </p>
           <input
@@ -341,7 +341,7 @@ export default function NewsArticleForm({ article }: Props) {
         />
 
         <div className="flex flex-wrap gap-3 pt-2">
-          <Button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+          <Button type="submit" disabled={loading} className="bg-cyan-700 hover:bg-cyan-800 text-white">
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             {isEdit ? 'Save changes' : 'Create article'}
           </Button>

@@ -44,7 +44,7 @@ export default function BookingActions({ booking }: BookingActionsProps) {
           asChild
           variant="ghost"
           size="sm"
-          className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
+          className="text-cyan-700 hover:text-cyan-800 hover:bg-cyan-50"
           title="Download confirmation PDF"
         >
           <a

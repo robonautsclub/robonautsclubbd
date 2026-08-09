@@ -48,7 +48,7 @@ export default function EventHeaderActions({ event, currentUserId }: EventHeader
           type="button"
           variant="outline"
           onClick={() => setShowEditForm(true)}
-          className="text-indigo-600 bg-indigo-50 border-indigo-200 hover:bg-indigo-100 hover:text-indigo-600"
+          className="text-cyan-700 bg-cyan-50 border-cyan-200 hover:bg-cyan-100 hover:text-cyan-700"
         >
           <Edit className="w-4 h-4" />
           Edit Event

@@ -136,7 +136,7 @@ export default function SchoolDirectoryManager({ schools }: Props) {
           type="button"
           variant={tab === 'directory' ? 'default' : 'outline'}
           onClick={() => setTab('directory')}
-          className={tab === 'directory' ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : ''}
+          className={tab === 'directory' ? 'bg-cyan-700 hover:bg-cyan-800 text-white' : ''}
         >
           Directory ({directorySchools.length})
         </Button>
@@ -144,7 +144,7 @@ export default function SchoolDirectoryManager({ schools }: Props) {
           type="button"
           variant={tab === 'pending' ? 'default' : 'outline'}
           onClick={() => setTab('pending')}
-          className={tab === 'pending' ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : ''}
+          className={tab === 'pending' ? 'bg-cyan-700 hover:bg-cyan-800 text-white' : ''}
         >
           Pending ({pendingSchools.length})
         </Button>
@@ -154,13 +154,13 @@ export default function SchoolDirectoryManager({ schools }: Props) {
         <>
           <Card className="p-5">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">{editId ? 'Edit School' : 'Add School'}</h3>
+              <h3 className="text-lg font-semibold text-slate-900">{editId ? 'Edit School' : 'Add School'}</h3>
               <Button
                 type="button"
                 variant="secondary"
                 onClick={handleSeed}
                 disabled={isPending}
-                className="bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+                className="bg-cyan-100 text-cyan-800 hover:bg-cyan-200"
               >
                 Seed Major Schools
               </Button>
@@ -223,7 +223,7 @@ export default function SchoolDirectoryManager({ schools }: Props) {
                   <Button
                     type="submit"
                     disabled={isPending}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                    className="bg-cyan-700 hover:bg-cyan-800 text-white"
                   >
                     {editId ? 'Update' : 'Add'}
                   </Button>
@@ -239,25 +239,25 @@ export default function SchoolDirectoryManager({ schools }: Props) {
           </Card>
 
           <Card className="overflow-hidden p-0">
-            <div className="px-4 py-3 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">
+            <div className="px-4 py-3 border-b border-slate-200">
+              <h3 className="text-lg font-semibold text-slate-900">
                 School Directory ({directorySchools.length})
               </h3>
             </div>
             <Table>
               <TableHeader className="bg-gray-50">
                 <TableRow>
-                  <TableHead className="px-4 py-2 text-xs font-semibold text-gray-600 uppercase">School</TableHead>
-                  <TableHead className="px-4 py-2 text-xs font-semibold text-gray-600 uppercase">City</TableHead>
-                  <TableHead className="px-4 py-2 text-xs font-semibold text-gray-600 uppercase">Status</TableHead>
-                  <TableHead className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase">Action</TableHead>
+                  <TableHead className="px-4 py-2 text-xs font-semibold text-slate-600 uppercase">School</TableHead>
+                  <TableHead className="px-4 py-2 text-xs font-semibold text-slate-600 uppercase">City</TableHead>
+                  <TableHead className="px-4 py-2 text-xs font-semibold text-slate-600 uppercase">Status</TableHead>
+                  <TableHead className="px-4 py-2 text-right text-xs font-semibold text-slate-600 uppercase">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {directorySchools.map((school) => (
                   <TableRow key={school.id}>
-                    <TableCell className="px-4 py-2 text-sm text-gray-900">{school.name}</TableCell>
-                    <TableCell className="px-4 py-2 text-sm text-gray-600">{school.city || '-'}</TableCell>
+                    <TableCell className="px-4 py-2 text-sm text-slate-900">{school.name}</TableCell>
+                    <TableCell className="px-4 py-2 text-sm text-slate-600">{school.city || '-'}</TableCell>
                     <TableCell className="px-4 py-2">
                       <Badge
                         variant="secondary"
@@ -276,7 +276,7 @@ export default function SchoolDirectoryManager({ schools }: Props) {
                         variant="ghost"
                         size="sm"
                         onClick={() => startEdit(school)}
-                        className="text-indigo-600 hover:text-indigo-700"
+                        className="text-cyan-700 hover:text-cyan-800"
                       >
                         Edit
                       </Button>
@@ -289,11 +289,11 @@ export default function SchoolDirectoryManager({ schools }: Props) {
         </>
       ) : (
         <Card className="overflow-hidden p-0">
-          <div className="px-4 py-3 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">
+          <div className="px-4 py-3 border-b border-slate-200">
+            <h3 className="text-lg font-semibold text-slate-900">
               Pending Schools ({pendingSchools.length})
             </h3>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-sm text-slate-600 mt-1">
               Custom school names from Robofest registrations awaiting confirmation.
             </p>
             {feedback && tab === 'pending' ? (
@@ -303,28 +303,28 @@ export default function SchoolDirectoryManager({ schools }: Props) {
           <Table>
             <TableHeader className="bg-gray-50">
               <TableRow>
-                <TableHead className="px-4 py-2 text-xs font-semibold text-gray-600 uppercase">School</TableHead>
-                <TableHead className="px-4 py-2 text-xs font-semibold text-gray-600 uppercase">Requested by</TableHead>
-                <TableHead className="px-4 py-2 text-xs font-semibold text-gray-600 uppercase">Source</TableHead>
-                <TableHead className="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase">Actions</TableHead>
+                <TableHead className="px-4 py-2 text-xs font-semibold text-slate-600 uppercase">School</TableHead>
+                <TableHead className="px-4 py-2 text-xs font-semibold text-slate-600 uppercase">Requested by</TableHead>
+                <TableHead className="px-4 py-2 text-xs font-semibold text-slate-600 uppercase">Source</TableHead>
+                <TableHead className="px-4 py-2 text-right text-xs font-semibold text-slate-600 uppercase">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {pendingSchools.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="px-4 py-8 text-center text-sm text-gray-500">
+                  <TableCell colSpan={4} className="px-4 py-8 text-center text-sm text-slate-500">
                     No pending schools.
                   </TableCell>
                 </TableRow>
               ) : (
                 pendingSchools.map((school) => (
                   <TableRow key={school.id}>
-                    <TableCell className="px-4 py-2 text-sm text-gray-900">{school.name}</TableCell>
-                    <TableCell className="px-4 py-2 text-sm text-gray-600">
+                    <TableCell className="px-4 py-2 text-sm text-slate-900">{school.name}</TableCell>
+                    <TableCell className="px-4 py-2 text-sm text-slate-600">
                       <div>{school.requestedByName || '—'}</div>
-                      <div className="text-xs text-gray-500">{school.requestedByEmail || ''}</div>
+                      <div className="text-xs text-slate-500">{school.requestedByEmail || ''}</div>
                     </TableCell>
-                    <TableCell className="px-4 py-2 text-sm text-gray-600">
+                    <TableCell className="px-4 py-2 text-sm text-slate-600">
                       {school.source || '—'}
                     </TableCell>
                     <TableCell className="px-4 py-2 text-right space-x-2">
