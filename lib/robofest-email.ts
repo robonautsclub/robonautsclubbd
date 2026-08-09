@@ -22,6 +22,7 @@ export type RobofestEmailTeamMember = {
 export type RobofestConfirmationEmailProps = {
   recipients: string[]
   teamName: string
+  teamNumber?: string
   competition: string
   division: string
   ageCategory: string
@@ -110,7 +111,11 @@ function buildMemberRowsHtml(members: RobofestEmailTeamMember[]): string {
         <tr>
           <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0; vertical-align: top;">
             <div style="color: #0f172a; font-size: 14px; font-weight: 600;">
-              ${String(index + 1).padStart(2, '0')}. ${escapeHtml(member.name || 'Member')}
+              ${
+                index === 0
+                  ? '01 (Team Leader)'
+                  : String(index + 1).padStart(2, '0')
+              }. ${escapeHtml(member.name || 'Member')}
             </div>
             <div style="color: #0e7490; font-size: 13px; margin-top: 2px;">
               ${escapeHtml(member.email || '—')}
@@ -129,6 +134,7 @@ function buildMemberRowsHtml(members: RobofestEmailTeamMember[]): string {
 function buildRobofestEmailHtml({
   greetingName,
   teamName,
+  teamNumber,
   competition,
   division,
   ageCategoryLabel,
@@ -142,6 +148,7 @@ function buildRobofestEmailHtml({
 }: {
   greetingName: string
   teamName: string
+  teamNumber?: string
   competition: string
   division: string
   ageCategoryLabel: string
@@ -154,13 +161,18 @@ function buildRobofestEmailHtml({
   trxId?: string
 }): string {
   const venue = event.venue || event.location || '—'
+  const teamId = (teamNumber || teamName || '—').trim() || '—'
+  const facebookUrl = SITE_CONFIG.social.facebook
+  const instagramUrl = SITE_CONFIG.social.instagram
+  const contactEmail = 'events@robonautsltd.com'
+
   return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Robofest Confirmation - ${escapeHtml(teamName)}</title>
+  <title>Registration Confirmed — RoboFest Bangladesh 2026</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafc; line-height: 1.6; color: #334155;">
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f8fafc; padding: 36px 16px;">
@@ -169,9 +181,9 @@ function buildRobofestEmailHtml({
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);">
           <tr>
             <td style="background: linear-gradient(135deg, #0e7490 0%, #155e75 55%, #0f172a 100%); padding: 40px 32px; text-align: center;">
-              <p style="margin: 0 0 8px; color: rgba(255,255,255,0.85); font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600;">Robofest Bangladesh 2026</p>
+              <p style="margin: 0 0 8px; color: rgba(255,255,255,0.85); font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 600;">RoboFest Bangladesh 2026</p>
               <h1 style="margin: 0 0 8px; color: #ffffff; font-size: 28px; font-weight: 700;">Registration Confirmed</h1>
-              <p style="margin: 0; color: rgba(255,255,255,0.9); font-size: 15px;">Your team is registered for the local round</p>
+              <p style="margin: 0; color: rgba(255,255,255,0.9); font-size: 15px;">You’re in — Official RoboFest Bangladesh Qualifier</p>
             </td>
           </tr>
           <tr>
@@ -179,42 +191,31 @@ function buildRobofestEmailHtml({
               <p style="margin: 0 0 16px; font-size: 16px; color: #334155;">
                 Dear <strong style="color: #0f172a;">${escapeHtml(greetingName)}</strong>,
               </p>
+              <p style="margin: 0 0 12px; font-size: 15px; color: #475569;">
+                Thank you for Registering for <strong style="color: #0e7490;">RoboFest Bangladesh 2026</strong>!
+              </p>
               <p style="margin: 0 0 24px; font-size: 15px; color: #475569;">
-                Thank you for registering for <strong style="color: #0e7490;">${escapeHtml(competition)}</strong>.
-                This confirmation includes your full team roster so every member stays listed together.
+                We’re excited to confirm that your registration has been successfully completed and your payment has been received. You are now officially confirmed as a participant of the Official RoboFest Bangladesh Qualifier, organized by Robonauts Ltd.
               </p>
 
               <table role="presentation" width="100%" style="border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 20px;">
                 <tr>
                   <td style="background-color: #ecfeff; padding: 14px 18px; border-bottom: 1px solid #cffafe;">
-                    <h2 style="margin: 0; font-size: 16px; color: #155e75;">Competition details</h2>
+                    <h2 style="margin: 0; font-size: 16px; color: #155e75;">Registration Details</h2>
                   </td>
                 </tr>
                 <tr>
                   <td style="padding: 18px;">
-                    <p style="margin: 0 0 8px; font-size: 14px;"><span style="color:#64748b;">Event:</span> <strong>${escapeHtml(event.title)}</strong></p>
-                    <p style="margin: 0 0 8px; font-size: 14px;"><span style="color:#64748b;">Competition:</span> <strong>${escapeHtml(competition)}</strong></p>
-                    <p style="margin: 0 0 8px; font-size: 14px;"><span style="color:#64748b;">Division:</span> <strong>${escapeHtml(division)}</strong></p>
-                    <p style="margin: 0 0 8px; font-size: 14px;"><span style="color:#64748b;">Age category:</span> <strong>${escapeHtml(ageCategoryLabel)}</strong></p>
-                    <p style="margin: 0 0 8px; font-size: 14px;"><span style="color:#64748b;">Date:</span> <strong>${escapeHtml(formattedDate)}</strong></p>
-                    <p style="margin: 0; font-size: 14px;"><span style="color:#64748b;">Venue:</span> <strong>${escapeHtml(venue)}</strong></p>
-                  </td>
-                </tr>
-              </table>
-
-              <table role="presentation" width="100%" style="border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 20px;">
-                <tr>
-                  <td style="background-color: #f8fafc; padding: 14px 18px; border-bottom: 1px solid #e2e8f0;">
-                    <h2 style="margin: 0; font-size: 16px; color: #0f172a;">Team</h2>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding: 18px;">
-                    <p style="margin: 0 0 14px; font-size: 15px;">
-                      <span style="color:#64748b;">Team name:</span>
-                      <strong style="color:#0f172a;">${escapeHtml(teamName)}</strong>
+                    <p style="margin: 0 0 10px; font-size: 15px;">
+                      <span style="color:#64748b;">Team ID:</span>
+                      <strong style="color:#0f172a; font-family: ui-monospace, monospace; font-size: 16px;">${escapeHtml(teamId)}</strong>
                     </p>
-                    <p style="margin: 0 0 8px; font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Team members</p>
+                    <p style="margin: 0 0 8px; font-size: 14px;"><span style="color:#64748b;">Competition:</span> <strong>${escapeHtml(competition)}</strong></p>
+                    <p style="margin: 0 0 8px; font-size: 14px;"><span style="color:#64748b;">Category:</span> <strong>${escapeHtml(ageCategoryLabel)}</strong></p>
+                    <p style="margin: 0 0 8px; font-size: 14px;"><span style="color:#64748b;">Division:</span> <strong>${escapeHtml(division)}</strong></p>
+                    <p style="margin: 0 0 8px; font-size: 14px;"><span style="color:#64748b;">Event Date:</span> <strong>${escapeHtml(formattedDate)}</strong></p>
+                    <p style="margin: 0 0 16px; font-size: 14px;"><span style="color:#64748b;">Venue:</span> <strong>${escapeHtml(venue)}</strong></p>
+                    <p style="margin: 0 0 8px; font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">Team Details</p>
                     <table role="presentation" width="100%">
                       ${buildMemberRowsHtml(teamMembers)}
                     </table>
@@ -222,18 +223,23 @@ function buildRobofestEmailHtml({
                 </tr>
               </table>
 
-              <table role="presentation" width="100%" style="border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 24px;">
+              <table role="presentation" width="100%" style="border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 20px;">
+                <tr>
+                  <td style="background-color: #f8fafc; padding: 14px 18px; border-bottom: 1px solid #e2e8f0;">
+                    <h2 style="margin: 0; font-size: 16px; color: #0f172a;">Payment Confirmation</h2>
+                  </td>
+                </tr>
                 <tr>
                   <td style="padding: 18px;">
                     <p style="margin: 0 0 8px; font-size: 14px;"><span style="color:#64748b;">Registration ID:</span> <strong style="font-family: ui-monospace, monospace;">${escapeHtml(registrationId)}</strong></p>
                     ${
                       amountPaid != null
-                        ? `<p style="margin: 0 0 8px; font-size: 14px;"><span style="color:#64748b;">Amount paid:</span> <strong>BDT ${escapeHtml(String(amountPaid))}</strong></p>`
+                        ? `<p style="margin: 0 0 8px; font-size: 14px;"><span style="color:#64748b;">Amount Paid:</span> <strong>BDT ${escapeHtml(String(amountPaid))}</strong></p>`
                         : ''
                     }
                     ${
                       trxId
-                        ? `<p style="margin: 0 0 8px; font-size: 14px;"><span style="color:#64748b;">Trx ID:</span> <strong>${escapeHtml(trxId)}</strong></p>`
+                        ? `<p style="margin: 0 0 8px; font-size: 14px;"><span style="color:#64748b;">TRX ID:</span> <strong>${escapeHtml(trxId)}</strong></p>`
                         : ''
                     }
                     <p style="margin: 12px 0 0;">
@@ -245,14 +251,53 @@ function buildRobofestEmailHtml({
                 </tr>
               </table>
 
-              <p style="margin: 0; font-size: 13px; color: #64748b;">
-                A PDF confirmation with your team roster is attached. Please keep this email for your records.
-              </p>
+              <table role="presentation" width="100%" style="border: 1px solid #fecaca; border-radius: 12px; margin-bottom: 20px; background-color: #fef2f2;">
+                <tr>
+                  <td style="padding: 14px 18px; border-bottom: 1px solid #fecaca;">
+                    <h2 style="margin: 0; font-size: 16px; color: #b91c1c;">Important</h2>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 18px;">
+                    <p style="margin: 0 0 12px; font-size: 14px; color: #7f1d1d;">
+                      <strong>Please save and remember your Team ID</strong> (<span style="font-family: ui-monospace, monospace; font-weight: 700;">${escapeHtml(teamId)}</span>), as it will be used for all future references, communications, and competition-related matters.
+                    </p>
+                    <p style="margin: 0; font-size: 14px; color: #475569;">
+                      Please keep this E-Mail for your records. A PDF confirmation with your team roster is attached. Further information regarding Competition Schedules, Venue Arrangements, and other important instructions will be shared through our Official Channels.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <table role="presentation" width="100%" style="border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 20px;">
+                <tr>
+                  <td style="padding: 18px;">
+                    <p style="margin: 0 0 10px; font-size: 14px; color: #475569;">
+                      <strong style="color:#0f172a;">Stay Updated:</strong>
+                      Follow <strong>@robonautsltd</strong> on
+                      <a href="${escapeHtml(facebookUrl)}" style="color:#0e7490; font-weight:600; text-decoration:underline;">Facebook</a>
+                      and
+                      <a href="${escapeHtml(instagramUrl)}" style="color:#0e7490; font-weight:600; text-decoration:underline;">Instagram</a>
+                      for all RoboFest Bangladesh 2026 updates.
+                    </p>
+                    <p style="margin: 0 0 16px; font-size: 14px; color: #475569;">
+                      For any queries regarding Competitions or Registration, please reach out to us at
+                      <a href="mailto:${escapeHtml(contactEmail)}" style="color:#0e7490; font-weight:600; text-decoration:underline;">${escapeHtml(contactEmail)}</a>.
+                    </p>
+                    <p style="margin: 0 0 8px; font-size: 15px; color: #0f172a; font-weight: 600;">
+                      It’s now time to get ready for the arena. Good luck!
+                    </p>
+                    <p style="margin: 0; font-size: 15px; color: #0e7490; font-weight: 600;">
+                      See you at RoboFest Bangladesh 2026!
+                    </p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
           <tr>
             <td style="background-color: #f1f5f9; padding: 18px 32px; text-align: center; color: #64748b; font-size: 12px;">
-              ${escapeHtml(SITE_CONFIG.name)} · Robofest Bangladesh Local Round
+              ${escapeHtml(SITE_CONFIG.name)} · RoboFest Bangladesh 2026
             </td>
           </tr>
         </table>
@@ -269,6 +314,7 @@ export async function sendRobofestConfirmationEmail(
   const {
     recipients,
     teamName,
+    teamNumber,
     competition,
     division,
     ageCategory,
@@ -324,6 +370,7 @@ export async function sendRobofestConfirmationEmail(
       bookingDetails: {
         name: teamName,
         teamName,
+        teamNumber,
         email: uniqueRecipients[0],
         school,
         phone,
@@ -379,6 +426,7 @@ export async function sendRobofestConfirmationEmail(
     const html = buildRobofestEmailHtml({
       greetingName,
       teamName,
+      teamNumber,
       competition,
       division,
       ageCategoryLabel,
@@ -394,7 +442,8 @@ export async function sendRobofestConfirmationEmail(
     const sendSmtpEmail = new brevo.SendSmtpEmail()
     sendSmtpEmail.sender = { name: fromName, email: fromEmail }
     sendSmtpEmail.to = [{ email: recipient, name: greetingName }]
-    sendSmtpEmail.subject = `Robofest confirmation — ${teamName} · ${competition}`
+    sendSmtpEmail.subject =
+      "Registration Confirmed! You’re In — RoboFest Bangladesh 2026"
     sendSmtpEmail.htmlContent = html
     if (attachment) sendSmtpEmail.attachment = attachment
 

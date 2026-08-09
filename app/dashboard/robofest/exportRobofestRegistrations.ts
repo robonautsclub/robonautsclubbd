@@ -44,6 +44,7 @@ export function exportRobofestCsv(rows: RobofestRegistration[]) {
   ])
   const headers = [
     'Registration ID',
+    'Team Number',
     'Team Name',
     'Contact Email',
     'Contact Phone',
@@ -65,6 +66,7 @@ export function exportRobofestCsv(rows: RobofestRegistration[]) {
   const lines = rows.map((r) =>
     [
       r.registrationId || '',
+      r.teamNumber || '',
       r.name,
       r.email,
       r.phone,
@@ -103,6 +105,7 @@ export async function exportRobofestExcel(rows: RobofestRegistration[]) {
     const row: Record<string, string | number> = {
       'No.': index + 1,
       'Registration ID': r.registrationId || '',
+      'Team Number': r.teamNumber || '',
       'Team Name': r.name || '',
       Competition: r.category || '',
       Division: r.roundCity || '',

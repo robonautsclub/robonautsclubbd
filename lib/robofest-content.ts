@@ -180,6 +180,8 @@ export type RobofestRegistration = {
   roundCity: string;
   notes: string;
   status: RobofestRegistrationStatus;
+  /** Auto-assigned competition team number, e.g. BS#001 */
+  teamNumber?: string;
   registrationId?: string;
   paymentStatus?: RobofestPaymentStatus;
   paymentGateway?: string;
@@ -529,6 +531,7 @@ export function mapRobofestRegistrationDoc(
     roundCity: asString(data.roundCity),
     notes: asString(data.notes),
     status,
+    teamNumber: data.teamNumber ? asString(data.teamNumber) : undefined,
     registrationId: data.registrationId
       ? asString(data.registrationId)
       : undefined,
