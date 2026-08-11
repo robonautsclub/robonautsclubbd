@@ -11,6 +11,10 @@ import type {
 } from '@/lib/robofest-content'
 import { resolveRobofestRoundVenueLabel } from '@/lib/robofest-content'
 import {
+  resolveRobofestCertificateSignatures,
+  type RobofestCertificateSignature,
+} from '@/lib/robofest-certificate-signatures'
+import {
   resolveRobofestAwardCategory,
   type RobofestAwardAccent,
   type RobofestAwardCategory,
@@ -38,6 +42,9 @@ type CertificatePageInput = {
   verificationUrl: string
   qrBuffer: Buffer | null
   certificateId: string
+  signatures: RobofestCertificateSignature[]
+  /** signature id → image buffer */
+  signatureImages: Record<string, Buffer>
 }
 
 const ACCENT_HEX: Record<RobofestAwardAccent, string> = {
@@ -134,20 +141,31 @@ function organizerLine(content: RobofestContent): string {
   return 'Robonauts Ltd Presents'
 }
 
-function signatureNames(content: RobofestContent): {
-  director: string
-  judge: string
-  organizer: string
-} {
-  const host =
-    sanitizeTextForPDF(content.hostName)?.trim() || 'Robonauts Ltd'
-  return {
-    director:
-      sanitizeTextForPDF(content.competitionDirector)?.trim() || host,
-    judge: sanitizeTextForPDF(content.headJudge)?.trim() || 'Head Judge',
-    organizer:
-      sanitizeTextForPDF(content.eventOrganizer)?.trim() || host,
+async function fetchSignatureImageBuffer(
+  url: string,
+): Promise<Buffer | null> {
+  try {
+    const response = await fetch(url)
+    if (!response.ok) return null
+    return Buffer.from(await response.arrayBuffer())
+  } catch {
+    return null
   }
+}
+
+async function loadSignatureImages(
+  signatures: RobofestCertificateSignature[],
+): Promise<Record<string, Buffer>> {
+  const images: Record<string, Buffer> = {}
+  await Promise.all(
+    signatures.map(async (sig) => {
+      const url = sig.imageUrl?.trim()
+      if (!url) return
+      const buf = await fetchSignatureImageBuffer(url)
+      if (buf) images[sig.id] = buf
+    }),
+  )
+  return images
 }
 
 function isParticipationAward(award: RobofestAwardCategory): boolean {
@@ -276,8 +294,24 @@ function drawSignatureBlock(
   width: number,
   name: string,
   role: string,
+  imageBuffer?: Buffer | null,
 ) {
-  const lineY = y + 18
+  const imageH = 32
+  const imageY = y
+  const lineY = y + imageH + 4
+
+  if (imageBuffer) {
+    try {
+      doc.image(imageBuffer, x + 4, imageY, {
+        fit: [width - 8, imageH],
+        align: 'center',
+        valign: 'bottom',
+      })
+    } catch {
+      // blank line still drawn below
+    }
+  }
+
   doc
     .moveTo(x, lineY)
     .lineTo(x + width, lineY)
@@ -307,6 +341,8 @@ function drawCertificatePage(doc: any, input: CertificatePageInput): void {
     award,
     qrBuffer,
     certificateId,
+    signatures,
+    signatureImages,
   } = input
 
   const pageWidth = doc.page.width as number
@@ -574,35 +610,29 @@ function drawCertificatePage(doc: any, input: CertificatePageInput): void {
       align: 'right',
     })
 
-  // Signatures
-  const sigs = signatureNames(content)
-  const sigY = innerY + innerH - 118
-  const sigGap = 16
-  const sigW = (contentWidth - qrSize - 28 - sigGap * 2) / 3
-  drawSignatureBlock(
-    doc,
-    contentLeft,
-    sigY,
-    sigW,
-    sigs.director,
-    'Competition Director',
-  )
-  drawSignatureBlock(
-    doc,
-    contentLeft + sigW + sigGap,
-    sigY,
-    sigW,
-    sigs.judge,
-    'Head Judge',
-  )
-  drawSignatureBlock(
-    doc,
-    contentLeft + (sigW + sigGap) * 2,
-    sigY,
-    sigW,
-    sigs.organizer,
-    'Event Organizer',
-  )
+  // Signatures — auto-arrange 1–4 across content left of QR
+  const sigCount = Math.max(signatures.length, 1)
+  const sigY = innerY + innerH - 132
+  const sigGap = 12
+  const sigAreaW = contentWidth - qrSize - 28
+  const sigW = (sigAreaW - sigGap * (sigCount - 1)) / sigCount
+  signatures.forEach((sig, index) => {
+    const name =
+      sanitizeTextForPDF(sig.name)?.trim() ||
+      sanitizeTextForPDF(sig.title)?.trim() ||
+      'Signatory'
+    const role =
+      sanitizeTextForPDF(sig.title)?.trim() || 'Signatory'
+    drawSignatureBlock(
+      doc,
+      contentLeft + index * (sigW + sigGap),
+      sigY,
+      sigW,
+      name,
+      role,
+      signatureImages[sig.id] || null,
+    )
+  })
 
   // QR bottom-right of content
   const qrX = rightX + rightW - contentPad - qrSize
@@ -765,6 +795,8 @@ async function buildPageInputs(
   robotBuffer: Buffer | null,
   participants: CertificateParticipant[],
   baseUrl: string,
+  signatures: RobofestCertificateSignature[],
+  signatureImages: Record<string, Buffer>,
 ): Promise<CertificatePageInput[]> {
   const { generateQRCodeBuffer } = await import('./qrCode')
   const registrationId = registration.registrationId || ''
@@ -799,6 +831,8 @@ async function buildPageInputs(
         registrationId,
         participant.memberIndex,
       ),
+      signatures,
+      signatureImages,
     })
   }
   return pages
@@ -833,6 +867,8 @@ export async function generateRobofestParticipationCertificatesPDF(input: {
   try {
     const logoBuffer = await loadCertLogo(baseUrl)
     const robotBuffer = loadRobotBuffer()
+    const signatures = resolveRobofestCertificateSignatures(content)
+    const signatureImages = await loadSignatureImages(signatures)
     const pages = await buildPageInputs(
       registration,
       content,
@@ -840,6 +876,8 @@ export async function generateRobofestParticipationCertificatesPDF(input: {
       robotBuffer,
       selected,
       baseUrl,
+      signatures,
+      signatureImages,
     )
     const buffer = await buildCertificatesPdf(pages)
 
@@ -873,6 +911,8 @@ export async function generateRobofestBulkParticipationCertificatesPDF(input: {
   const eligible = registrations.filter((r) => r.status !== 'cancelled')
   const logoBuffer = await loadCertLogo(baseUrl)
   const robotBuffer = loadRobotBuffer()
+  const signatures = resolveRobofestCertificateSignatures(content)
+  const signatureImages = await loadSignatureImages(signatures)
   const pages: CertificatePageInput[] = []
 
   for (const registration of eligible) {
@@ -885,6 +925,8 @@ export async function generateRobofestBulkParticipationCertificatesPDF(input: {
         robotBuffer,
         resolveCertificateParticipants(registration),
         baseUrl,
+        signatures,
+        signatureImages,
       )),
     )
   }

@@ -18,6 +18,11 @@ import {
   ROBOFEST_DEFAULT_AWARD_CATEGORY_ID,
   type RobofestAwardCategory,
 } from "@/lib/robofest-award-categories";
+import {
+  getDefaultCertificateSignatures,
+  resolveRobofestCertificateSignatures,
+  type RobofestCertificateSignature,
+} from "@/lib/robofest-certificate-signatures";
 
 export type { RobofestAwardCategory, RobofestAwardAccent } from "@/lib/robofest-award-categories";
 export {
@@ -28,6 +33,15 @@ export {
   nextCustomAwardCategoryId,
   sanitizeRobofestAwardCategories,
 } from "@/lib/robofest-award-categories";
+
+export type { RobofestCertificateSignature } from "@/lib/robofest-certificate-signatures";
+export {
+  ROBOFEST_MAX_CERTIFICATE_SIGNATURES,
+  getDefaultCertificateSignatures,
+  mapRobofestCertificateSignature,
+  resolveRobofestCertificateSignatures,
+  sanitizeRobofestCertificateSignatures,
+} from "@/lib/robofest-certificate-signatures";
 
 export {
   ROBOFEST_DEFAULT_FEE_PER_MEMBER_BDT,
@@ -136,10 +150,20 @@ export type RobofestContent = {
   venueLabel: string;
   venueDetail: string;
   hostName: string;
-  /** Certificate signature names (Content tab). */
-  competitionDirector: string;
-  headJudge: string;
-  eventOrganizer: string;
+  /**
+   * @deprecated Prefer certificateSignatures. Kept for Firestore migration.
+   */
+  competitionDirector?: string;
+  /**
+   * @deprecated Prefer certificateSignatures. Kept for Firestore migration.
+   */
+  headJudge?: string;
+  /**
+   * @deprecated Prefer certificateSignatures. Kept for Firestore migration.
+   */
+  eventOrganizer?: string;
+  /** Configurable certificate signature blocks (1–4). */
+  certificateSignatures: RobofestCertificateSignature[];
   officialSite: string;
   categoriesUrl: string;
   generalRulesPdf: string;
@@ -241,6 +265,7 @@ function seedCategories(): RobofestCategoryContent[] {
 }
 
 export function getDefaultRobofestContent(): RobofestContent {
+  const hostName = ROBOFEST_LOCAL.hostName;
   return {
     statusBadge: ROBOFEST_LOCAL.statusBadge,
     presentsLabel: ROBOFEST_LOCAL.presentsLabel,
@@ -250,10 +275,8 @@ export function getDefaultRobofestContent(): RobofestContent {
     timeLabel: ROBOFEST_LOCAL.timeLabel,
     venueLabel: ROBOFEST_LOCAL.venueLabel,
     venueDetail: ROBOFEST_LOCAL.venueDetail,
-    hostName: ROBOFEST_LOCAL.hostName,
-    competitionDirector: ROBOFEST_LOCAL.hostName,
-    headJudge: 'Head Judge',
-    eventOrganizer: ROBOFEST_LOCAL.hostName || 'Robonauts Ltd',
+    hostName,
+    certificateSignatures: getDefaultCertificateSignatures(hostName),
     officialSite: ROBOFEST_LOCAL.officialSite,
     categoriesUrl: ROBOFEST_LOCAL.categoriesUrl,
     generalRulesPdf: ROBOFEST_LOCAL.generalRulesPdf,
@@ -405,14 +428,9 @@ export function mapRobofestContentDoc(
     venueLabel: asString(data.venueLabel, defaults.venueLabel),
     venueDetail: asString(data.venueDetail, defaults.venueDetail),
     hostName: asString(data.hostName, defaults.hostName),
-    competitionDirector: asString(
-      data.competitionDirector,
-      asString(data.hostName, defaults.competitionDirector),
-    ),
-    headJudge: asString(data.headJudge, defaults.headJudge),
-    eventOrganizer: asString(
-      data.eventOrganizer,
-      asString(data.hostName, defaults.eventOrganizer),
+    certificateSignatures: resolveRobofestCertificateSignatures(
+      data,
+      asString(data.hostName, defaults.hostName),
     ),
     officialSite: asString(data.officialSite, defaults.officialSite),
     categoriesUrl: asString(data.categoriesUrl, defaults.categoriesUrl),

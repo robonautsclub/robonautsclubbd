@@ -15,7 +15,12 @@ const ALLOWED_MIME_TYPES = [
   'image/gif',
 ]
 
-const ALLOWED_CLOUDINARY_FOLDERS = ['events', 'news', 'gallery'] as const
+const ALLOWED_CLOUDINARY_FOLDERS = [
+  'events',
+  'news',
+  'gallery',
+  'robofest',
+] as const
 type CloudinaryFolder = (typeof ALLOWED_CLOUDINARY_FOLDERS)[number]
 
 function parseFolder(formData: FormData): CloudinaryFolder {
@@ -87,13 +92,16 @@ export async function POST(request: NextRequest) {
     // Convert buffer to stream
     const stream = bufferToStream(buffer)
 
-    // Upload to Cloudinary with AVIF conversion
+    // Robofest signature images stay PNG so PDFKit can embed them;
+    // other uploads use AVIF for storage efficiency.
+    const format = cloudinaryFolder === 'robofest' ? 'png' : 'avif'
+
     return new Promise<NextResponse>((resolve) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: cloudinaryFolder,
-          format: 'avif', // Convert to AVIF format for optimized storage
-          quality: 'auto', // Automatic quality optimization
+          format,
+          quality: 'auto',
         },
         (error, result) => {
           if (error) {

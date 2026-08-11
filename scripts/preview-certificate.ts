@@ -1,6 +1,6 @@
 /**
  * Sample preview for the premium Robofest certificate PDF.
- * Run with: pnpm tsx scripts/preview-certificate.ts
+ * Run with: pnpm preview:certificate
  * Outputs to: scripts/verify-certificate-output.pdf
  */
 import { writeFileSync } from 'fs'
@@ -47,11 +47,24 @@ async function main() {
   console.log('Generating premium certificate preview…')
 
   const content = getDefaultRobofestContent()
-  content.competitionDirector = 'Eng. Farhan Ahmed'
-  content.headJudge = 'Dr. Nusrat Jahan'
-  content.eventOrganizer = content.hostName || 'Robonauts Ltd'
+  content.certificateSignatures = [
+    {
+      id: 'sig-director',
+      name: 'Eng. Farhan Ahmed',
+      title: 'Competition Director',
+    },
+    {
+      id: 'sig-judge',
+      name: 'Dr. Nusrat Jahan',
+      title: 'Head Judge',
+    },
+    {
+      id: 'sig-organizer',
+      name: content.hostName || 'Robonauts Ltd',
+      title: 'Event Organizer',
+    },
+  ]
 
-  // Participation + 1st place pages from sample team
   const result = await generateRobofestParticipationCertificatesPDF({
     registration: sampleRegistration,
     content,

@@ -37,6 +37,7 @@ import {
   type RobofestCampusAmbassadorWriteInput,
 } from '@/lib/robofest-campus-ambassadors'
 import { listRobofestCampusAmbassadorsFromDb } from '@/lib/robofest-campus-ambassadors-db'
+import { sanitizeRobofestCertificateSignatures } from '@/lib/robofest-certificate-signatures'
 import { loadRobofestRegistrationsCached } from './registrations-data'
 
 function revalidateRobofestPublic() {
@@ -125,17 +126,10 @@ export async function updateRobofestContent(
         description: step.description.trim(),
       })),
       awardCategories: sanitizeRobofestAwardCategories(input.awardCategories),
-      competitionDirector: (
-        input.competitionDirector ||
-        input.hostName ||
-        defaults.competitionDirector
-      ).trim(),
-      headJudge: (input.headJudge || defaults.headJudge).trim(),
-      eventOrganizer: (
-        input.eventOrganizer ||
-        input.hostName ||
-        defaults.eventOrganizer
-      ).trim(),
+      certificateSignatures: sanitizeRobofestCertificateSignatures(
+        input.certificateSignatures,
+        (input.hostName || defaults.hostName).trim(),
+      ),
       isPaid: Boolean(input.isPaid),
       amount: Number(input.amount) || 0,
       registrationClosingDate: (() => {
