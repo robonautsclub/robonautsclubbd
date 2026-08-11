@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { cn } from "@/lib/utils";
 import {
   formatRegistrationClosingLabel,
@@ -36,6 +36,21 @@ function pad(n: number) {
   return String(n).padStart(2, "0");
 }
 
+function subscribeToSecondTicks(onStoreChange: () => void) {
+  const id = window.setInterval(onStoreChange, 1000);
+  return () => window.clearInterval(id);
+}
+
+/** Whole seconds — stable within a tick so useSyncExternalStore won't loop. */
+function getClientNowSeconds() {
+  return Math.floor(Date.now() / 1000);
+}
+
+/** Stable on server + during hydration so digits don't mismatch. */
+function getServerNowSeconds(): number | null {
+  return null;
+}
+
 export default function RobofestRegistrationCountdown({
   closingDate,
   className,
@@ -45,16 +60,10 @@ export default function RobofestRegistrationCountdown({
   className?: string;
   compact?: boolean;
 }) {
-  const [now, setNow] = useState(() => new Date());
-
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(id);
-  }, []);
-
-  const remaining = useMemo(
-    () => getRemaining(closingDate, now),
-    [closingDate, now],
+  const nowSeconds = useSyncExternalStore(
+    subscribeToSecondTicks,
+    getClientNowSeconds,
+    getServerNowSeconds,
   );
 
   const dateLabel = useMemo(
@@ -62,7 +71,15 @@ export default function RobofestRegistrationCountdown({
     [closingDate],
   );
 
-  if (remaining.expired) {
+  const remaining = useMemo(
+    () =>
+      nowSeconds != null
+        ? getRemaining(closingDate, new Date(nowSeconds * 1000))
+        : null,
+    [closingDate, nowSeconds],
+  );
+
+  if (remaining?.expired) {
     return (
       <div
         className={cn(
@@ -78,12 +95,19 @@ export default function RobofestRegistrationCountdown({
     );
   }
 
-  const units = [
-    { label: "Days", value: remaining.days },
-    { label: "Hours", value: remaining.hours },
-    { label: "Mins", value: remaining.minutes },
-    { label: "Secs", value: remaining.seconds },
-  ] as const;
+  const units = remaining
+    ? ([
+        { label: "Days", value: String(remaining.days) },
+        { label: "Hours", value: pad(remaining.hours) },
+        { label: "Mins", value: pad(remaining.minutes) },
+        { label: "Secs", value: pad(remaining.seconds) },
+      ] as const)
+    : ([
+        { label: "Days", value: "—" },
+        { label: "Hours", value: "—" },
+        { label: "Mins", value: "—" },
+        { label: "Secs", value: "—" },
+      ] as const);
 
   return (
     <div
@@ -118,7 +142,7 @@ export default function RobofestRegistrationCountdown({
               ) : null}
               <div className="text-center min-w-10">
                 <div className="text-lg sm:text-xl font-bold tabular-nums text-slate-900 leading-none">
-                  {unit.label === "Days" ? unit.value : pad(unit.value)}
+                  {unit.value}
                 </div>
                 <div className="text-[10px] uppercase tracking-wide text-slate-500 mt-0.5">
                   {unit.label}

@@ -22,6 +22,7 @@ import type {
   RobofestRegistrationStatus,
   RobofestTeamMember,
 } from '@/lib/robofest-content'
+import type { RobofestCampusAmbassador } from '@/lib/robofest-campus-ambassadors'
 import { formatAgeCategoryLabel } from '@/lib/robofest-registration-options'
 import { cn } from '@/lib/utils'
 import {
@@ -37,6 +38,7 @@ import {
 } from './exportRobofestRegistrations'
 import { downloadPdfFromResponse } from '@/lib/downloadPdfBlob'
 import CreateRobofestRegistrationForm from './CreateRobofestRegistrationForm'
+import CampusAmbassadorsManager from './CampusAmbassadorsManager'
 import DatePicker from '@/app/dashboard/events/DatePicker'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
@@ -126,6 +128,7 @@ type Props = {
   initialContent: RobofestContent
   registrations: RobofestRegistration[]
   schools: string[]
+  campusAmbassadors: RobofestCampusAmbassador[]
 }
 
 function statusBadgeClass(status: string) {
@@ -211,6 +214,7 @@ export default function RobofestDashboardClient({
   initialContent,
   registrations,
   schools,
+  campusAmbassadors,
 }: Props) {
   const router = useRouter()
   const [content, setContent] = useState(initialContent)
@@ -506,7 +510,8 @@ export default function RobofestDashboardClient({
             Robofest
           </h2>
           <p className="text-sm text-slate-500 mt-1">
-            Local-round registrations, competition content, and exports.
+            Local-round registrations, competition content, ambassadors, and
+            exports.
           </p>
         </div>
         <TabsList className="w-full sm:w-fit shrink-0 bg-slate-100/80">
@@ -515,6 +520,9 @@ export default function RobofestDashboardClient({
           </TabsTrigger>
           <TabsTrigger value="content" className="flex-1 sm:flex-none">
             Content
+          </TabsTrigger>
+          <TabsTrigger value="ambassadors" className="flex-1 sm:flex-none">
+            Ambassadors
           </TabsTrigger>
         </TabsList>
       </div>
@@ -597,6 +605,9 @@ export default function RobofestDashboardClient({
                 <CreateRobofestRegistrationForm
                   content={content}
                   schools={schools}
+                  campusAmbassadors={campusAmbassadors.filter(
+                    (a) => a.isActive,
+                  )}
                 />
               </div>
             </div>
@@ -1670,6 +1681,10 @@ export default function RobofestDashboardClient({
             Reset to defaults
           </Button>
         </div>
+      </TabsContent>
+
+      <TabsContent value="ambassadors" className="space-y-4 w-full min-w-0">
+        <CampusAmbassadorsManager ambassadors={campusAmbassadors} />
       </TabsContent>
     </Tabs>
   )

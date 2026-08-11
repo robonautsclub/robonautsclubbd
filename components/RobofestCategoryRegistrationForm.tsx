@@ -9,7 +9,7 @@ import {
 } from "@/lib/schoolDirectory";
 import {
   formatCampusAmbassadorLabel,
-  ROBOFEST_CAMPUS_AMBASSADORS,
+  type RobofestCampusAmbassador,
 } from "@/lib/robofest-campus-ambassadors";
 import {
   getGradesForAgeCategory,
@@ -80,6 +80,7 @@ export default function RobofestCategoryRegistrationForm({
   category,
   rounds,
   schools,
+  campusAmbassadors,
   isPaid,
   amount,
   rulesPdf,
@@ -88,6 +89,7 @@ export default function RobofestCategoryRegistrationForm({
   category: string;
   rounds: RobofestRoundContent[];
   schools: string[];
+  campusAmbassadors: RobofestCampusAmbassador[];
   isPaid: boolean;
   amount: number;
   rulesPdf?: string;
@@ -302,7 +304,7 @@ export default function RobofestCategoryRegistrationForm({
 
       <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 leading-relaxed">
         Team number is assigned automatically after registration (e.g. BS#001)
-        and is used as your team name.
+        and is used as your Team Number.
       </p>
 
       <div className="space-y-1.5">
@@ -382,9 +384,7 @@ export default function RobofestCategoryRegistrationForm({
             className="space-y-3 rounded-lg border border-gray-200 bg-gray-50/70 p-3"
           >
             <legend className="px-1 text-sm font-semibold text-gray-800">
-              {index === 0
-                ? "Team Member 01 (Team Leader)"
-                : `Team Member ${String(index + 1).padStart(2, "0")}`}
+              {`Team Member ${String(index + 1).padStart(2, "0")}`}
             </legend>
 
             <div className="space-y-1.5">
@@ -392,7 +392,9 @@ export default function RobofestCategoryRegistrationForm({
                 htmlFor={fieldId(`member-${index}-name`)}
                 className="text-sm font-medium text-gray-700"
               >
-                Full Name <span className="text-red-500">*</span>
+                Full Name
+                {index === 0 ? " (Team Leader)" : ""}{" "}
+                <span className="text-red-500">*</span>
               </label>
               <Input
                 id={fieldId(`member-${index}-name`)}
@@ -554,7 +556,7 @@ export default function RobofestCategoryRegistrationForm({
           className={selectClassName}
         >
           <option value="">None</option>
-          {ROBOFEST_CAMPUS_AMBASSADORS.map((a) => (
+          {campusAmbassadors.map((a) => (
             <option key={a.id} value={a.id}>
               {formatCampusAmbassadorLabel(a)}
             </option>

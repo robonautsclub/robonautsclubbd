@@ -27,6 +27,15 @@ import {
   type RobofestRegistrationInput,
 } from '@/lib/robofest-registration-input'
 import { computeRobofestRegistrationTotal, resolveRobofestFee } from '@/lib/robofest-fee'
+import {
+  PUBLIC_ROBOFEST_AMBASSADORS_TAG,
+  ROBOFEST_CAMPUS_AMBASSADOR_SEED,
+  ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION,
+  nextRobofestCampusAmbassadorId,
+  type RobofestCampusAmbassador,
+  type RobofestCampusAmbassadorWriteInput,
+} from '@/lib/robofest-campus-ambassadors'
+import { listRobofestCampusAmbassadorsFromDb } from '@/lib/robofest-campus-ambassadors-db'
 import { loadRobofestRegistrationsCached } from './registrations-data'
 
 function revalidateRobofestPublic() {
@@ -34,6 +43,13 @@ function revalidateRobofestPublic() {
   revalidatePath('/robofest')
   revalidatePath('/robofest', 'layout')
   revalidatePath('/dashboard/robofest')
+}
+
+function revalidateRobofestAmbassadors() {
+  revalidateTag(PUBLIC_ROBOFEST_AMBASSADORS_TAG, 'max')
+  revalidatePath('/dashboard/robofest')
+  revalidatePath('/robofest')
+  revalidatePath('/robofest', 'layout')
 }
 
 export async function getRobofestDashboardContent(): Promise<RobofestContent> {
@@ -340,4 +356,196 @@ export async function resetRobofestContentToDefaults(): Promise<{
 
   revalidateRobofestPublic()
   return { success: true, content: mapRobofestContentDoc(defaults as unknown as Record<string, unknown>) }
+}
+
+export async function getRobofestCampusAmbassadors(): Promise<
+  RobofestCampusAmbassador[]
+> {
+  await requireAuth()
+  if (adminDb) {
+    const collection = adminDb.collection(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION)
+    const snapshot = await collection.limit(1).get()
+    if (snapshot.empty) {
+      const now = new Date()
+      const batch = adminDb.batch()
+      for (const seed of ROBOFEST_CAMPUS_AMBASSADOR_SEED) {
+        batch.set(collection.doc(seed.id), {
+          name: seed.name,
+          school: seed.school,
+          phone: seed.phone || '',
+          email: seed.email || '',
+          isActive: seed.isActive,
+          createdAt: now,
+          updatedAt: now,
+        })
+      }
+      await batch.commit()
+    }
+  }
+  return listRobofestCampusAmbassadorsFromDb(true)
+}
+
+export async function createRobofestCampusAmbassador(
+  input: RobofestCampusAmbassadorWriteInput,
+): Promise<{ success: boolean; error?: string; id?: string }> {
+  await requireAuth()
+  if (!adminDb) return { success: false, error: 'Database unavailable.' }
+
+  const name = (input.name || '').trim()
+  const school = (input.school || '').trim()
+  if (!name) return { success: false, error: 'Name is required.' }
+  if (!school) return { success: false, error: 'School is required.' }
+
+  const phone = (input.phone || '').trim()
+  const email = (input.email || '').trim().toLowerCase()
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { success: false, error: 'Enter a valid email.' }
+  }
+
+  const existing = await adminDb
+    .collection(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION)
+    .get()
+  const id = nextRobofestCampusAmbassadorId(existing.docs.map((d) => d.id))
+  const now = new Date()
+
+  await adminDb.collection(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION).doc(id).set({
+    name,
+    school,
+    phone,
+    email,
+    isActive: input.isActive ?? true,
+    createdAt: now,
+    updatedAt: now,
+  })
+
+  revalidateRobofestAmbassadors()
+  return { success: true, id }
+}
+
+export async function updateRobofestCampusAmbassador(
+  id: string,
+  input: RobofestCampusAmbassadorWriteInput,
+): Promise<{ success: boolean; error?: string }> {
+  await requireAuth()
+  if (!adminDb) return { success: false, error: 'Database unavailable.' }
+
+  const trimmedId = (id || '').trim()
+  if (!trimmedId) return { success: false, error: 'Ambassador id is required.' }
+
+  const name = (input.name || '').trim()
+  const school = (input.school || '').trim()
+  if (!name) return { success: false, error: 'Name is required.' }
+  if (!school) return { success: false, error: 'School is required.' }
+
+  const phone = (input.phone || '').trim()
+  const email = (input.email || '').trim().toLowerCase()
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { success: false, error: 'Enter a valid email.' }
+  }
+
+  const ref = adminDb
+    .collection(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION)
+    .doc(trimmedId)
+  const snap = await ref.get()
+  if (!snap.exists) {
+    return { success: false, error: 'Ambassador not found.' }
+  }
+
+  await ref.update({
+    name,
+    school,
+    phone,
+    email,
+    isActive: input.isActive ?? true,
+    updatedAt: FieldValue.serverTimestamp(),
+  })
+
+  revalidateRobofestAmbassadors()
+  return { success: true }
+}
+
+export async function deleteRobofestCampusAmbassador(
+  id: string,
+): Promise<{ success: boolean; error?: string }> {
+  await requireAuth()
+  if (!adminDb) return { success: false, error: 'Database unavailable.' }
+
+  const trimmedId = (id || '').trim()
+  if (!trimmedId) return { success: false, error: 'Ambassador id is required.' }
+
+  const ref = adminDb
+    .collection(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION)
+    .doc(trimmedId)
+  const snap = await ref.get()
+  if (!snap.exists) {
+    return { success: false, error: 'Ambassador not found.' }
+  }
+
+  await ref.delete()
+  revalidateRobofestAmbassadors()
+  return { success: true }
+}
+
+export async function seedRobofestCampusAmbassadors(): Promise<{
+  success: boolean
+  message: string
+}> {
+  await requireAuth()
+  if (!adminDb) return { success: false, message: 'Database unavailable.' }
+
+  const collection = adminDb.collection(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION)
+  const existing = await collection.get()
+  const existingById = new Map(
+    existing.docs.map((doc) => [doc.id, doc.data() as Record<string, unknown>]),
+  )
+
+  let created = 0
+  let updated = 0
+  const now = new Date()
+  const batch = adminDb.batch()
+
+  for (const seed of ROBOFEST_CAMPUS_AMBASSADOR_SEED) {
+    const ref = collection.doc(seed.id)
+    const prev = existingById.get(seed.id)
+    if (!prev) {
+      batch.set(ref, {
+        name: seed.name,
+        school: seed.school,
+        phone: seed.phone || '',
+        email: seed.email || '',
+        isActive: seed.isActive,
+        createdAt: now,
+        updatedAt: now,
+      })
+      created += 1
+      continue
+    }
+
+    const prevActive =
+      typeof prev.isActive === 'boolean' ? prev.isActive : true
+    batch.set(
+      ref,
+      {
+        name: seed.name,
+        school: seed.school,
+        phone: seed.phone || '',
+        email: seed.email || '',
+        isActive: prevActive,
+        updatedAt: now,
+        createdAt: prev.createdAt ?? now,
+      },
+      { merge: true },
+    )
+    updated += 1
+  }
+
+  if (created + updated > 0) {
+    await batch.commit()
+  }
+
+  revalidateRobofestAmbassadors()
+  return {
+    success: true,
+    message: `Seed complete: ${created} created, ${updated} updated.`,
+  }
 }
