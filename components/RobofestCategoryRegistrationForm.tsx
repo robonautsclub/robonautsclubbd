@@ -302,7 +302,7 @@ export default function RobofestCategoryRegistrationForm({
 
       <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 leading-relaxed">
         Team number is assigned automatically after registration (e.g. BS#001)
-        and is used as your team name.
+        and is used as your Team ID.
       </p>
 
       <div className="space-y-1.5">
