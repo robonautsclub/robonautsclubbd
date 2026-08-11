@@ -61,7 +61,7 @@ export const metadata: Metadata = {
 }
 
 interface VerificationPageProps {
-  searchParams: Promise<{ registrationId?: string }>
+  searchParams: Promise<{ registrationId?: string; member?: string }>
 }
 
 type VerificationLookup =
@@ -139,6 +139,11 @@ async function getBookingByRegistrationId(
 export default async function VerifyBookingPage({ searchParams }: VerificationPageProps) {
   const params = await searchParams
   const registrationId = params.registrationId
+  const memberRaw = params.member?.trim()
+  const certificateMemberIndex =
+    memberRaw != null && memberRaw !== '' && /^\d+$/.test(memberRaw)
+      ? Number.parseInt(memberRaw, 10)
+      : undefined
 
   // Error State: No registration ID provided
   if (!registrationId) {
@@ -280,6 +285,7 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
         registration={result.registration}
         content={result.content}
         qrCodeDataURL={qrCodeDataURL}
+        certificateMemberIndex={certificateMemberIndex}
       />
     )
   }

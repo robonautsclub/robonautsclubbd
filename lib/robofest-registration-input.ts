@@ -7,6 +7,7 @@ import {
   resolveSchoolFromSelection,
 } from "@/lib/pendingSchool";
 import { getActiveRobofestCampusAmbassadorById } from "@/lib/robofest-campus-ambassadors-db";
+import { ROBOFEST_DEFAULT_AWARD_CATEGORY_ID } from "@/lib/robofest-award-categories";
 import type { RobofestTeamMember } from "@/lib/robofest-content";
 import {
   formatAgeCategoryLabel,
@@ -140,6 +141,7 @@ export async function validateRobofestRegistrationInput(
       pendingSchoolId,
       branch: branch || undefined,
       grade,
+      awardCategoryId: ROBOFEST_DEFAULT_AWARD_CATEGORY_ID,
     });
   }
 

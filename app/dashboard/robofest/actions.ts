@@ -13,6 +13,7 @@ import {
   getRobofestCategoryByName,
   getRobofestContentFresh,
   mapRobofestContentDoc,
+  sanitizeRobofestAwardCategories,
   type RobofestContent,
   type RobofestRegistration,
   type RobofestRegistrationStatus,
@@ -123,6 +124,18 @@ export async function updateRobofestContent(
         title: step.title.trim(),
         description: step.description.trim(),
       })),
+      awardCategories: sanitizeRobofestAwardCategories(input.awardCategories),
+      competitionDirector: (
+        input.competitionDirector ||
+        input.hostName ||
+        defaults.competitionDirector
+      ).trim(),
+      headJudge: (input.headJudge || defaults.headJudge).trim(),
+      eventOrganizer: (
+        input.eventOrganizer ||
+        input.hostName ||
+        defaults.eventOrganizer
+      ).trim(),
       isPaid: Boolean(input.isPaid),
       amount: Number(input.amount) || 0,
       registrationClosingDate: (() => {
@@ -197,6 +210,69 @@ export async function updateRobofestRegistrationStatus(
   }
 
   await ref.update(update)
+  revalidatePath('/dashboard/robofest')
+  return { success: true }
+}
+
+export async function updateRobofestMemberAwardCategory(
+  registrationDocId: string,
+  memberIndex: number,
+  awardCategoryId: string,
+): Promise<{ success: boolean; error?: string }> {
+  await requireAuth()
+  if (!adminDb) return { success: false, error: 'Database unavailable.' }
+
+  const trimmedId = (registrationDocId || '').trim()
+  if (!trimmedId) {
+    return { success: false, error: 'Registration id is required.' }
+  }
+  if (!Number.isInteger(memberIndex) || memberIndex < 0) {
+    return { success: false, error: 'Invalid member index.' }
+  }
+
+  const content = await getRobofestContentFresh()
+  const categories = sanitizeRobofestAwardCategories(content.awardCategories)
+  const categoryId = (awardCategoryId || '').trim()
+  const category = categories.find((c) => c.id === categoryId)
+  if (!category || category.isActive === false) {
+    return { success: false, error: 'Selected award category is not valid.' }
+  }
+
+  const ref = adminDb
+    .collection(ROBOFEST_REGISTRATIONS_COLLECTION)
+    .doc(trimmedId)
+  const snap = await ref.get()
+  if (!snap.exists) return { success: false, error: 'Registration not found.' }
+
+  const data = snap.data() as Record<string, unknown>
+  const members = Array.isArray(data.teamMembers)
+    ? [...(data.teamMembers as Record<string, unknown>[])]
+    : []
+
+  if (members.length === 0) {
+    return {
+      success: false,
+      error: 'This registration has no team members to assign an award to.',
+    }
+  }
+  if (memberIndex >= members.length) {
+    return { success: false, error: 'Member not found on this registration.' }
+  }
+
+  const current = members[memberIndex]
+  if (!current || typeof current !== 'object') {
+    return { success: false, error: 'Member not found on this registration.' }
+  }
+
+  members[memberIndex] = {
+    ...current,
+    awardCategoryId: category.id,
+  }
+
+  await ref.update({
+    teamMembers: members,
+    updatedAt: FieldValue.serverTimestamp(),
+  })
   revalidatePath('/dashboard/robofest')
   return { success: true }
 }

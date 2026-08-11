@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   QrCode,
   Trophy,
+  Award,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import Image from 'next/image'
@@ -17,6 +18,10 @@ import {
   resolveRobofestRoundDateLabel,
   resolveRobofestRoundVenueLabel,
 } from '@/lib/robofest-content'
+import {
+  resolveRobofestAwardCategory,
+  ROBOFEST_DEFAULT_AWARD_CATEGORY_ID,
+} from '@/lib/robofest-award-categories'
 import { formatAgeCategoryLabel } from '@/lib/robofest-registration-options'
 import { SITE_CONFIG } from '@/lib/site-config'
 import { Badge } from '@/components/ui/badge'
@@ -27,12 +32,40 @@ type Props = {
   registration: RobofestRegistration
   content: RobofestContent
   qrCodeDataURL: string | null
+  /** When set (from certificate QR), show minimal certificate verify UI only. */
+  certificateMemberIndex?: number
+}
+
+function resolveCertificateAwardee(
+  registration: RobofestRegistration,
+  memberIndex: number,
+): { name: string; awardCategoryId?: string } | null {
+  const members = registration.teamMembers || []
+  if (members.length > 0) {
+    const member = members[memberIndex]
+    if (!member?.name?.trim()) return null
+    return {
+      name: member.name.trim(),
+      awardCategoryId: member.awardCategoryId,
+    }
+  }
+  if (memberIndex === 0) {
+    return {
+      name:
+        registration.name?.trim() ||
+        registration.email?.trim() ||
+        'Participant',
+      awardCategoryId: ROBOFEST_DEFAULT_AWARD_CATEGORY_ID,
+    }
+  }
+  return null
 }
 
 export default function VerifyRobofestRegistration({
   registration,
   content,
   qrCodeDataURL,
+  certificateMemberIndex,
 }: Props) {
   const teamMembers = registration.teamMembers || []
   const registeredAt = registration.createdAt
@@ -50,6 +83,126 @@ export default function VerifyRobofestRegistration({
     registration.roundCity || '',
   )
   const teamNumber = registration.teamNumber || registration.name
+
+  const certificateMode =
+    typeof certificateMemberIndex === 'number' &&
+    Number.isInteger(certificateMemberIndex) &&
+    certificateMemberIndex >= 0
+
+  const awardee = certificateMode
+    ? resolveCertificateAwardee(registration, certificateMemberIndex!)
+    : null
+
+  if (certificateMode && awardee) {
+    const award = resolveRobofestAwardCategory(
+      content.awardCategories,
+      awardee.awardCategoryId,
+    )
+
+    return (
+      <div className="min-h-screen bg-linear-to-br from-slate-50 via-cyan-50 to-slate-100 flex items-center justify-center py-8 sm:py-12 px-4">
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-200 rounded-full blur-3xl opacity-25 translate-x-1/2 -translate-y-1/2" />
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-slate-200 rounded-full blur-3xl opacity-30 -translate-x-1/2 translate-y-1/2" />
+        </div>
+
+        <div className="relative z-10 w-full max-w-lg">
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="bg-linear-to-r from-cyan-600 via-teal-600 to-slate-800 px-6 sm:px-8 py-8 text-center">
+              <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center mx-auto mb-4 shadow-xl border-4 border-white/40">
+                <CheckCircle className="w-10 h-10 text-white" />
+              </div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-100 mb-2">
+                RoboFest Bangladesh 2026
+              </p>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-white mb-2 tracking-tight">
+                Certificate Verified
+              </h1>
+              <p className="text-sm text-cyan-50 font-medium">
+                This award certificate is authentic
+              </p>
+            </div>
+
+            <div className="p-6 sm:p-8 space-y-5">
+              <div className="rounded-xl border-2 border-cyan-200 bg-cyan-50/60 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-cyan-700 mb-1">
+                  Registration ID
+                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-xl font-bold font-mono text-slate-900">
+                    {registration.registrationId}
+                  </p>
+                  {registration.registrationId ? (
+                    <CopyButton
+                      text={registration.registrationId}
+                      label="Registration ID"
+                    />
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+                  Name
+                </p>
+                <p className="text-xl font-bold text-slate-900">{awardee.name}</p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                  Position
+                </p>
+                <Badge className="inline-flex items-center gap-1.5 bg-cyan-700 hover:bg-cyan-700 text-white border-0 text-sm px-3 py-1.5">
+                  <Award className="w-4 h-4" />
+                  {award.label}
+                </Badge>
+              </div>
+
+              <Button
+                asChild
+                variant="outline"
+                className="w-full border-slate-200"
+              >
+                <Link href="/robofest" prefetch={false}>
+                  Back to Robofest
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (certificateMode && !awardee) {
+    return (
+      <div className="min-h-screen bg-linear-to-br from-slate-50 via-cyan-50 to-slate-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 max-w-md w-full text-center">
+          <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+            <ShieldCheck className="w-8 h-8 text-amber-700" />
+          </div>
+          <h1 className="text-xl font-bold text-slate-900 mb-2">
+            Certificate member not found
+          </h1>
+          <p className="text-sm text-slate-600 mb-6">
+            This registration is valid, but the certificate member index does
+            not match a team member.
+          </p>
+          <p className="text-xs font-mono text-slate-500 mb-6">
+            {registration.registrationId}
+          </p>
+          <Button asChild className="bg-cyan-700 hover:bg-cyan-800 text-white">
+            <Link
+              href={`/verify-booking?registrationId=${encodeURIComponent(registration.registrationId || '')}`}
+              prefetch={false}
+            >
+              View full registration
+            </Link>
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-50 via-cyan-50 to-slate-100 py-8 sm:py-12 px-4">
