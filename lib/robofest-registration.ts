@@ -140,7 +140,7 @@ export function buildRobofestEventForPdfEmail(
     venue: venueLabel,
     description: `${form.category} — ${formatAgeCategoryLabel(form.ageCategory)} · ${form.roundCity} Division`,
     fullDescription: content.lead,
-    eligibility: "Robofest Bangladesh local round participants",
+    eligibility: "⁠RoboFest Bangladesh Round Participants",
     createdAt: now,
     updatedAt: now,
     createdBy: "system",

@@ -58,7 +58,7 @@ export const BOTTLESUMO_RULES = {
     "Substantially similar robots (including from the same school) may face investigation and possible penalty or disqualification.",
     "The robot must be fully constructed, functional, and autonomous on arrival—no remote control, Bluetooth/Wi-Fi tele-operation, or human signalling once a match starts.",
     "One robot per team for the entire competition.",
-    "Labelling: Team ID clearly visible; a permanent “Front” marking on the primary-sensor side for the whole event.",
+    "Labelling: Team Name clearly visible; a permanent “Front” marking on the primary-sensor side for the whole event.",
     "Teams bring their own laptop/computer and charging cable to modify code between rounds.",
   ],
   specs: {

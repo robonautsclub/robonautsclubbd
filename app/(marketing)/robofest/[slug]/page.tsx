@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import { notFound } from "next/navigation";
 import { getPublicEnglishMediumSchools } from "@/app/(marketing)/events/actions";
+import { getPublicRobofestCampusAmbassadors } from "@/lib/robofest-campus-ambassadors-db";
 import {
   getActiveRobofestCategories,
   getRobofestCategoryFromContent,
@@ -104,6 +105,7 @@ export default async function RobofestCategoryRoute({ params }: PageProps) {
   }
 
   const schools = await getPublicEnglishMediumSchools();
+  const campusAmbassadors = await getPublicRobofestCampusAmbassadors();
   const image = getRobofestCategoryImage(category);
   const categoryUrl = getRobofestCategoryHref(category.slug);
 
@@ -142,6 +144,7 @@ export default async function RobofestCategoryRoute({ params }: PageProps) {
         content={content}
         fee={fee}
         schools={schools}
+        campusAmbassadors={campusAmbassadors}
       />
     </>
   );

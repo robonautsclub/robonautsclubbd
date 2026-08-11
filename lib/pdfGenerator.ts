@@ -84,28 +84,28 @@ function resolveFontRead(pathStr: string, fontPath: string | null): Buffer | nul
  */
 function truncateTextToFit(text: string, maxWidth: number, maxHeight: number, fontSize: number): string {
   if (!text) return ''
-  
+
   // Approximate character width (conservative estimate for Times-Roman)
   const avgCharWidth = fontSize * 0.6
   const charsPerLine = Math.floor(maxWidth / avgCharWidth)
   const lineHeight = fontSize * 1.2
   const maxLines = Math.floor(maxHeight / lineHeight)
   const maxChars = Math.max(0, maxLines * charsPerLine - 10) // Reserve space for ellipsis
-  
+
   if (text.length <= maxChars) {
     return text
   }
-  
+
   // Truncate at word boundary when possible
   const truncated = text.substring(0, maxChars - 3)
   const lastSpace = truncated.lastIndexOf(' ')
   const lastNewline = truncated.lastIndexOf('\n')
   const lastBreak = Math.max(lastSpace, lastNewline)
-  
+
   if (lastBreak > maxChars - 50) {
     return truncated.substring(0, lastBreak) + '...'
   }
-  
+
   return truncated + '...'
 }
 
@@ -148,10 +148,10 @@ function resolvePDFKitFontPath(): string | null {
       const pnpmDir = join(process.cwd(), 'node_modules', '.pnpm')
       if (existsSync(pnpmDir)) {
         const dirs = readdirSync(pnpmDir).filter((dir) => dir.startsWith('pdfkit@'))
-        const pnpmPaths = dirs.map((dir) => 
+        const pnpmPaths = dirs.map((dir) =>
           join(pnpmDir, dir, 'node_modules', 'pdfkit', 'js', 'data')
         )
-        
+
         // Also try the exact version from the error
         pnpmPaths.push(join(process.cwd(), 'node_modules', '.pnpm', 'pdfkit@0.17.2', 'node_modules', 'pdfkit', 'js', 'data'))
 
@@ -199,7 +199,7 @@ function resolvePDFKitFontPath(): string | null {
         // Path might not be accessible, continue
       }
     }
-    
+
     // Method 4: Try to find pdfkit using require.resolve and navigate from there
     try {
       // Dynamic require needed for PDFKit resolution in serverless environments
@@ -212,7 +212,7 @@ function resolvePDFKitFontPath(): string | null {
       if (existsSync(join(dataPath, 'Times-Roman.afm')) || existsSync(join(dataPath, 'Helvetica.afm'))) {
         return dataPath
       }
-      
+
       // Try alternative: go up from lib/pdfkit.js
       const pdfkitLibDir = dirname(pdfkitMain)
       const altDataPath = join(pdfkitLibDir, '..', 'js', 'data')
@@ -258,17 +258,17 @@ function setupPDFKitFonts(): { originalReadFileSync: ReadFileSyncFn } | null {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const fs = require('fs')
     const originalReadFileSync = fs.readFileSync.bind(fs) as ReadFileSyncFn
-    
+
     // Patch readFileSync to intercept font file reads
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     fs.readFileSync = function(path: string | Buffer | number, ...args: any[]): Buffer | string {
       const pathStr = String(path)
-      
+
       // Check if this is a PDFKit font file request (more comprehensive matching)
-      const isPDFKitFontRequest = 
+      const isPDFKitFontRequest =
         (pathStr.includes('pdfkit') || pathStr.includes('Helvetica') || pathStr.includes('Times') || pathStr.includes('Courier')) &&
         (pathStr.includes('data') || pathStr.includes('.afm') || pathStr.includes('js'))
-      
+
       if (isPDFKitFontRequest) {
         const fontData = resolveFontRead(pathStr, fontPath)
         if (fontData) {
@@ -279,7 +279,7 @@ function setupPDFKitFonts(): { originalReadFileSync: ReadFileSyncFn } | null {
           return fontData
         }
       }
-      
+
       // For all other files, use original behavior
       try {
         return originalReadFileSync(path, ...args)
@@ -353,17 +353,17 @@ export async function generateBookingConfirmationPDF({
 }: GeneratePDFProps): Promise<Buffer> {
   // Dynamically import PDFKit only when needed (code splitting)
   const PDFDocument = (await import('pdfkit')).default
-  
+
   return new Promise(async (resolve, reject) => {
     // Dynamic require needed for monkey-patching in serverless environments
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const fs = require('fs')
     let fontPatch: { originalReadFileSync: ReadFileSyncFn } | null = null
-    
+
     try {
       // Setup fonts before creating PDFDocument
       fontPatch = setupPDFKitFonts()
-      
+
       // Create PDFDocument - font reads should now be intercepted.
       // We set all PDFKit margins to 0 because the layout in generatePDFContent
       // positions every element with explicit (x, y) coordinates and manages
@@ -376,7 +376,7 @@ export async function generateBookingConfirmationPDF({
         margins: { top: 0, bottom: 0, left: 0, right: 0 },
         autoFirstPage: true,
       })
-      
+
       // Monitor for page additions - if a second page is created, log a warning
       let pageCount = 1
       doc.on('pageAdded', () => {
@@ -415,7 +415,7 @@ export async function generateBookingConfirmationPDF({
         }
         reject(error)
       })
-      
+
       // Load logo (optional) — filesystem in dev, fetch in serverless
       const logoBuffer = await loadLogoBuffer(verificationUrl)
 
@@ -659,12 +659,12 @@ async function generatePDFContent(
     const teamId = sanitizedBooking.teamNumber || sanitizedBooking.teamName
     const teamLeaderName = sanitizedBooking.teamMembers?.[0]?.name?.trim() || ''
 
-    y = drawRow('Team ID', teamId, y)
+    y = drawRow('Team Number', teamId, y)
     if (teamLeaderName) {
-      y = drawRow('Team leader contact', teamLeaderName, y)
+      y = drawRow('Team lead Name', teamLeaderName, y)
     }
     y = drawRow('Team Lead Email', sanitizedBooking.email, y)
-    y = drawRow('Team lead phone', sanitizedBooking.phone, y)
+    y = drawRow('Team Lead Contact', sanitizedBooking.phone, y)
   } else {
     y = drawRow('Name', sanitizedBooking.name, y)
     y = drawRow('School', sanitizedBooking.school, y)
@@ -694,42 +694,15 @@ async function generatePDFContent(
     for (let i = 0; i < sanitizedBooking.teamMembers.length; i += 1) {
       if (y + 28 > flowSpaceBottom) break
       const member = sanitizedBooking.teamMembers[i]
-      const label = `${
-        i === 0 ? '01 (Team Leader)' : String(i + 1).padStart(2, '0')
-      }. ${member.name || 'Member'}`
+      const label = `${String(i + 1).padStart(2, '0')}. ${member.name || 'Member'}${
+        i === 0 ? ' (Team Leader)' : ''
+      }`
       const detail = [member.email, member.grade, member.school, member.phone]
         .filter(Boolean)
         .join(' · ')
       y = drawRow(label, detail || '—', y)
     }
     y += 4
-  }
-
-  // ---------- Optional: Additional Information ----------
-  if (sanitizedBooking.information && y + 32 < flowSpaceBottom) {
-    y += 6
-    doc.font(theme.font.bold).fontSize(theme.size.label).fillColor(theme.color.mute)
-    doc.text('Additional Information', left, y, { width: contentWidth })
-    y += 14
-
-    const noteAvail = flowSpaceBottom - y - 24
-    const noteText = truncateTextToFit(
-      sanitizedBooking.information,
-      contentWidth - 24,
-      noteAvail,
-      theme.size.body
-    )
-    doc.font(theme.font.regular).fontSize(theme.size.body)
-    const noteH = doc.heightOfString(noteText, { width: contentWidth - 24, lineGap: 2 })
-    const noteBoxH = Math.min(noteH, noteAvail) + 16
-    doc.rect(left, y, contentWidth, noteBoxH).fill(theme.color.accentSoft)
-    doc.font(theme.font.regular).fontSize(theme.size.body).fillColor(theme.color.ink)
-    doc.text(noteText, left + 12, y + 8, {
-      width: contentWidth - 24,
-      height: noteAvail,
-      lineGap: 2,
-    })
-    y += noteBoxH + 14
   }
 
   // ---------- Optional: About the Event ----------
@@ -805,4 +778,3 @@ async function generatePDFContent(
     { width: contentWidth, align: 'center' }
   )
 }
-

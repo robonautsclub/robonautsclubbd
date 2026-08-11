@@ -111,11 +111,9 @@ function buildMemberRowsHtml(members: RobofestEmailTeamMember[]): string {
         <tr>
           <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0; vertical-align: top;">
             <div style="color: #0f172a; font-size: 14px; font-weight: 600;">
-              ${
-                index === 0
-                  ? '01 (Team Leader)'
-                  : String(index + 1).padStart(2, '0')
-              }. ${escapeHtml(member.name || 'Member')}
+              ${String(index + 1).padStart(2, '0')}. ${escapeHtml(member.name || 'Member')}${
+                index === 0 ? ' (Team Leader)' : ''
+              }
             </div>
             <div style="color: #0e7490; font-size: 13px; margin-top: 2px;">
               ${escapeHtml(member.email || '—')}
@@ -209,7 +207,7 @@ function buildRobofestEmailHtml({
                 <tr>
                   <td style="padding: 18px;">
                     <p style="margin: 0 0 10px; font-size: 15px;">
-                      <span style="color:#64748b;">Team ID:</span>
+                      <span style="color:#64748b;">Team Number:</span>
                       <strong style="color:#0f172a; font-family: ui-monospace, monospace; font-size: 16px;">${escapeHtml(teamId)}</strong>
                     </p>
                     <p style="margin: 0 0 8px; font-size: 14px;"><span style="color:#64748b;">Competition:</span> <strong>${escapeHtml(competition)}</strong></p>
@@ -262,7 +260,7 @@ function buildRobofestEmailHtml({
                 <tr>
                   <td style="padding: 18px;">
                     <p style="margin: 0 0 12px; font-size: 14px; color: #7f1d1d;">
-                      <strong>Please save and remember your Team ID</strong> (<span style="font-family: ui-monospace, monospace; font-weight: 700;">${escapeHtml(teamId)}</span>), as it will be used for all future references, communications, and competition-related matters.
+                      <strong>Please save and remember your Team Name</strong> (<span style="font-family: ui-monospace, monospace; font-weight: 700;">${escapeHtml(teamId)}</span>), as it will be used for all future references, communications, and competition-related matters.
                     </p>
                     <p style="margin: 0; font-size: 14px; color: #475569;">
                       Please keep this E-Mail for your records. Further information regarding Competition Schedules, Venue Arrangements, and other important instructions will be shared through our Official Channels.
