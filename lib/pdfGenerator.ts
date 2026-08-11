@@ -661,10 +661,10 @@ async function generatePDFContent(
 
     y = drawRow('Team Number', teamId, y)
     if (teamLeaderName) {
-      y = drawRow('Team leader contact', teamLeaderName, y)
+      y = drawRow('Team lead Name', teamLeaderName, y)
     }
     y = drawRow('Team Lead Email', sanitizedBooking.email, y)
-    y = drawRow('Team lead phone', sanitizedBooking.phone, y)
+    y = drawRow('Team Lead Contact', sanitizedBooking.phone, y)
   } else {
     y = drawRow('Name', sanitizedBooking.name, y)
     y = drawRow('School', sanitizedBooking.school, y)

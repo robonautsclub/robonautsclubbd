@@ -6,7 +6,7 @@ import {
   createPendingSchoolIfNeeded,
   resolveSchoolFromSelection,
 } from "@/lib/pendingSchool";
-import { getRobofestCampusAmbassadorById } from "@/lib/robofest-campus-ambassadors";
+import { getActiveRobofestCampusAmbassadorById } from "@/lib/robofest-campus-ambassadors-db";
 import type { RobofestTeamMember } from "@/lib/robofest-content";
 import {
   formatAgeCategoryLabel,
@@ -153,7 +153,7 @@ export async function validateRobofestRegistrationInput(
   let campusAmbassadorSchool: string | undefined;
   const ambassadorId = formData.campusAmbassadorId?.trim() ?? "";
   if (ambassadorId) {
-    const ambassador = getRobofestCampusAmbassadorById(ambassadorId);
+    const ambassador = await getActiveRobofestCampusAmbassadorById(ambassadorId);
     if (!ambassador) {
       return { ok: false, error: "Selected campus ambassador is not valid." };
     }

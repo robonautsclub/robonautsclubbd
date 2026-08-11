@@ -10,7 +10,7 @@ import {
 } from '@/lib/robofest-fee'
 import {
   formatCampusAmbassadorLabel,
-  ROBOFEST_CAMPUS_AMBASSADORS,
+  type RobofestCampusAmbassador,
 } from '@/lib/robofest-campus-ambassadors'
 import {
   getGradesForAgeCategory,
@@ -85,9 +85,11 @@ const selectClassName =
 export default function CreateRobofestRegistrationForm({
   content,
   schools,
+  campusAmbassadors,
 }: {
   content: RobofestContent
   schools: string[]
+  campusAmbassadors: RobofestCampusAmbassador[]
 }) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
@@ -477,7 +479,7 @@ export default function CreateRobofestRegistrationForm({
               }
             >
               <option value="">None</option>
-              {ROBOFEST_CAMPUS_AMBASSADORS.map((a) => (
+              {campusAmbassadors.map((a) => (
                 <option key={a.id} value={a.id}>
                   {formatCampusAmbassadorLabel(a)}
                 </option>

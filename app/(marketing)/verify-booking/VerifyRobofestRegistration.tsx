@@ -233,7 +233,7 @@ export default function VerifyRobofestRegistration({
                     <div className="flex items-center gap-2 mb-1.5">
                       <Phone className="w-4 h-4 text-slate-500" />
                       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                        Team lead phone
+                        Team lead Contact
                       </p>
                     </div>
                     <p className="text-base font-semibold text-slate-900">

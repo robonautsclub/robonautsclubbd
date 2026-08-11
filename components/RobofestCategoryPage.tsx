@@ -8,6 +8,7 @@ import {
   getRobofestCategoryImage,
   getRobofestCategoryRulesPdf,
 } from "@/lib/robofest-content";
+import type { RobofestCampusAmbassador } from "@/lib/robofest-campus-ambassadors";
 import { getRobofestCategoryRules } from "@/lib/robofest-category-rules";
 import RobofestCategoryRegistrationForm from "@/components/RobofestCategoryRegistrationForm";
 import RobofestRegistrationCountdown from "@/components/RobofestRegistrationCountdown";
@@ -47,11 +48,13 @@ export default function RobofestCategoryPage({
   content,
   fee,
   schools,
+  campusAmbassadors,
 }: {
   category: RobofestCategoryContent;
   content: RobofestContent;
   fee: { isPaid: boolean; amount: number };
   schools: string[];
+  campusAmbassadors: RobofestCampusAmbassador[];
 }) {
   const rulesPdf = getRobofestCategoryRulesPdf(category);
   const rules = getRobofestCategoryRules(category.slug);
@@ -326,6 +329,7 @@ export default function RobofestCategoryPage({
                   category={category.name}
                   rounds={content.rounds}
                   schools={schools}
+                  campusAmbassadors={campusAmbassadors}
                   isPaid={fee.isPaid}
                   amount={fee.amount}
                   rulesPdf={rulesPdf || undefined}

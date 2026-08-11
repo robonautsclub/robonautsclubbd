@@ -9,7 +9,7 @@ import {
 } from "@/lib/schoolDirectory";
 import {
   formatCampusAmbassadorLabel,
-  ROBOFEST_CAMPUS_AMBASSADORS,
+  type RobofestCampusAmbassador,
 } from "@/lib/robofest-campus-ambassadors";
 import {
   getGradesForAgeCategory,
@@ -80,6 +80,7 @@ export default function RobofestCategoryRegistrationForm({
   category,
   rounds,
   schools,
+  campusAmbassadors,
   isPaid,
   amount,
   rulesPdf,
@@ -88,6 +89,7 @@ export default function RobofestCategoryRegistrationForm({
   category: string;
   rounds: RobofestRoundContent[];
   schools: string[];
+  campusAmbassadors: RobofestCampusAmbassador[];
   isPaid: boolean;
   amount: number;
   rulesPdf?: string;
@@ -554,7 +556,7 @@ export default function RobofestCategoryRegistrationForm({
           className={selectClassName}
         >
           <option value="">None</option>
-          {ROBOFEST_CAMPUS_AMBASSADORS.map((a) => (
+          {campusAmbassadors.map((a) => (
             <option key={a.id} value={a.id}>
               {formatCampusAmbassadorLabel(a)}
             </option>
