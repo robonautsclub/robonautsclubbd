@@ -15,6 +15,7 @@ import {
   Search,
   Trophy,
   Users,
+  Award,
 } from 'lucide-react'
 import type {
   RobofestContent,
@@ -23,12 +24,22 @@ import type {
   RobofestTeamMember,
 } from '@/lib/robofest-content'
 import type { RobofestCampusAmbassador } from '@/lib/robofest-campus-ambassadors'
+import {
+  getActiveRobofestAwardCategories,
+  nextCustomAwardCategoryId,
+  ROBOFEST_CERTIFICATE_TYPES,
+  ROBOFEST_DEFAULT_AWARD_CATEGORY_ID,
+  type RobofestAwardAccent,
+  type RobofestAwardCategory,
+  type RobofestCertificateType,
+} from '@/lib/robofest-award-categories'
 import { formatAgeCategoryLabel } from '@/lib/robofest-registration-options'
 import { cn } from '@/lib/utils'
 import {
   resendRobofestRegistrationEmail,
   resetRobofestContentToDefaults,
   updateRobofestContent,
+  updateRobofestMemberAwardCategory,
   updateRobofestRegistrationStatus,
 } from './actions'
 import {
@@ -46,6 +57,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Collapsible,
   CollapsibleContent,
@@ -145,19 +157,44 @@ function CollapsibleTeamMembers({
   registrationId,
   teamSize,
   members,
+  awardCategories,
+  canDownloadCertificate,
+  onDownloadCertificate,
+  onAwardChange,
+  certificatePending,
 }: {
   registrationId: string
   teamSize?: number
   members?: RobofestTeamMember[]
+  awardCategories: RobofestAwardCategory[]
+  canDownloadCertificate?: boolean
+  onDownloadCertificate?: (memberIndex: number) => void
+  onAwardChange?: (memberIndex: number, awardCategoryId: string) => void
+  certificatePending?: boolean
 }) {
   const count = teamSize || members?.length || 0
+  const activeAwards = getActiveRobofestAwardCategories(awardCategories)
+
   if (!members?.length) {
     return (
       <div className="text-xs">
         <div className="font-medium text-slate-800">
           {count} member{count === 1 ? '' : 's'}
         </div>
-        <span className="text-slate-400">—</span>
+        {canDownloadCertificate && onDownloadCertificate ? (
+          <button
+            type="button"
+            disabled={certificatePending}
+            onClick={() => onDownloadCertificate(0)}
+            title="Download participation certificate"
+            className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-cyan-700 hover:text-cyan-900 disabled:opacity-50"
+          >
+            <Award className="w-3 h-3" />
+            Certificate
+          </button>
+        ) : (
+          <span className="text-slate-400">—</span>
+        )}
       </div>
     )
   }
@@ -170,7 +207,7 @@ function CollapsibleTeamMembers({
   const remaining = Math.max(0, members.length - 2)
 
   return (
-    <Collapsible className="group/team text-xs min-w-[11rem] max-w-[18rem]">
+    <Collapsible className="group/team text-xs min-w-[11rem] max-w-[22rem]">
       <CollapsibleTrigger asChild>
         <button
           type="button"
@@ -191,19 +228,66 @@ function CollapsibleTeamMembers({
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-2 space-y-1.5 data-[state=closed]:animate-none">
-        <ul className="space-y-1.5 rounded-md border border-slate-100 bg-slate-50/80 p-2 text-slate-600">
-          {members.map((m, i) => (
-            <li key={`${registrationId}-m-${i}`} className="leading-snug">
-              <span className="font-medium text-slate-800">
-                {String(i + 1).padStart(2, '0')}. {m.name}
-              </span>
-              <div className="text-[11px] text-slate-500 break-words">
-                {[m.grade, m.school, m.branch, m.phone, m.email]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </div>
-            </li>
-          ))}
+        <ul className="space-y-2 rounded-md border border-slate-100 bg-slate-50/80 p-2 text-slate-600">
+          {members.map((m, i) => {
+            const awardId =
+              m.awardCategoryId || ROBOFEST_DEFAULT_AWARD_CATEGORY_ID
+            return (
+              <li
+                key={`${registrationId}-m-${i}`}
+                className="leading-snug space-y-1.5"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <span className="font-medium text-slate-800">
+                      {String(i + 1).padStart(2, '0')}. {m.name}
+                    </span>
+                    <div className="text-[11px] text-slate-500 break-words">
+                      {[m.grade, m.school, m.branch, m.phone, m.email]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </div>
+                  </div>
+                  {canDownloadCertificate && onDownloadCertificate ? (
+                    <button
+                      type="button"
+                      disabled={certificatePending}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onDownloadCertificate(i)
+                      }}
+                      title={`Download certificate for ${m.name}`}
+                      className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-white text-cyan-700 hover:bg-cyan-50 hover:text-cyan-900 disabled:opacity-50"
+                    >
+                      <Award className="w-3.5 h-3.5" />
+                    </button>
+                  ) : null}
+                </div>
+                {onAwardChange ? (
+                  <select
+                    className="h-7 w-full rounded-md border border-slate-200 bg-white px-2 text-[11px] text-slate-700"
+                    value={awardId}
+                    disabled={certificatePending}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                      e.stopPropagation()
+                      onAwardChange(i, e.target.value)
+                    }}
+                    title="Award category"
+                  >
+                    {activeAwards.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.label}
+                      </option>
+                    ))}
+                    {!activeAwards.some((c) => c.id === awardId) ? (
+                      <option value={awardId}>{awardId}</option>
+                    ) : null}
+                  </select>
+                ) : null}
+              </li>
+            )
+          })}
         </ul>
       </CollapsibleContent>
     </Collapsible>
@@ -422,6 +506,25 @@ export default function RobofestDashboardClient({
     })
   }
 
+  const setMemberAward = (
+    registrationDocId: string,
+    memberIndex: number,
+    awardCategoryId: string,
+  ) => {
+    startTransition(async () => {
+      const result = await updateRobofestMemberAwardCategory(
+        registrationDocId,
+        memberIndex,
+        awardCategoryId,
+      )
+      if (!result.success) {
+        alert(result.error || 'Failed to update award')
+        return
+      }
+      router.refresh()
+    })
+  }
+
   const resendEmail = (id: string) => {
     startTransition(async () => {
       const result = await resendRobofestRegistrationEmail(id)
@@ -461,6 +564,72 @@ export default function RobofestDashboardClient({
         )
       } catch (err) {
         alert(err instanceof Error ? err.message : 'Failed to download PDF')
+      }
+    })
+  }
+
+  const downloadMemberCertificate = (
+    registration: RobofestRegistration,
+    memberIndex: number,
+  ) => {
+    if (!registration.registrationId) {
+      alert('Registration ID is missing.')
+      return
+    }
+    if (registration.status === 'cancelled') {
+      alert('Cannot generate certificates for a cancelled registration.')
+      return
+    }
+    startTransition(async () => {
+      try {
+        const response = await fetch(
+          `/api/dashboard/robofest/registrations/${registration.id}/certificate`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ registration, content, memberIndex }),
+          },
+        )
+        await downloadPdfFromResponse(
+          response,
+          `Robofest-Certificate-${registration.registrationId}-${memberIndex + 1}.pdf`,
+        )
+      } catch (err) {
+        alert(
+          err instanceof Error
+            ? err.message
+            : 'Failed to download certificate',
+        )
+      }
+    })
+  }
+
+  const downloadBulkCertificates = () => {
+    if (filtered.length === 0) {
+      alert('No registrations to export.')
+      return
+    }
+    startExportTransition(async () => {
+      try {
+        const response = await fetch('/api/dashboard/robofest/certificates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            registrations: filtered,
+            content,
+            statusLabel: statusTab,
+          }),
+        })
+        await downloadPdfFromResponse(
+          response,
+          `Robofest-Certificates-${statusTab}.pdf`,
+        )
+      } catch (err) {
+        alert(
+          err instanceof Error
+            ? err.message
+            : 'Failed to download certificates',
+        )
       }
     })
   }
@@ -909,6 +1078,17 @@ export default function RobofestDashboardClient({
                 <Download className="w-3.5 h-3.5" />
                 PDF
               </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="bg-cyan-700 hover:bg-cyan-800 text-white"
+                onClick={downloadBulkCertificates}
+                disabled={filtered.length === 0 || exportPending}
+                title="Download participation certificates for all participants in this filtered list"
+              >
+                <Award className="w-3.5 h-3.5" />
+                Certificates
+              </Button>
               {exportPending ? (
                 <span className="text-xs text-slate-500">Exporting…</span>
               ) : null}
@@ -1014,6 +1194,18 @@ export default function RobofestDashboardClient({
                             registrationId={r.id}
                             teamSize={r.teamSize}
                             members={r.teamMembers}
+                            awardCategories={content.awardCategories || []}
+                            canDownloadCertificate={
+                              Boolean(r.registrationId) &&
+                              r.status !== 'cancelled'
+                            }
+                            certificatePending={pending}
+                            onDownloadCertificate={(memberIndex) =>
+                              downloadMemberCertificate(r, memberIndex)
+                            }
+                            onAwardChange={(memberIndex, awardCategoryId) =>
+                              setMemberAward(r.id, memberIndex, awardCategoryId)
+                            }
                           />
                         </TableCell>
                         <TableCell className="text-xs min-w-[8rem]">
@@ -1666,6 +1858,271 @@ export default function RobofestDashboardClient({
                 </div>
               </div>
             ))}
+        </ContentSection>
+
+        <ContentSection
+          title="Award categories"
+          description="Built-in and custom awards used on certificates. Save content to persist."
+          icon={<Award className="w-4 h-4 text-cyan-500" />}
+          contentClassName="space-y-4"
+        >
+          <div className="space-y-3">
+            {(content.awardCategories || []).map((cat, index) => (
+              <div
+                key={cat.id}
+                className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 space-y-2"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Badge
+                      variant="secondary"
+                      className={
+                        cat.isBuiltIn
+                          ? 'bg-cyan-100 text-cyan-800'
+                          : 'bg-slate-200 text-slate-700'
+                      }
+                    >
+                      {cat.isBuiltIn ? 'Built-in' : 'Custom'}
+                    </Badge>
+                    <span className="text-xs font-mono text-slate-500 truncate">
+                      {cat.id}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label className="flex items-center gap-1.5 text-xs text-slate-600">
+                      <Checkbox
+                        checked={cat.isActive !== false}
+                        onCheckedChange={(v) => {
+                          const checked = v === true
+                          setContent((prev) => {
+                            const awardCategories = [
+                              ...(prev.awardCategories || []),
+                            ]
+                            awardCategories[index] = {
+                              ...awardCategories[index],
+                              isActive: checked,
+                            }
+                            return { ...prev, awardCategories }
+                          })
+                        }}
+                      />
+                      Active
+                    </label>
+                    {!cat.isBuiltIn ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="text-red-600 border-red-200"
+                        onClick={() => {
+                          if (
+                            !confirm(
+                              `Remove custom award “${cat.label}”? Members still using it will fall back to Participant.`,
+                            )
+                          ) {
+                            return
+                          }
+                          setContent((prev) => ({
+                            ...prev,
+                            awardCategories: (prev.awardCategories || []).filter(
+                              (c) => c.id !== cat.id,
+                            ),
+                          }))
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500">Label</label>
+                    <Input
+                      value={cat.label}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setContent((prev) => {
+                          const awardCategories = [
+                            ...(prev.awardCategories || []),
+                          ]
+                          awardCategories[index] = {
+                            ...awardCategories[index],
+                            label: value,
+                          }
+                          return { ...prev, awardCategories }
+                        })
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500">Accent</label>
+                    <select
+                      className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
+                      value={cat.accent || 'slate'}
+                      onChange={(e) => {
+                        const value = e.target.value as RobofestAwardAccent
+                        setContent((prev) => {
+                          const awardCategories = [
+                            ...(prev.awardCategories || []),
+                          ]
+                          awardCategories[index] = {
+                            ...awardCategories[index],
+                            accent: value,
+                          }
+                          return { ...prev, awardCategories }
+                        })
+                      }}
+                    >
+                      <option value="cyan">Cyan</option>
+                      <option value="gold">Gold</option>
+                      <option value="silver">Silver</option>
+                      <option value="bronze">Bronze</option>
+                      <option value="slate">Slate</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="text-xs text-slate-500">
+                      Certificate type
+                    </label>
+                    <select
+                      className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
+                      value={cat.certificateType || 'achievement'}
+                      onChange={(e) => {
+                        const value = e.target.value as RobofestCertificateType
+                        setContent((prev) => {
+                          const awardCategories = [
+                            ...(prev.awardCategories || []),
+                          ]
+                          awardCategories[index] = {
+                            ...awardCategories[index],
+                            certificateType: value,
+                          }
+                          return { ...prev, awardCategories }
+                        })
+                      }}
+                    >
+                      {ROBOFEST_CERTIFICATE_TYPES.map((type) => (
+                        <option key={type} value={type}>
+                          {type.charAt(0).toUpperCase() + type.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="text-xs text-slate-500">
+                      Certificate title
+                    </label>
+                    <Input
+                      value={cat.certificateTitle}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setContent((prev) => {
+                          const awardCategories = [
+                            ...(prev.awardCategories || []),
+                          ]
+                          awardCategories[index] = {
+                            ...awardCategories[index],
+                            certificateTitle: value,
+                          }
+                          return { ...prev, awardCategories }
+                        })
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="text-xs text-slate-500">
+                      Certificate body (after the name)
+                    </label>
+                    <Input
+                      value={cat.certificateBody}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setContent((prev) => {
+                          const awardCategories = [
+                            ...(prev.awardCategories || []),
+                          ]
+                          awardCategories[index] = {
+                            ...awardCategories[index],
+                            certificateBody: value,
+                          }
+                          return { ...prev, awardCategories }
+                        })
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-lg border border-dashed border-cyan-200 bg-cyan-50/40 p-3 space-y-2">
+            <p className="text-sm font-medium text-slate-800">
+              Add custom award
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                className="bg-cyan-700 hover:bg-cyan-800 text-white"
+                onClick={() => {
+                  setContent((prev) => {
+                    const existing = prev.awardCategories || []
+                    const label = 'New Award'
+                    const id = nextCustomAwardCategoryId(existing, label)
+                    return {
+                      ...prev,
+                      awardCategories: [
+                        ...existing,
+                        {
+                          id,
+                          label,
+                          certificateTitle: 'CERTIFICATE OF ACHIEVEMENT',
+                          certificateBody: 'for achieving this recognition in',
+                          certificateType: 'achievement',
+                          accent: 'slate',
+                          isBuiltIn: false,
+                          isActive: true,
+                        },
+                      ],
+                    }
+                  })
+                }}
+              >
+                Add category
+              </Button>
+            </div>
+          </div>
+        </ContentSection>
+
+        <ContentSection
+          title="Certificate signatures"
+          description="Names printed under the three signature lines on award certificates."
+          icon={<Award className="w-4 h-4 text-cyan-500" />}
+          contentClassName="grid sm:grid-cols-3 gap-3"
+        >
+          {(
+            [
+              ['competitionDirector', 'Competition Director'],
+              ['headJudge', 'Head Judge'],
+              ['eventOrganizer', 'Event Organizer'],
+            ] as const
+          ).map(([key, label]) => (
+            <div key={key} className="space-y-1">
+              <label className="text-xs text-slate-500">{label}</label>
+              <Input
+                value={content[key] ?? ''}
+                onChange={(e) =>
+                  setContent((prev) => ({ ...prev, [key]: e.target.value }))
+                }
+                placeholder={
+                  key === 'headJudge'
+                    ? 'Head Judge'
+                    : content.hostName || 'Robonauts Ltd'
+                }
+              />
+            </div>
+          ))}
         </ContentSection>
 
         <div className="flex flex-wrap gap-3">

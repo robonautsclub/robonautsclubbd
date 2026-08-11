@@ -12,6 +12,22 @@ import {
   ROBOFEST_LOCAL,
 } from "@/lib/robofest-local";
 import { ROBOFEST_DEFAULT_FEE_PER_MEMBER_BDT } from "@/lib/robofest-fee";
+import {
+  mergeRobofestAwardCategories,
+  ROBOFEST_BUILTIN_AWARD_CATEGORIES,
+  ROBOFEST_DEFAULT_AWARD_CATEGORY_ID,
+  type RobofestAwardCategory,
+} from "@/lib/robofest-award-categories";
+
+export type { RobofestAwardCategory, RobofestAwardAccent } from "@/lib/robofest-award-categories";
+export {
+  ROBOFEST_BUILTIN_AWARD_CATEGORIES,
+  ROBOFEST_DEFAULT_AWARD_CATEGORY_ID,
+  getActiveRobofestAwardCategories,
+  resolveRobofestAwardCategory,
+  nextCustomAwardCategoryId,
+  sanitizeRobofestAwardCategories,
+} from "@/lib/robofest-award-categories";
 
 export {
   ROBOFEST_DEFAULT_FEE_PER_MEMBER_BDT,
@@ -120,6 +136,10 @@ export type RobofestContent = {
   venueLabel: string;
   venueDetail: string;
   hostName: string;
+  /** Certificate signature names (Content tab). */
+  competitionDirector: string;
+  headJudge: string;
+  eventOrganizer: string;
   officialSite: string;
   categoriesUrl: string;
   generalRulesPdf: string;
@@ -136,6 +156,8 @@ export type RobofestContent = {
   rounds: RobofestRoundContent[];
   categories: RobofestCategoryContent[];
   howItWorks: RobofestHowItWorksStep[];
+  /** Certificate award categories (built-in + custom). */
+  awardCategories: RobofestAwardCategory[];
   isPaid: boolean;
   amount: number;
   /** YYYY-MM-DDTHH:mm (Asia/Dhaka) or legacy YYYY-MM-DD. Null = no deadline. */
@@ -160,6 +182,8 @@ export type RobofestTeamMember = {
   pendingSchoolId?: string;
   branch?: string;
   grade: string;
+  /** Award category id from content.awardCategories; defaults to participant. */
+  awardCategoryId?: string;
 };
 
 export type RobofestRegistration = {
@@ -227,6 +251,9 @@ export function getDefaultRobofestContent(): RobofestContent {
     venueLabel: ROBOFEST_LOCAL.venueLabel,
     venueDetail: ROBOFEST_LOCAL.venueDetail,
     hostName: ROBOFEST_LOCAL.hostName,
+    competitionDirector: ROBOFEST_LOCAL.hostName,
+    headJudge: 'Head Judge',
+    eventOrganizer: ROBOFEST_LOCAL.hostName || 'Robonauts Ltd',
     officialSite: ROBOFEST_LOCAL.officialSite,
     categoriesUrl: ROBOFEST_LOCAL.categoriesUrl,
     generalRulesPdf: ROBOFEST_LOCAL.generalRulesPdf,
@@ -243,6 +270,7 @@ export function getDefaultRobofestContent(): RobofestContent {
     rounds: ROBOFEST_LOCAL.rounds.map((round) => ({ ...round })),
     categories: seedCategories(),
     howItWorks: ROBOFEST_HOW_IT_WORKS.map((step) => ({ ...step })),
+    awardCategories: ROBOFEST_BUILTIN_AWARD_CATEGORIES.map((c) => ({ ...c })),
     isPaid: true,
     amount: 300,
     registrationClosingDate: null,
@@ -377,6 +405,15 @@ export function mapRobofestContentDoc(
     venueLabel: asString(data.venueLabel, defaults.venueLabel),
     venueDetail: asString(data.venueDetail, defaults.venueDetail),
     hostName: asString(data.hostName, defaults.hostName),
+    competitionDirector: asString(
+      data.competitionDirector,
+      asString(data.hostName, defaults.competitionDirector),
+    ),
+    headJudge: asString(data.headJudge, defaults.headJudge),
+    eventOrganizer: asString(
+      data.eventOrganizer,
+      asString(data.hostName, defaults.eventOrganizer),
+    ),
     officialSite: asString(data.officialSite, defaults.officialSite),
     categoriesUrl: asString(data.categoriesUrl, defaults.categoriesUrl),
     generalRulesPdf: asString(data.generalRulesPdf, defaults.generalRulesPdf),
@@ -432,6 +469,7 @@ export function mapRobofestContentDoc(
         description: asString(s.description, seed?.description ?? ""),
       };
     }),
+    awardCategories: mergeRobofestAwardCategories(data.awardCategories),
     isPaid: asBool(data.isPaid, defaults.isPaid),
     amount: asNumber(data.amount, defaults.amount),
     registrationClosingDate: (() => {
@@ -478,10 +516,13 @@ export function mapRobofestRegistrationDoc(
           const school = asString(member.school).trim();
           const branch = asString(member.branch).trim();
           if (!name && !email && !grade) return null;
+          const awardRaw = asString(member.awardCategoryId).trim();
+          const awardCategoryId = awardRaw || ROBOFEST_DEFAULT_AWARD_CATEGORY_ID;
           return {
             name,
             email,
             grade,
+            awardCategoryId,
             ...(phone ? { phone } : {}),
             ...(school ? { school } : {}),
             ...(typeof member.schoolIsCustom === "boolean"

@@ -245,7 +245,7 @@ type ReadFileSyncFn = (path: string | Buffer | number, options?: string) => Buff
  * Returns the original function and the patched function setup status
  * This is the most reliable way to handle font loading in serverless environments
  */
-function setupPDFKitFonts(): { originalReadFileSync: ReadFileSyncFn } | null {
+export function setupPDFKitFonts(): { originalReadFileSync: ReadFileSyncFn } | null {
   try {
     const fontPath = resolvePDFKitFontPath()
     const hasEmbeddedFonts = Object.keys(PDFKIT_FONT_DATA).length > 0
@@ -314,7 +314,7 @@ function setupPDFKitFonts(): { originalReadFileSync: ReadFileSyncFn } | null {
 /**
  * Load site logo for PDF header. Tries local filesystem first, then fetches from site URL.
  */
-async function loadLogoBuffer(verificationUrl: string): Promise<Buffer | null> {
+export async function loadLogoBuffer(verificationUrl: string): Promise<Buffer | null> {
   const logoFileName = basename(SITE_CONFIG.assets.logo)
 
   try {
