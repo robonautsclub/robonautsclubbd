@@ -54,7 +54,7 @@ export const LINE_FOLLOWING_RULES: RobofestCategoryRulesPackage = {
       items: [
         "Robots must be designed, built, and programmed by student team members. Mentors may teach but may not build or program.",
         "Fully autonomous after the start signal—no remote control or tele-operation.",
-        "One robot per team; Team ID must be visible on the robot.",
+        "One robot per team; Team Name must be visible on the robot.",
         "Teams bring their own laptop and charger for programming.",
       ],
     },

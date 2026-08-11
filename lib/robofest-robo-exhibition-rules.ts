@@ -73,7 +73,7 @@ export const ROBO_EXHIBITION_RULES: RobofestCategoryRulesPackage = {
         "Designed and built by student team members; mentors may guide/teach but not build.",
         "Substantially similar projects may face investigation and penalty or disqualification.",
         "Fully constructed and ready for display on arrival; one project per team.",
-        "Labelling: Team ID on the display board; theme and project title clearly labelled.",
+        "Labelling: Team Name on the display board; theme and project title clearly labelled.",
         "Bring digital files (slides/abstract) on your own device if needed.",
         "Electronics optional but encouraged (≤12V DC only; no mains/AC). No open flames, combustion engines, lasers above Class 2, or pressurized gas.",
         "Wiring must be secured/insulated. Prohibited: sharp uncovered edges, glass, live animals, hazardous chemicals, aerosols, drones/flying parts, >12V or mains power.",

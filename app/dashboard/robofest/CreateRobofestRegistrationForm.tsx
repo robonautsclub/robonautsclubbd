@@ -389,13 +389,13 @@ export default function CreateRobofestRegistrationForm({
               className="rounded-lg border border-gray-100 p-3 space-y-2"
             >
               <p className="text-sm font-medium text-gray-800">
-                {index === 0
-                  ? 'Team Member 01 (Team Leader)'
-                  : `Team Member ${String(index + 1).padStart(2, '0')}`}
+                {`Team Member ${String(index + 1).padStart(2, '0')}`}
               </p>
               <div className="grid sm:grid-cols-2 gap-2">
                 <Input
-                  placeholder="Name"
+                  placeholder={
+                    index === 0 ? 'Name (Team Leader)' : 'Name'
+                  }
                   value={member.name}
                   onChange={updateMember(index, 'name')}
                   required

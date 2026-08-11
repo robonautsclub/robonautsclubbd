@@ -295,10 +295,16 @@ export default function VerifyRobofestRegistration({
                     >
                       <p className="font-bold text-slate-900">
                         {index === 0
-                          ? '01 (Team Leader)'
+                          ? '01'
                           : String(index + 1).padStart(2, '0')}
                         . {member.name}
+                        {index === 0 && (
+                          <span className="ml-1 text-xs font-normal text-slate-600">
+                            (Team Leader)
+                          </span>
+                        )}
                       </p>
+
                       <p className="text-sm text-cyan-800 mt-1 break-all">
                         {member.email || '—'}
                       </p>
