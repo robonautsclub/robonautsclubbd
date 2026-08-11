@@ -1,0 +1,93 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from '@/lib/auth'
+import type { RobofestContent, RobofestRegistration } from '@/lib/robofest-content'
+import { generateRobofestParticipationCertificatesPDF } from '@/lib/robofest-certificate-pdf'
+import { SITE_CONFIG } from '@/lib/site-config'
+
+export const dynamic = 'force-dynamic'
+
+type RouteContext = {
+  params: Promise<{ id: string }>
+}
+
+function getBaseUrl(request: NextRequest): string {
+  let baseUrl =
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    request.nextUrl.origin
+  if (!baseUrl && process.env.VERCEL_URL) {
+    baseUrl = `https://${process.env.VERCEL_URL}`
+  }
+  if (!baseUrl) baseUrl = SITE_CONFIG.url
+  return baseUrl.replace(/\/$/, '')
+}
+
+/**
+ * POST /api/dashboard/robofest/registrations/[id]/certificate
+ * Generate participation certificate PDF for one member (memberIndex) or all members.
+ */
+export async function POST(request: NextRequest, context: RouteContext) {
+  const session = await getServerSession()
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { id } = await context.params
+
+  let body: {
+    registration?: RobofestRegistration
+    content?: RobofestContent
+    memberIndex?: number
+  }
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+
+  const registration = body.registration
+  const content = body.content
+
+  if (!registration || !content) {
+    return NextResponse.json(
+      { error: 'registration and content are required' },
+      { status: 400 },
+    )
+  }
+
+  if (registration.id && registration.id !== id) {
+    return NextResponse.json(
+      { error: 'Registration id mismatch' },
+      { status: 400 },
+    )
+  }
+
+  const memberIndex =
+    typeof body.memberIndex === 'number' && Number.isInteger(body.memberIndex)
+      ? body.memberIndex
+      : undefined
+
+  if (memberIndex !== undefined && memberIndex < 0) {
+    return NextResponse.json({ error: 'Invalid memberIndex' }, { status: 400 })
+  }
+
+  const result = await generateRobofestParticipationCertificatesPDF({
+    registration: { ...registration, id: registration.id || id },
+    content,
+    memberIndex,
+    baseUrl: getBaseUrl(request),
+  })
+
+  if ('error' in result) {
+    return NextResponse.json({ error: result.error }, { status: 400 })
+  }
+
+  return new NextResponse(new Uint8Array(result.buffer), {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${result.filename}"`,
+      'Cache-Control': 'no-store',
+    },
+  })
+}
