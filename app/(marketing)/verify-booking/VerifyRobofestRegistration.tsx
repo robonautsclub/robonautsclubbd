@@ -168,7 +168,7 @@ export default function VerifyRobofestRegistration({
                   {ageLabel ? (
                     <div className="bg-white rounded-xl p-4 border border-slate-200">
                       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-                        Age category
+                        Category
                       </p>
                       <p className="text-base font-semibold text-slate-900">
                         {ageLabel}
@@ -212,7 +212,7 @@ export default function VerifyRobofestRegistration({
                 <div className="space-y-4">
                   <div className="bg-white rounded-xl p-4 border border-slate-200">
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-                      Team number
+                      Team Number
                     </p>
                     <p className="text-base sm:text-lg font-bold font-mono text-cyan-800">
                       {teamNumber}
@@ -222,7 +222,7 @@ export default function VerifyRobofestRegistration({
                     <div className="flex items-center gap-2 mb-1.5">
                       <Mail className="w-4 h-4 text-slate-500" />
                       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                        Team lead email
+                        Team Lead Email
                       </p>
                     </div>
                     <p className="text-base font-semibold text-slate-900 break-all">
@@ -275,7 +275,7 @@ export default function VerifyRobofestRegistration({
                 </div>
                 <div>
                   <h3 className="text-lg sm:text-xl font-bold text-slate-900">
-                    Team members
+                    Team Members
                   </h3>
                   <p className="text-sm text-slate-500">
                     {registration.teamSize || teamMembers.length || 0} member

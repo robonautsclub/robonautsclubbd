@@ -705,33 +705,6 @@ async function generatePDFContent(
     y += 4
   }
 
-  // ---------- Optional: Additional Information ----------
-  if (sanitizedBooking.information && y + 32 < flowSpaceBottom) {
-    y += 6
-    doc.font(theme.font.bold).fontSize(theme.size.label).fillColor(theme.color.mute)
-    doc.text('Additional Information', left, y, { width: contentWidth })
-    y += 14
-
-    const noteAvail = flowSpaceBottom - y - 24
-    const noteText = truncateTextToFit(
-      sanitizedBooking.information,
-      contentWidth - 24,
-      noteAvail,
-      theme.size.body
-    )
-    doc.font(theme.font.regular).fontSize(theme.size.body)
-    const noteH = doc.heightOfString(noteText, { width: contentWidth - 24, lineGap: 2 })
-    const noteBoxH = Math.min(noteH, noteAvail) + 16
-    doc.rect(left, y, contentWidth, noteBoxH).fill(theme.color.accentSoft)
-    doc.font(theme.font.regular).fontSize(theme.size.body).fillColor(theme.color.ink)
-    doc.text(noteText, left + 12, y + 8, {
-      width: contentWidth - 24,
-      height: noteAvail,
-      lineGap: 2,
-    })
-    y += noteBoxH + 14
-  }
-
   // ---------- Optional: About the Event ----------
   const description = sanitizedEvent.fullDescription || sanitizedEvent.description
   const descRoom = flowSpaceBottom - y
