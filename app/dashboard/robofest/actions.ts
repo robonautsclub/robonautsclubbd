@@ -130,6 +130,7 @@ export async function updateRobofestContent(
         input.certificateSignatures,
         (input.hostName || defaults.hostName).trim(),
       ),
+      certificateTemplateId: input.certificateTemplateId?.trim() || null,
       isPaid: Boolean(input.isPaid),
       amount: Number(input.amount) || 0,
       registrationClosingDate: (() => {

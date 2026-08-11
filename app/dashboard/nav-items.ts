@@ -8,6 +8,7 @@ import {
   Images,
   School,
   Trophy,
+  Award,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -28,6 +29,7 @@ export function getDashboardNavItems(
     { href: '/dashboard/gallery', icon: Images, label: 'Gallery' },
     { href: '/dashboard/schools', icon: School, label: 'Schools' },
     { href: '/dashboard/robofest', icon: Trophy, label: 'Robofest' },
+    { href: '/dashboard/certificates', icon: Award, label: 'Certificates' },
     ...(role === 'superAdmin'
       ? [{ href: '/dashboard/members', icon: Users, label: 'Members' }]
       : []),

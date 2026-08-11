@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { format } from 'date-fns'
-import { Calendar, Clock, MapPin, Users, Mail, User, Banknote } from 'lucide-react'
+import { Calendar, Clock, MapPin, Users, Mail, User, Banknote, Award } from 'lucide-react'
 import type { Booking } from '@/types/booking'
 import type { Event } from '@/types/event'
 import BookingActions from './BookingActions'
@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { downloadPdfFromResponse } from '@/lib/downloadPdfBlob'
 
 type Props = {
   event: Event
@@ -23,6 +24,9 @@ export default function EventDetailsClient({ event, bookings }: Props) {
   const [showDetails, setShowDetails] = useState(false)
   const [nameFilter, setNameFilter] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
+  const [bulkCertPending, setBulkCertPending] = useState(false)
+
+  const hasCertificateTemplate = Boolean(event.certificateTemplateId?.trim())
 
   const eventDates = parseEventDates(event.date)
 
@@ -63,6 +67,27 @@ export default function EventDetailsClient({ event, bookings }: Props) {
     }
     return Array.from(map.entries())
   }, [bookings])
+
+  const downloadBulkCertificates = async () => {
+    if (!hasCertificateTemplate) {
+      alert('Assign a certificate template on this event first (Edit event).')
+      return
+    }
+    if (filteredBookings.length === 0) return
+    setBulkCertPending(true)
+    try {
+      const response = await fetch(`/api/dashboard/events/${event.id}/certificates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event, bookings: filteredBookings }),
+      })
+      await downloadPdfFromResponse(response, `Certificates-${event.id}.pdf`)
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to download certificates')
+    } finally {
+      setBulkCertPending(false)
+    }
+  }
 
   return (
     <>
@@ -219,7 +244,24 @@ export default function EventDetailsClient({ event, bookings }: Props) {
               Registrations
               <span className="text-xs sm:text-sm font-normal text-slate-500">({filteredBookings.length})</span>
             </h3>
-            <ExportBookingsButton bookings={bookings} eventTitle={event.title} />
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={bulkCertPending || !hasCertificateTemplate || filteredBookings.length === 0}
+                onClick={() => void downloadBulkCertificates()}
+                title={
+                  hasCertificateTemplate
+                    ? 'Download certificates for filtered registrations'
+                    : 'Assign a certificate template on the event first'
+                }
+              >
+                <Award className="w-4 h-4" />
+                {bulkCertPending ? 'Certificates…' : 'Certificates'}
+              </Button>
+              <ExportBookingsButton bookings={bookings} eventTitle={event.title} />
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <input

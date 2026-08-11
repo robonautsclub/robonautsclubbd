@@ -320,6 +320,7 @@ export async function createEvent(formData: {
   contactPersonMobileOrEmail?: string
   customFormFields?: Event['customFormFields']
   defaultRegistrationFields?: Event['defaultRegistrationFields']
+  certificateTemplateId?: string | null
 }): Promise<{ success: boolean; error?: string; eventId?: string }> {
   const session = await requireAuth()
 
@@ -399,6 +400,7 @@ export async function createEvent(formData: {
       contactPersonMobileOrEmail: formData.contactPersonMobileOrEmail?.trim() ?? '',
       customFormFields,
       defaultRegistrationFields,
+      certificateTemplateId: formData.certificateTemplateId?.trim() || null,
       createdAt: now,
       updatedAt: now,
       createdBy: session.uid,
@@ -461,6 +463,7 @@ export async function updateEvent(
     contactPersonMobileOrEmail?: string
     customFormFields?: Event['customFormFields']
     defaultRegistrationFields?: Event['defaultRegistrationFields']
+    certificateTemplateId?: string | null
   }
 ): Promise<{ success: boolean; error?: string }> {
   const session = await requireAuth()
@@ -564,6 +567,7 @@ export async function updateEvent(
       contactPersonMobileOrEmail: formData.contactPersonMobileOrEmail?.trim() ?? '',
       customFormFields,
       defaultRegistrationFields,
+      certificateTemplateId: formData.certificateTemplateId?.trim() || null,
       updatedAt: new Date(),
     })
 

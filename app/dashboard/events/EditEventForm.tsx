@@ -10,6 +10,7 @@ import { X, Calendar, Clock, MapPin, FileText, Users, Image as ImageIcon, Sparkl
 import MultiDatePicker from './MultiDatePicker'
 import TimePicker from './TimePicker'
 import CustomFormBuilder from './CustomFormBuilder'
+import CertificateTemplateSelect from './CertificateTemplateSelect'
 import type { Event, EventCustomFormField, EventDefaultRegistrationFields } from '@/types/event'
 import { normalizeDefaultRegistrationFields } from '@/lib/registrationFields'
 import { dashboardEventFormSchema, type DashboardEventFormValues } from '@/lib/validation/events'
@@ -58,6 +59,7 @@ function editEventFormDefaults(event: Event): DashboardEventFormValues {
     defaultRegistrationFields: normalizeDefaultRegistrationFields(event.defaultRegistrationFields, {
       hasCategories: Array.isArray(event.categories) && event.categories.length > 0,
     }) as EventDefaultRegistrationFields,
+    certificateTemplateId: event.certificateTemplateId || '',
   }
 }
 
@@ -208,6 +210,7 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
         contactPersonMobileOrEmail: values.contactPersonMobileOrEmail.trim(),
         customFormFields: values.customFormFields,
         defaultRegistrationFields: values.defaultRegistrationFields as Event['defaultRegistrationFields'],
+        certificateTemplateId: values.certificateTemplateId?.trim() || null,
       })
 
       if (result.success) {
@@ -756,6 +759,12 @@ export default function EditEventForm({ event, onClose }: EditEventFormProps) {
                 </p>
               </div>
             </div>
+
+            <CertificateTemplateSelect
+              value={formData.certificateTemplateId || ''}
+              onChange={(v) => form.setValue('certificateTemplateId', v)}
+              disabled={loading}
+            />
 
             {/* Contact person */}
             <div className="space-y-3">

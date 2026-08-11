@@ -1,5 +1,6 @@
 /**
  * Premium Robofest certificate PDFs — A4 landscape, left robot panel + right content.
+ * When content.certificateTemplateId is set, uses the background template engine instead.
  */
 
 import { existsSync, readFileSync } from 'fs'
@@ -20,6 +21,10 @@ import {
   type RobofestAwardCategory,
   type RobofestCertificateType,
 } from '@/lib/robofest-award-categories'
+import { generateCertificatesFromTemplate } from '@/lib/certificate-template-pdf'
+import type { CertificateRenderValues } from '@/lib/certificate-template-pdf'
+import { resolveCertificateAwardFields } from '@/lib/certificate-templates'
+import { loadActiveCertificateTemplateById } from '@/lib/certificate-templates-db'
 import { loadLogoBuffer, setupPDFKitFonts } from '@/lib/pdfGenerator'
 import { SITE_CONFIG } from '@/lib/site-config'
 import { sanitizeTextForPDF } from '@/lib/textSanitizer'
@@ -151,6 +156,16 @@ async function fetchSignatureImageBuffer(
   } catch {
     return null
   }
+}
+
+function buildTemplateSignatureSlots(
+  content: RobofestContent,
+): NonNullable<CertificateRenderValues['signatureSlots']> {
+  return resolveRobofestCertificateSignatures(content).map((sig) => ({
+    imageUrl: sig.imageUrl?.trim() || undefined,
+    name: sig.name?.trim() || undefined,
+    title: sig.title?.trim() || undefined,
+  }))
 }
 
 async function loadSignatureImages(
@@ -864,6 +879,67 @@ export async function generateRobofestParticipationCertificatesPDF(input: {
     return { error: 'Participant not found on this registration.' }
   }
 
+  const templateId = content.certificateTemplateId?.trim()
+  if (templateId) {
+    const template = await loadActiveCertificateTemplateById(templateId)
+    if (!template) {
+      return {
+        error:
+          'Assigned certificate template is missing or inactive. Clear it in Robofest Content or fix the template.',
+      }
+    }
+    const signatureSlots = buildTemplateSignatureSlots(content)
+    const pages = selected.map((participant) => {
+      const award = resolveRobofestAwardCategory(
+        content.awardCategories,
+        participant.awardCategoryId,
+      )
+      const category = registration.category || ''
+      const awardFields = resolveCertificateAwardFields(award, { category })
+      const certificateId = buildRobofestCertificateId(
+        registration.registrationId!,
+        participant.memberIndex,
+      )
+      return {
+        recipientName: participant.name,
+        school: participant.school || registration.school || '',
+        grade: participant.grade || '',
+        category,
+        eventTitle: content.headline || 'RoboFest Bangladesh 2026',
+        eventDate: content.dateLabel || '',
+        venue: resolveRobofestRoundVenueLabel(content, registration.roundCity),
+        teamNumber: registration.teamNumber || registration.name || '',
+        certificateTitle: awardFields.certificateTitle,
+        certificateBody: awardFields.certificateBody,
+        awardLabel: awardFields.awardLabel,
+        registrationId: registration.registrationId!,
+        certificateId,
+        issueDate: format(
+          registration.createdAt
+            ? new Date(registration.createdAt)
+            : new Date(),
+          'dd MMMM yyyy',
+        ),
+        verificationUrl: buildCertificateVerificationUrl(
+          baseUrl,
+          registration.registrationId!,
+          participant.memberIndex,
+        ),
+        signatureSlots,
+      }
+    })
+
+    const result = await generateCertificatesFromTemplate({
+      template,
+      pages,
+      filename:
+        typeof memberIndex === 'number' && selected[0]
+          ? `Robofest-Certificate-${registration.registrationId}-${memberIndex + 1}.pdf`
+          : `Robofest-Certificate-${registration.registrationId}.pdf`,
+    })
+    return result
+  }
+
   try {
     const logoBuffer = await loadCertLogo(baseUrl)
     const robotBuffer = loadRobotBuffer()
@@ -909,6 +985,74 @@ export async function generateRobofestBulkParticipationCertificatesPDF(input: {
   const { registrations, content, statusLabel } = input
   const baseUrl = resolveBaseUrl(input.baseUrl)
   const eligible = registrations.filter((r) => r.status !== 'cancelled')
+
+  const templateId = content.certificateTemplateId?.trim()
+  if (templateId) {
+    const template = await loadActiveCertificateTemplateById(templateId)
+    if (!template) {
+      return {
+        error:
+          'Assigned certificate template is missing or inactive. Clear it in Robofest Content or fix the template.',
+      }
+    }
+    const signatureSlots = buildTemplateSignatureSlots(content)
+    const pages = []
+    for (const registration of eligible) {
+      if (!registration.registrationId) continue
+      for (const participant of resolveCertificateParticipants(registration)) {
+        const award = resolveRobofestAwardCategory(
+          content.awardCategories,
+          participant.awardCategoryId,
+        )
+        const category = registration.category || ''
+        const awardFields = resolveCertificateAwardFields(award, { category })
+        pages.push({
+          recipientName: participant.name,
+          school: participant.school || registration.school || '',
+          grade: participant.grade || '',
+          category,
+          eventTitle: content.headline || 'RoboFest Bangladesh 2026',
+          eventDate: content.dateLabel || '',
+          venue: resolveRobofestRoundVenueLabel(
+            content,
+            registration.roundCity,
+          ),
+          teamNumber: registration.teamNumber || registration.name || '',
+          certificateTitle: awardFields.certificateTitle,
+          certificateBody: awardFields.certificateBody,
+          awardLabel: awardFields.awardLabel,
+          registrationId: registration.registrationId,
+          certificateId: buildRobofestCertificateId(
+            registration.registrationId,
+            participant.memberIndex,
+          ),
+          issueDate: format(
+            registration.createdAt
+              ? new Date(registration.createdAt)
+              : new Date(),
+            'dd MMMM yyyy',
+          ),
+          verificationUrl: buildCertificateVerificationUrl(
+            baseUrl,
+            registration.registrationId,
+            participant.memberIndex,
+          ),
+          signatureSlots,
+        })
+      }
+    }
+    if (pages.length === 0) {
+      return { error: 'No participants found to generate certificates for.' }
+    }
+    const stamp = format(new Date(), 'yyyy-MM-dd')
+    const statusPart = safeFilenamePart(statusLabel || 'export')
+    return generateCertificatesFromTemplate({
+      template,
+      pages,
+      filename: `Robofest-Certificates-${statusPart}-${stamp}.pdf`,
+    })
+  }
+
   const logoBuffer = await loadCertLogo(baseUrl)
   const robotBuffer = loadRobotBuffer()
   const signatures = resolveRobofestCertificateSignatures(content)

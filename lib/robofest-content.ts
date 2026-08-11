@@ -164,6 +164,8 @@ export type RobofestContent = {
   eventOrganizer?: string;
   /** Configurable certificate signature blocks (1–4). */
   certificateSignatures: RobofestCertificateSignature[];
+  /** Assigned background template from Certificates dashboard; null = use built-in PDF. */
+  certificateTemplateId?: string | null;
   officialSite: string;
   categoriesUrl: string;
   generalRulesPdf: string;
@@ -277,6 +279,7 @@ export function getDefaultRobofestContent(): RobofestContent {
     venueDetail: ROBOFEST_LOCAL.venueDetail,
     hostName,
     certificateSignatures: getDefaultCertificateSignatures(hostName),
+    certificateTemplateId: null,
     officialSite: ROBOFEST_LOCAL.officialSite,
     categoriesUrl: ROBOFEST_LOCAL.categoriesUrl,
     generalRulesPdf: ROBOFEST_LOCAL.generalRulesPdf,
@@ -432,6 +435,10 @@ export function mapRobofestContentDoc(
       data,
       asString(data.hostName, defaults.hostName),
     ),
+    certificateTemplateId: (() => {
+      const raw = asString(data.certificateTemplateId).trim()
+      return raw || null
+    })(),
     officialSite: asString(data.officialSite, defaults.officialSite),
     categoriesUrl: asString(data.categoriesUrl, defaults.categoriesUrl),
     generalRulesPdf: asString(data.generalRulesPdf, defaults.generalRulesPdf),

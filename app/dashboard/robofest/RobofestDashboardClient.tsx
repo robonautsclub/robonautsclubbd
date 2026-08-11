@@ -55,6 +55,7 @@ import {
 import { downloadPdfFromResponse } from '@/lib/downloadPdfBlob'
 import CreateRobofestRegistrationForm from './CreateRobofestRegistrationForm'
 import CampusAmbassadorsManager from './CampusAmbassadorsManager'
+import CertificateTemplateSelect from '@/app/dashboard/events/CertificateTemplateSelect'
 import DatePicker from '@/app/dashboard/events/DatePicker'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
@@ -2101,6 +2102,24 @@ export default function RobofestDashboardClient({
               </Button>
             </div>
           </div>
+        </ContentSection>
+
+        <ContentSection
+          title="Certificate template"
+          description="Optional background template from Certificates. When set, downloads use that artwork instead of the built-in Robofest design."
+          icon={<Award className="w-4 h-4 text-cyan-500" />}
+          contentClassName="space-y-2"
+        >
+          <CertificateTemplateSelect
+            value={content.certificateTemplateId || ''}
+            onChange={(v) =>
+              setContent((prev) => ({
+                ...prev,
+                certificateTemplateId: v || null,
+              }))
+            }
+            disabled={pending}
+          />
         </ContentSection>
 
         <ContentSection
