@@ -10,29 +10,39 @@ import DeleteConfirmation from './DeleteConfirmation'
 import type { Event } from '@/types/event'
 import { hasEventPassed, isRegistrationClosedByDate } from '@/lib/dateUtils'
 import { Button } from '@/components/ui/button'
+import type {
+  DashboardPermission,
+  DashboardRole,
+} from '@/lib/dashboard-permissions'
+import { canDeleteResource, canEditResource } from '@/lib/dashboard-permissions'
 
 interface EventActionsProps {
   event: Event
   currentUserId?: string
-  userRole?: 'superAdmin' | 'admin'
+  userRole?: DashboardRole
+  permissions?: DashboardPermission[]
 }
 
-export default function EventActions({ event, currentUserId, userRole }: EventActionsProps) {
+export default function EventActions({
+  event,
+  currentUserId,
+  userRole,
+  permissions = [],
+}: EventActionsProps) {
   const router = useRouter()
   const [showEditForm, setShowEditForm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [togglingRegistration, setTogglingRegistration] = useState(false)
 
-  // Show edit/delete buttons if:
-  // - User is Super Admin (can edit/delete any event), OR
-  // - User is Admin AND is the creator of the event
-  const isSuperAdmin = userRole === 'superAdmin'
-  const isOwner = currentUserId && event.createdBy === currentUserId
-  const canEdit = isSuperAdmin || isOwner
-  const canDelete = isSuperAdmin || isOwner
+  const session = {
+    role: userRole || 'admin',
+    permissions,
+    uid: currentUserId,
+  }
+  const canEdit = canEditResource(session, 'events', event.createdBy)
+  const canDelete = canDeleteResource(session, 'events', event.createdBy)
 
-  // Show disable/enable registration button only when event is not past and registration closing date has not passed
   const showRegistrationToggle =
     canEdit &&
     !hasEventPassed(event.date) &&
@@ -59,7 +69,11 @@ export default function EventActions({ event, currentUserId, userRole }: EventAc
   const handleToggleRegistration = async () => {
     setTogglingRegistration(true)
     try {
-      const dateValue = Array.isArray(event.date) ? (event.date.length === 1 ? event.date[0] : event.date.join(',')) : event.date
+      const dateValue = Array.isArray(event.date)
+        ? event.date.length === 1
+          ? event.date[0]
+          : event.date.join(',')
+        : event.date
       const result = await updateEvent(event.id, {
         title: event.title,
         date: dateValue,
@@ -104,9 +118,17 @@ export default function EventActions({ event, currentUserId, userRole }: EventAc
                 onClick={handleToggleRegistration}
                 disabled={togglingRegistration}
                 className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                title={event.registrationDisabled ? 'Enable registration' : 'Disable registration'}
+                title={
+                  event.registrationDisabled
+                    ? 'Enable registration'
+                    : 'Disable registration'
+                }
               >
-                {event.registrationDisabled ? <LockOpen className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                {event.registrationDisabled ? (
+                  <LockOpen className="w-4 h-4" />
+                ) : (
+                  <Lock className="w-4 h-4" />
+                )}
                 {event.registrationDisabled ? 'Enable reg.' : 'Disable reg.'}
               </Button>
             )}
@@ -150,18 +172,13 @@ export default function EventActions({ event, currentUserId, userRole }: EventAc
         </Button>
       </div>
 
-      {showEditForm && (
-        <EditEventForm
-          event={event}
-          onClose={() => setShowEditForm(false)}
-        />
+      {showEditForm && canEdit && (
+        <EditEventForm event={event} onClose={() => setShowEditForm(false)} />
       )}
-
-      {showDeleteConfirm && (
+      {showDeleteConfirm && canDelete && (
         <DeleteConfirmation
           title="Delete Event"
-          message="Are you sure you want to delete this event? All associated bookings will also be deleted."
-          itemName={event.title}
+          message={`Are you sure you want to delete "${event.title}"? This will also delete all registrations.`}
           onConfirm={handleDelete}
           onCancel={() => setShowDeleteConfirm(false)}
         />
@@ -169,4 +186,3 @@ export default function EventActions({ event, currentUserId, userRole }: EventAc
     </>
   )
 }
-

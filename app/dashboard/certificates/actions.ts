@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { FieldValue } from 'firebase-admin/firestore'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, canCreateArea, canEditOthersArea, canDeleteArea } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase-admin'
 import {
   CERTIFICATE_TEMPLATES_COLLECTION,
@@ -60,6 +60,9 @@ export async function createCertificateTemplate(
   input: CertificateTemplateWriteInput,
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   const session = await requireAuth()
+  if (!canCreateArea(session, 'certificates')) {
+    return { success: false, error: 'You do not have permission to create certificate templates.' }
+  }
   if (!adminDb) return { success: false, error: 'Database unavailable.' }
 
   const name = (input.name || '').trim()
@@ -99,6 +102,9 @@ export async function updateCertificateTemplate(
   },
 ): Promise<{ success: boolean; error?: string }> {
   const session = await requireAuth()
+  if (!canEditOthersArea(session, 'certificates') && !canCreateArea(session, 'certificates')) {
+    return { success: false, error: 'You do not have permission to edit certificate templates.' }
+  }
   if (!adminDb) return { success: false, error: 'Database unavailable.' }
   const templateId = id.trim()
   if (!templateId) return { success: false, error: 'Template id required.' }
@@ -154,6 +160,9 @@ export async function duplicateCertificateTemplate(
   id: string,
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   const session = await requireAuth()
+  if (!canCreateArea(session, 'certificates')) {
+    return { success: false, error: 'You do not have permission to create certificate templates.' }
+  }
   if (!adminDb) return { success: false, error: 'Database unavailable.' }
   const source = await getCertificateTemplate(id)
   if (!source) return { success: false, error: 'Template not found.' }
@@ -181,7 +190,10 @@ export async function duplicateCertificateTemplate(
 export async function deleteCertificateTemplate(
   id: string,
 ): Promise<{ success: boolean; error?: string }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!canDeleteArea(session, 'certificates')) {
+    return { success: false, error: 'You do not have permission to delete certificate templates.' }
+  }
   if (!adminDb) return { success: false, error: 'Database unavailable.' }
   const templateId = id.trim()
   if (!templateId) return { success: false, error: 'Template id required.' }

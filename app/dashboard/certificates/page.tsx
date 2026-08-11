@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Plus, Award } from 'lucide-react'
-import { requireAuth } from '@/lib/auth'
+import { requireTabAccess, canCreateArea, canEditArea, canDeleteArea, hasPermission } from '@/lib/auth'
 import { listCertificateTemplates } from '@/app/dashboard/certificates/actions'
 import CertificateTemplatesList from './CertificateTemplatesList'
 import { Button } from '@/components/ui/button'
@@ -8,7 +8,11 @@ import { Button } from '@/components/ui/button'
 export const dynamic = 'force-dynamic'
 
 export default async function CertificatesDashboardPage() {
-  await requireAuth()
+  const session = await requireTabAccess('certificates')
+  const canCreate = canCreateArea(session, 'certificates')
+  const canEdit = canEditArea(session, 'certificates')
+  const canDelete = canDeleteArea(session, 'certificates')
+  const canDownload = hasPermission(session, 'exports.pdf')
   const templates = await listCertificateTemplates()
 
   return (
@@ -23,15 +27,23 @@ export default async function CertificatesDashboardPage() {
             Create background templates and assign them to Events or Robofest.
           </p>
         </div>
-        <Button asChild className="bg-cyan-700 hover:bg-cyan-800 text-white shadow-sm">
-          <Link href="/dashboard/certificates/new" prefetch={false}>
-            <Plus className="w-4 h-4" />
-            New template
-          </Link>
-        </Button>
+        {canCreate ? (
+          <Button asChild className="bg-cyan-700 hover:bg-cyan-800 text-white shadow-sm">
+            <Link href="/dashboard/certificates/new" prefetch={false}>
+              <Plus className="w-4 h-4" />
+              New template
+            </Link>
+          </Button>
+        ) : null}
       </div>
 
-      <CertificateTemplatesList templates={templates} />
+      <CertificateTemplatesList
+        templates={templates}
+        canEdit={canEdit}
+        canCreate={canCreate}
+        canDelete={canDelete}
+        canDownload={canDownload}
+      />
     </div>
   )
 }

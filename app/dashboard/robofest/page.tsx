@@ -1,4 +1,4 @@
-import { requireAuth } from '@/lib/auth'
+import { requireTabAccess, canCreateArea, canEditOthersArea, canDeleteArea, hasPermission } from '@/lib/auth'
 import { getPublicEnglishMediumSchools } from '@/app/(marketing)/events/actions'
 import {
   getRobofestCampusAmbassadors,
@@ -10,7 +10,7 @@ import RobofestDashboardClient from './RobofestDashboardClient'
 export const dynamic = 'force-dynamic'
 
 export default async function RobofestDashboardPage() {
-  await requireAuth()
+  const session = await requireTabAccess('robofest')
   const [content, registrations, schools, campusAmbassadors] =
     await Promise.all([
       getRobofestDashboardContent(),
@@ -26,6 +26,14 @@ export default async function RobofestDashboardPage() {
         registrations={registrations}
         schools={schools}
         campusAmbassadors={campusAmbassadors}
+        canCreate={canCreateArea(session, 'robofest')}
+        canEdit={canEditOthersArea(session, 'robofest')}
+        canDelete={canDeleteArea(session, 'robofest')}
+        canViewPayments={hasPermission(session, 'payments.view')}
+        canSendMail={hasPermission(session, 'mail.send')}
+        canExportCsv={hasPermission(session, 'exports.csv')}
+        canExportExcel={hasPermission(session, 'exports.excel')}
+        canExportPdf={hasPermission(session, 'exports.pdf')}
       />
     </div>
   )

@@ -17,8 +17,15 @@ import { Card, CardContent } from '@/components/ui/card'
 
 export default function CertificateTemplatesList({
   templates,
+  canEdit = false,
+  canCreate = false,
+  canDelete = false,
 }: {
   templates: CertificateTemplate[]
+  canEdit?: boolean
+  canCreate?: boolean
+  canDelete?: boolean
+  canDownload?: boolean
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -45,9 +52,11 @@ export default function CertificateTemplatesList({
           <p className="text-sm text-slate-500 mb-6">
             Upload a background and place text fields for Events and Robofest.
           </p>
-          <Button asChild className="bg-cyan-700 hover:bg-cyan-800 text-white">
-            <Link href="/dashboard/certificates/new">Create the first template</Link>
-          </Button>
+          {canCreate ? (
+            <Button asChild className="bg-cyan-700 hover:bg-cyan-800 text-white">
+              <Link href="/dashboard/certificates/new">Create the first template</Link>
+            </Button>
+          ) : null}
         </CardContent>
       </Card>
     )
@@ -108,69 +117,77 @@ export default function CertificateTemplatesList({
                     {t.fields.length} field{t.fields.length === 1 ? '' : 's'}
                   </p>
                   <div className="flex flex-wrap gap-2 pt-1">
-                    <Button asChild size="sm" variant="outline">
-                      <Link href={`/dashboard/certificates/${t.id}/edit`}>
-                        <Pencil className="w-3.5 h-3.5" />
-                        Edit
-                      </Link>
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={pending}
-                      onClick={() =>
-                        run(
-                          () => duplicateCertificateTemplate(t.id),
-                          (id) => {
-                            if (id) router.push(`/dashboard/certificates/${id}/edit`)
-                          },
-                        )
-                      }
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                      Duplicate
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={pending}
-                      onClick={() =>
-                        run(() =>
-                          updateCertificateTemplate(t.id, {
-                            isActive: !t.isActive,
-                          }),
-                        )
-                      }
-                    >
-                      {t.isActive ? (
-                        <ToggleRight className="w-3.5 h-3.5" />
-                      ) : (
-                        <ToggleLeft className="w-3.5 h-3.5" />
-                      )}
-                      {t.isActive ? 'Deactivate' : 'Activate'}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="text-red-600 border-red-200"
-                      disabled={pending}
-                      onClick={() => {
-                        if (
-                          !confirm(
-                            `Delete template “${t.name}”? Events using it will need a new assignment.`,
+                    {canEdit ? (
+                      <Button asChild size="sm" variant="outline">
+                        <Link href={`/dashboard/certificates/${t.id}/edit`}>
+                          <Pencil className="w-3.5 h-3.5" />
+                          Edit
+                        </Link>
+                      </Button>
+                    ) : null}
+                    {canCreate ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={pending}
+                        onClick={() =>
+                          run(
+                            () => duplicateCertificateTemplate(t.id),
+                            (id) => {
+                              if (id) router.push(`/dashboard/certificates/${id}/edit`)
+                            },
                           )
-                        ) {
-                          return
                         }
-                        run(() => deleteCertificateTemplate(t.id))
-                      }}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      Delete
-                    </Button>
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        Duplicate
+                      </Button>
+                    ) : null}
+                    {canEdit ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={pending}
+                        onClick={() =>
+                          run(() =>
+                            updateCertificateTemplate(t.id, {
+                              isActive: !t.isActive,
+                            }),
+                          )
+                        }
+                      >
+                        {t.isActive ? (
+                          <ToggleRight className="w-3.5 h-3.5" />
+                        ) : (
+                          <ToggleLeft className="w-3.5 h-3.5" />
+                        )}
+                        {t.isActive ? 'Deactivate' : 'Activate'}
+                      </Button>
+                    ) : null}
+                    {canDelete ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="text-red-600 border-red-200"
+                        disabled={pending}
+                        onClick={() => {
+                          if (
+                            !confirm(
+                              `Delete template “${t.name}”? Events using it will need a new assignment.`,
+                            )
+                          ) {
+                            return
+                          }
+                          run(() => deleteCertificateTemplate(t.id))
+                        }}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Delete
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               </div>

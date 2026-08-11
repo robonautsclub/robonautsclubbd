@@ -8,27 +8,38 @@ import EditCourseForm from './EditCourseForm'
 import DeleteConfirmation from './DeleteConfirmation'
 import type { Course } from '@/types/course'
 import { Button } from '@/components/ui/button'
+import type {
+  DashboardPermission,
+  DashboardRole,
+} from '@/lib/dashboard-permissions'
+import { canDeleteResource, canEditResource } from '@/lib/dashboard-permissions'
 
 interface CourseActionsProps {
   course: Course
   currentUserId?: string
-  userRole?: 'superAdmin' | 'admin'
+  userRole?: DashboardRole
+  permissions?: DashboardPermission[]
 }
 
-export default function CourseActions({ course, currentUserId, userRole }: CourseActionsProps) {
+export default function CourseActions({
+  course,
+  currentUserId,
+  userRole,
+  permissions = [],
+}: CourseActionsProps) {
   const router = useRouter()
   const [showEditForm, setShowEditForm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [archiving, setArchiving] = useState(false)
-  
-  // Show edit/delete buttons if:
-  // - User is Super Admin (can edit/delete any course), OR
-  // - User is Admin AND is the creator of the course
-  const isSuperAdmin = userRole === 'superAdmin'
-  const isOwner = currentUserId && course.createdBy === currentUserId
-  const canEdit = isSuperAdmin || isOwner
-  const canDelete = isSuperAdmin || isOwner
+
+  const session = {
+    role: userRole || 'admin',
+    permissions,
+    uid: currentUserId,
+  }
+  const canEdit = canEditResource(session, 'courses', course.createdBy)
+  const canDelete = canDeleteResource(session, 'courses', course.createdBy)
 
   const handleDelete = async () => {
     setDeleting(true)
@@ -79,27 +90,29 @@ export default function CourseActions({ course, currentUserId, userRole }: Cours
             Edit
           </Button>
         )}
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={handleArchive}
-          disabled={archiving}
-          className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-          title={course.isArchived ? 'Unarchive course' : 'Archive course'}
-        >
-          {course.isArchived ? (
-            <>
-              <ArchiveRestore className="w-4 h-4" />
-              Unarchive
-            </>
-          ) : (
-            <>
-              <Archive className="w-4 h-4" />
-              Archive
-            </>
-          )}
-        </Button>
+        {canEdit && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleArchive}
+            disabled={archiving}
+            className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+            title={course.isArchived ? 'Unarchive course' : 'Archive course'}
+          >
+            {course.isArchived ? (
+              <>
+                <ArchiveRestore className="w-4 h-4" />
+                Unarchive
+              </>
+            ) : (
+              <>
+                <Archive className="w-4 h-4" />
+                Archive
+              </>
+            )}
+          </Button>
+        )}
         {canDelete && (
           <Button
             type="button"
@@ -115,14 +128,14 @@ export default function CourseActions({ course, currentUserId, userRole }: Cours
         )}
       </div>
 
-      {showEditForm && (
+      {showEditForm && canEdit && (
         <EditCourseForm
           course={course}
           onClose={() => setShowEditForm(false)}
         />
       )}
 
-      {showDeleteConfirm && (
+      {showDeleteConfirm && canDelete && (
         <DeleteConfirmation
           title="Delete Course"
           message="Are you sure you want to delete this course? This action cannot be undone."
@@ -134,4 +147,3 @@ export default function CourseActions({ course, currentUserId, userRole }: Cours
     </>
   )
 }
-

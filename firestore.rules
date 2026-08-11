@@ -12,9 +12,19 @@ service cloud.firestore {
         return request.auth != null && request.auth.token.role == 'superAdmin';
       }
       
-      // Helper function to check if user is Admin (includes Super Admin)
+      // Helper function to check if user is staff (Admin, Moderator, or Super Admin)
       function isAdmin() {
-        return request.auth != null && (request.auth.token.role == 'admin' || request.auth.token.role == 'superAdmin');
+        return request.auth != null && (
+          request.auth.token.role == 'admin' ||
+          request.auth.token.role == 'moderator' ||
+          request.auth.token.role == 'superAdmin'
+        );
+      }
+
+      function isStaffOwner() {
+        return request.auth != null
+          && (request.auth.token.role == 'admin' || request.auth.token.role == 'moderator')
+          && isOwner();
       }
       
       // Helper function to check if user owns the resource
@@ -22,18 +32,16 @@ service cloud.firestore {
         return request.auth != null && resource.data.createdBy == request.auth.uid;
       }
       
-      // Create: Both Super Admin and Admin can create events
+      // Create: staff can create events
       // Must set createdBy field to the authenticated user's UID
       allow create: if isAdmin() 
         && request.resource.data.createdBy == request.auth.uid;
       
-      // Update: Super Admin can update any event, Admin can only update own events
-      allow update: if isSuperAdmin() 
-        || (request.auth.token.role == 'admin' && isOwner());
+      // Update: Super Admin can update any event, staff can only update own events
+      allow update: if isSuperAdmin() || isStaffOwner();
       
-      // Delete: Super Admin can delete any event, Admin can only delete own events
-      allow delete: if isSuperAdmin() 
-        || (request.auth.token.role == 'admin' && isOwner());
+      // Delete: Super Admin can delete any event, staff can only delete own events
+      allow delete: if isSuperAdmin() || isStaffOwner();
     }
     
     // Bookings collection - public read/write for booking forms, authenticated full access
@@ -59,9 +67,19 @@ service cloud.firestore {
         return request.auth != null && request.auth.token.role == 'superAdmin';
       }
       
-      // Helper function to check if user is Admin (includes Super Admin)
+      // Helper function to check if user is staff (Admin, Moderator, or Super Admin)
       function isAdmin() {
-        return request.auth != null && (request.auth.token.role == 'admin' || request.auth.token.role == 'superAdmin');
+        return request.auth != null && (
+          request.auth.token.role == 'admin' ||
+          request.auth.token.role == 'moderator' ||
+          request.auth.token.role == 'superAdmin'
+        );
+      }
+
+      function isStaffOwner() {
+        return request.auth != null
+          && (request.auth.token.role == 'admin' || request.auth.token.role == 'moderator')
+          && isOwner();
       }
       
       // Helper function to check if user owns the resource
@@ -69,18 +87,16 @@ service cloud.firestore {
         return request.auth != null && resource.data.createdBy == request.auth.uid;
       }
       
-      // Create: Both Super Admin and Admin can create courses
+      // Create: staff can create courses
       // Must set createdBy field to the authenticated user's UID
       allow create: if isAdmin() 
         && request.resource.data.createdBy == request.auth.uid;
       
-      // Update: Super Admin can update any course, Admin can only update own courses
-      allow update: if isSuperAdmin() 
-        || (request.auth.token.role == 'admin' && isOwner());
+      // Update: Super Admin can update any course, staff can only update own courses
+      allow update: if isSuperAdmin() || isStaffOwner();
       
-      // Delete: Super Admin can delete any course, Admin can only delete own courses
-      allow delete: if isSuperAdmin() 
-        || (request.auth.token.role == 'admin' && isOwner());
+      // Delete: Super Admin can delete any course, staff can only delete own courses
+      allow delete: if isSuperAdmin() || isStaffOwner();
     }
     
     // News articles — public read only when published; admin writes
@@ -89,10 +105,19 @@ service cloud.firestore {
         return request.auth != null && request.auth.token.role == 'superAdmin';
       }
       function newsIsAdmin() {
-        return request.auth != null && (request.auth.token.role == 'admin' || request.auth.token.role == 'superAdmin');
+        return request.auth != null && (
+          request.auth.token.role == 'admin' ||
+          request.auth.token.role == 'moderator' ||
+          request.auth.token.role == 'superAdmin'
+        );
       }
       function newsIsOwner() {
         return request.auth != null && resource.data.createdBy == request.auth.uid;
+      }
+      function newsIsStaffOwner() {
+        return request.auth != null
+          && (request.auth.token.role == 'admin' || request.auth.token.role == 'moderator')
+          && newsIsOwner();
       }
 
       allow read: if resource.data.published == true
@@ -101,11 +126,9 @@ service cloud.firestore {
       allow create: if newsIsAdmin()
         && request.resource.data.createdBy == request.auth.uid;
 
-      allow update: if newsIsSuperAdmin()
-        || (request.auth.token.role == 'admin' && newsIsOwner());
+      allow update: if newsIsSuperAdmin() || newsIsStaffOwner();
 
-      allow delete: if newsIsSuperAdmin()
-        || (request.auth.token.role == 'admin' && newsIsOwner());
+      allow delete: if newsIsSuperAdmin() || newsIsStaffOwner();
     }
 
     // Gallery image groups — public read; admin writes
@@ -114,10 +137,19 @@ service cloud.firestore {
         return request.auth != null && request.auth.token.role == 'superAdmin';
       }
       function galleryIsAdmin() {
-        return request.auth != null && (request.auth.token.role == 'admin' || request.auth.token.role == 'superAdmin');
+        return request.auth != null && (
+          request.auth.token.role == 'admin' ||
+          request.auth.token.role == 'moderator' ||
+          request.auth.token.role == 'superAdmin'
+        );
       }
       function galleryIsOwner() {
         return request.auth != null && resource.data.createdBy == request.auth.uid;
+      }
+      function galleryIsStaffOwner() {
+        return request.auth != null
+          && (request.auth.token.role == 'admin' || request.auth.token.role == 'moderator')
+          && galleryIsOwner();
       }
 
       allow read: if true;
@@ -125,11 +157,9 @@ service cloud.firestore {
       allow create: if galleryIsAdmin()
         && request.resource.data.createdBy == request.auth.uid;
 
-      allow update: if galleryIsSuperAdmin()
-        || (request.auth.token.role == 'admin' && galleryIsOwner());
+      allow update: if galleryIsSuperAdmin() || galleryIsStaffOwner();
 
-      allow delete: if galleryIsSuperAdmin()
-        || (request.auth.token.role == 'admin' && galleryIsOwner());
+      allow delete: if galleryIsSuperAdmin() || galleryIsStaffOwner();
     }
 
     // Notifications collection - authenticated read/write for admins

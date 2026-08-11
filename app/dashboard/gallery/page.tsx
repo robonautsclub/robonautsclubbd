@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { requireAuth } from '@/lib/auth'
+import { requireTabAccess, canCreateArea, canEditResource, canDeleteResource } from '@/lib/auth'
 import { Images, Plus, ExternalLink, MapPin, Calendar } from 'lucide-react'
 import { effectiveGalleryDisplayRaw } from '@/lib/publicContentDates'
 import { getGalleryGroupsForDashboard } from './actions'
@@ -25,7 +25,8 @@ function formatListDate(raw: string | Date | null) {
 }
 
 export default async function DashboardGalleryPage() {
-  await requireAuth()
+  const session = await requireTabAccess('gallery')
+  const canCreate = canCreateArea(session, 'gallery')
   const groups = await getGalleryGroupsForDashboard()
 
   return (
@@ -35,12 +36,14 @@ export default async function DashboardGalleryPage() {
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Gallery</h2>
           <p className="text-sm sm:text-base text-slate-600 mt-1">Organize photo albums with a title and location</p>
         </div>
-        <Button asChild className="bg-cyan-700 hover:bg-cyan-800 text-white shadow-sm">
-          <Link href="/dashboard/gallery/new" prefetch={false}>
-            <Plus className="w-4 h-4" />
-            New album
-          </Link>
-        </Button>
+        {canCreate ? (
+          <Button asChild className="bg-cyan-700 hover:bg-cyan-800 text-white shadow-sm">
+            <Link href="/dashboard/gallery/new" prefetch={false}>
+              <Plus className="w-4 h-4" />
+              New album
+            </Link>
+          </Button>
+        ) : null}
       </div>
 
       {groups.length === 0 ? (
@@ -48,11 +51,13 @@ export default async function DashboardGalleryPage() {
           <CardContent className="p-12 text-center">
             <Images className="w-12 h-12 mx-auto text-gray-300 mb-4" />
             <p className="text-slate-600 mb-6">No albums yet.</p>
-            <Button asChild variant="link" className="text-cyan-700 hover:text-cyan-800 h-auto p-0">
-              <Link href="/dashboard/gallery/new" prefetch={false}>
-                Create the first album
-              </Link>
-            </Button>
+            {canCreate ? (
+              <Button asChild variant="link" className="text-cyan-700 hover:text-cyan-800 h-auto p-0">
+                <Link href="/dashboard/gallery/new" prefetch={false}>
+                  Create the first album
+                </Link>
+              </Button>
+            ) : null}
           </CardContent>
         </Card>
       ) : (
@@ -94,12 +99,16 @@ export default async function DashboardGalleryPage() {
                         Public gallery
                       </Link>
                     </Button>
-                    <Button asChild variant="outline" size="sm" className="text-cyan-800 bg-cyan-50 border-cyan-200 hover:bg-cyan-100 hover:text-cyan-800">
-                      <Link href={`/dashboard/gallery/${g.id}/edit`} prefetch={false}>
-                        Edit
-                      </Link>
-                    </Button>
-                    <DeleteGalleryButton id={g.id} title={g.title} />
+                    {canEditResource(session, 'gallery', g.createdBy) ? (
+                      <Button asChild variant="outline" size="sm" className="text-cyan-800 bg-cyan-50 border-cyan-200 hover:bg-cyan-100 hover:text-cyan-800">
+                        <Link href={`/dashboard/gallery/${g.id}/edit`} prefetch={false}>
+                          Edit
+                        </Link>
+                      </Button>
+                    ) : null}
+                    {canDeleteResource(session, 'gallery', g.createdBy) ? (
+                      <DeleteGalleryButton id={g.id} title={g.title} />
+                    ) : null}
                   </div>
                 </div>
                 {g.images.length > 0 ? (

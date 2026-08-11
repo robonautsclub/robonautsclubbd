@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { requireAuth } from '@/lib/auth'
+import { requireCreateOrEdit, hasPermission } from '@/lib/auth'
 import { getCertificateTemplate } from '@/app/dashboard/certificates/actions'
 import CertificateTemplateEditor from '@/app/dashboard/certificates/CertificateTemplateEditor'
 
@@ -10,14 +10,17 @@ export default async function EditCertificateTemplatePage({
 }: {
   params: Promise<{ id: string }>
 }) {
-  await requireAuth()
+  const session = await requireCreateOrEdit('certificates')
   const { id } = await params
   const template = await getCertificateTemplate(id)
   if (!template) notFound()
 
   return (
     <div className="w-full min-w-0 max-w-[1400px] mx-auto">
-      <CertificateTemplateEditor template={template} />
+      <CertificateTemplateEditor
+        template={template}
+        canDownload={hasPermission(session, 'exports.pdf')}
+      />
     </div>
   )
 }

@@ -18,9 +18,22 @@ import { downloadPdfFromResponse } from '@/lib/downloadPdfBlob'
 type Props = {
   event: Event
   bookings: Booking[]
+  canEdit?: boolean
+  canDelete?: boolean
+  canViewPayments?: boolean
+  canExportExcel?: boolean
+  canExportPdf?: boolean
 }
 
-export default function EventDetailsClient({ event, bookings }: Props) {
+export default function EventDetailsClient({
+  event,
+  bookings,
+  canEdit = false,
+  canDelete = false,
+  canViewPayments = false,
+  canExportExcel = false,
+  canExportPdf = false,
+}: Props) {
   const [showDetails, setShowDetails] = useState(false)
   const [nameFilter, setNameFilter] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
@@ -206,13 +219,17 @@ export default function EventDetailsClient({ event, bookings }: Props) {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-slate-500">Paid Registrations</p>
-            <p className="text-2xl font-bold text-slate-900">{paidCount}</p>
+            <p className="text-2xl font-bold text-slate-900">
+              {canViewPayments ? paidCount : '—'}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-slate-500">Money Collected</p>
-            <p className="text-2xl font-bold text-green-700">BDT {totalCollected}</p>
+            <p className="text-2xl font-bold text-green-700">
+              {canViewPayments ? `BDT ${totalCollected}` : '—'}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -245,22 +262,29 @@ export default function EventDetailsClient({ event, bookings }: Props) {
               <span className="text-xs sm:text-sm font-normal text-slate-500">({filteredBookings.length})</span>
             </h3>
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={bulkCertPending || !hasCertificateTemplate || filteredBookings.length === 0}
-                onClick={() => void downloadBulkCertificates()}
-                title={
-                  hasCertificateTemplate
-                    ? 'Download certificates for filtered registrations'
-                    : 'Assign a certificate template on the event first'
-                }
-              >
-                <Award className="w-4 h-4" />
-                {bulkCertPending ? 'Certificates…' : 'Certificates'}
-              </Button>
-              <ExportBookingsButton bookings={bookings} eventTitle={event.title} />
+              {canExportPdf && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={bulkCertPending || !hasCertificateTemplate || filteredBookings.length === 0}
+                  onClick={() => void downloadBulkCertificates()}
+                  title={
+                    hasCertificateTemplate
+                      ? 'Download certificates for filtered registrations'
+                      : 'Assign a certificate template on the event first'
+                  }
+                >
+                  <Award className="w-4 h-4" />
+                  {bulkCertPending ? 'Certificates…' : 'Certificates'}
+                </Button>
+              )}
+              <ExportBookingsButton
+                bookings={bookings}
+                eventTitle={event.title}
+                canExportExcel={canExportExcel}
+                canExportPdf={canExportPdf}
+              />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -306,7 +330,9 @@ export default function EventDetailsClient({ event, bookings }: Props) {
                 <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">School</TableHead>
                 <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Email</TableHead>
                 <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider hidden lg:table-cell">Phone</TableHead>
-                <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Paid</TableHead>
+                <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  {canViewPayments ? 'Paid' : 'Status'}
+                </TableHead>
                 <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Booked At</TableHead>
                 <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</TableHead>
               </TableRow>
@@ -349,15 +375,26 @@ export default function EventDetailsClient({ event, bookings }: Props) {
                     </TableCell>
                     <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="text-xs sm:text-sm text-slate-900 flex items-center gap-1">
-                        <Banknote className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
-                        {booking.amountPaid ? `BDT ${booking.amountPaid}` : '—'}
+                        {canViewPayments ? (
+                          <>
+                            <Banknote className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
+                            {booking.amountPaid ? `BDT ${booking.amountPaid}` : '—'}
+                          </>
+                        ) : (
+                          '—'
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="text-xs sm:text-sm text-slate-500">{formattedDate}</div>
                     </TableCell>
                     <TableCell className="px-3 sm:px-6 py-3 sm:py-4 text-right">
-                      <BookingActions booking={booking} event={event} />
+                      <BookingActions
+                        booking={booking}
+                        event={event}
+                        canCancel={canEdit || canDelete}
+                        canDownloadPdf={canExportPdf}
+                      />
                     </TableCell>
                   </TableRow>
                 )

@@ -1,7 +1,16 @@
 'use server'
 
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
-import { requireAuth, isSuperAdmin } from '@/lib/auth'
+import {
+  requireAuth,
+  canCreateArea,
+  canEditResource,
+  canDeleteResource,
+  canEditArea,
+  canDeleteArea,
+  hasPermission,
+} from '@/lib/auth'
+import { isDashboardRole } from '@/lib/dashboard-permissions'
 import { adminDb } from '@/lib/firebase-admin'
 import { adminAuth } from '@/lib/firebase-admin'
 import { Event } from '@/types/event'
@@ -230,7 +239,7 @@ export async function getEvents(): Promise<Event[]> {
     return await getCachedEventsList()
   } catch (error) {
     console.error('Error fetching events:', error)
-    throw new Error('Failed to fetch events')
+    return []
   }
 }
 
@@ -249,7 +258,7 @@ export async function getDashboardEventsSummary(): Promise<DashboardEventSummary
     return await getCachedDashboardEventsSummary()
   } catch (error) {
     console.error('Error fetching dashboard events summary:', error)
-    throw new Error('Failed to fetch dashboard events summary')
+    return []
   }
 }
 
@@ -323,6 +332,9 @@ export async function createEvent(formData: {
   certificateTemplateId?: string | null
 }): Promise<{ success: boolean; error?: string; eventId?: string }> {
   const session = await requireAuth()
+  if (!canCreateArea(session, 'events')) {
+    return { success: false, error: 'You do not have permission to create events.' }
+  }
 
   if (!adminDb) {
     console.error('Firebase Admin SDK not available. Cannot create event.')
@@ -487,15 +499,11 @@ export async function updateEvent(
     }
 
     const eventData = eventDoc.data()!
-    
-    // Role-based permission check: Super Admin can update any event, Admin can only update own events
-    const userIsSuperAdmin = isSuperAdmin(session)
-    const userIsOwner = eventData.createdBy === session.uid
-    
-    if (!userIsSuperAdmin && !userIsOwner) {
+
+    if (!canEditResource(session, 'events', eventData.createdBy as string | undefined)) {
       return {
         success: false,
-        error: 'You can only update events that you created.',
+        error: 'You do not have permission to edit this event.',
       }
     }
 
@@ -625,15 +633,11 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
     }
 
     const eventData = eventDoc.data()!
-    
-    // Role-based permission check: Super Admin can delete any event, Admin can only delete own events
-    const userIsSuperAdmin = isSuperAdmin(session)
-    const userIsOwner = eventData.createdBy === session.uid
-    
-    if (!userIsSuperAdmin && !userIsOwner) {
+
+    if (!canDeleteResource(session, 'events', eventData.createdBy as string | undefined)) {
       return {
         success: false,
-        error: 'You can only delete events that you created.',
+        error: 'You do not have permission to delete this event.',
       }
     }
 
@@ -754,7 +758,10 @@ export async function getBookings(eventId: string): Promise<Booking[]> {
  * Cancel/Delete a booking
  */
 export async function cancelBooking(bookingId: string): Promise<{ success: boolean; error?: string }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!canEditArea(session, 'events') && !canDeleteArea(session, 'events')) {
+    return { success: false, error: 'You do not have permission to cancel bookings.' }
+  }
 
   if (!adminDb) {
     console.error('Firebase Admin SDK not available. Cannot cancel booking.')
@@ -797,7 +804,11 @@ export async function cancelBooking(bookingId: string): Promise<{ success: boole
     } as Event
 
     // Send cancellation email before deleting the booking
-    if (booking.email && booking.registrationId) {
+    if (
+      booking.email &&
+      booking.registrationId &&
+      hasPermission(session, 'mail.send')
+    ) {
       try {
         const { sendBookingCancellationEmail } = await import('@/lib/email')
         const emailResult = await sendBookingCancellationEmail({
@@ -895,7 +906,9 @@ export async function createCourse(formData: {
   image: string
 }): Promise<{ success: boolean; error?: string; courseId?: string }> {
   const session = await requireAuth()
-
+  if (!canCreateArea(session, 'courses')) {
+    return { success: false, error: 'You do not have permission to create courses.' }
+  }
   if (!adminDb) {
     return {
       success: false,
@@ -1000,15 +1013,11 @@ export async function updateCourse(
     }
 
     const courseData = courseDoc.data()!
-    
-    // Role-based permission check: Super Admin can update any course, Admin can only update own courses
-    const userIsSuperAdmin = isSuperAdmin(session)
-    const userIsOwner = courseData.createdBy === session.uid
-    
-    if (!userIsSuperAdmin && !userIsOwner) {
+
+    if (!canEditResource(session, 'courses', courseData.createdBy as string | undefined)) {
       return {
         success: false,
-        error: 'You can only update courses that you created.',
+        error: 'You do not have permission to edit this course.',
       }
     }
 
@@ -1093,15 +1102,11 @@ export async function archiveCourse(courseId: string): Promise<{ success: boolea
     }
 
     const courseData = courseDoc.data()!
-    
-    // Role-based permission check: Super Admin can archive any course, Admin can only archive own courses
-    const userIsSuperAdmin = isSuperAdmin(session)
-    const userIsOwner = courseData.createdBy === session.uid
-    
-    if (!userIsSuperAdmin && !userIsOwner) {
+
+    if (!canEditResource(session, 'courses', courseData.createdBy as string | undefined)) {
       return {
         success: false,
-        error: 'You can only archive courses that you created.',
+        error: 'You do not have permission to archive this course.',
       }
     }
 
@@ -1163,15 +1168,11 @@ export async function deleteCourse(courseId: string): Promise<{ success: boolean
     }
 
     const courseData = courseDoc.data()!
-    
-    // Role-based permission check: Super Admin can delete any course, Admin can only delete own courses
-    const userIsSuperAdmin = isSuperAdmin(session)
-    const userIsOwner = courseData.createdBy === session.uid
-    
-    if (!userIsSuperAdmin && !userIsOwner) {
+
+    if (!canDeleteResource(session, 'courses', courseData.createdBy as string | undefined)) {
       return {
         success: false,
-        error: 'You can only delete courses that you created.',
+        error: 'You do not have permission to delete this course.',
       }
     }
 
@@ -1218,7 +1219,9 @@ async function getDashboardMembers(session: Session): Promise<DashboardMember[]>
 
   const listUsersResult = await adminAuth.listUsers(1000)
   return listUsersResult.users.map((user) => {
-    const role = (user.customClaims?.role as 'superAdmin' | 'admin' | undefined) || 'admin'
+    const role = (isDashboardRole(user.customClaims?.role)
+      ? user.customClaims!.role
+      : 'admin') as Session['role']
     return {
       uid: user.uid,
       email: user.email || '',

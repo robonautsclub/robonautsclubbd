@@ -1,12 +1,15 @@
-import { requireAuth } from '@/lib/auth'
+import { requireTabAccess, canCreateArea, canEditOthersArea, canDeleteArea } from '@/lib/auth'
 import { getSchoolDirectory } from './actions'
 import SchoolDirectoryManager from './SchoolDirectoryManager'
 
 export const dynamic = 'force-dynamic'
 
 export default async function SchoolsPage() {
-  await requireAuth()
-  const schools = await getSchoolDirectory(true)
+  const session = await requireTabAccess('schools')
+  const canCreate = canCreateArea(session, 'schools')
+  const canEdit = canEditOthersArea(session, 'schools')
+  const canDelete = canDeleteArea(session, 'schools')
+  const { schools, error } = await getSchoolDirectory(true)
 
   return (
     <div className="w-full min-w-0 max-w-7xl mx-auto space-y-5">
@@ -16,7 +19,12 @@ export default async function SchoolsPage() {
           Manage English-medium schools for registration dropdowns. Confirm custom names submitted via Robofest.
         </p>
       </div>
-      <SchoolDirectoryManager schools={schools} />
+      {error ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          {error}
+        </div>
+      ) : null}
+      <SchoolDirectoryManager schools={schools} canCreate={canCreate} canEdit={canEdit} canDelete={canDelete} />
     </div>
   )
 }

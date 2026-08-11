@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { format } from 'date-fns'
-import { getServerSession } from '@/lib/auth'
+import { getServerSession, hasPermission } from '@/lib/auth'
 import { getCertificateTemplateForIssue } from '@/app/dashboard/certificates/actions'
 import {
   buildEventCertificateId,
@@ -21,6 +21,10 @@ export async function POST(
   const session = await getServerSession()
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (!hasPermission(session, 'exports.pdf')) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const { id: eventId } = await context.params

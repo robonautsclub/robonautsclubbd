@@ -147,6 +147,14 @@ type Props = {
   registrations: RobofestRegistration[]
   schools: string[]
   campusAmbassadors: RobofestCampusAmbassador[]
+  canCreate?: boolean
+  canEdit?: boolean
+  canDelete?: boolean
+  canViewPayments?: boolean
+  canSendMail?: boolean
+  canExportCsv?: boolean
+  canExportExcel?: boolean
+  canExportPdf?: boolean
 }
 
 function statusBadgeClass(status: string) {
@@ -305,6 +313,14 @@ export default function RobofestDashboardClient({
   registrations,
   schools,
   campusAmbassadors,
+  canCreate = false,
+  canEdit = false,
+  canDelete = false,
+  canViewPayments = false,
+  canSendMail = false,
+  canExportCsv = false,
+  canExportExcel = false,
+  canExportPdf = false,
 }: Props) {
   const router = useRouter()
   const [content, setContent] = useState(initialContent)
@@ -441,9 +457,10 @@ export default function RobofestDashboardClient({
     startExportTransition(() => {
       ;(async () => {
         try {
-          if (kind === 'csv') exportRobofestCsv(filtered)
-          else if (kind === 'excel') await exportRobofestExcel(filtered)
-          else await exportRobofestPdf(filtered)
+          const opts = { includePayments: canViewPayments }
+          if (kind === 'csv') exportRobofestCsv(filtered, opts)
+          else if (kind === 'excel') await exportRobofestExcel(filtered, opts)
+          else await exportRobofestPdf(filtered, opts)
         } catch (err) {
           console.error(`Robofest ${kind} export failed:`, err)
           alert(`Failed to export ${kind.toUpperCase()}. Please try again.`)
@@ -780,13 +797,17 @@ export default function RobofestDashboardClient({
                     Clear filters
                   </Button>
                 ) : null}
-                <CreateRobofestRegistrationForm
-                  content={content}
-                  schools={schools}
-                  campusAmbassadors={campusAmbassadors.filter(
-                    (a) => a.isActive,
-                  )}
-                />
+                {canCreate ? (
+                  <CreateRobofestRegistrationForm
+                    content={content}
+                    schools={schools}
+                    campusAmbassadors={campusAmbassadors.filter(
+                      (a) => a.isActive,
+                    )}
+                    canViewPayments={canViewPayments}
+                    canSendMail={canSendMail}
+                  />
+                ) : null}
               </div>
             </div>
           </div>
@@ -808,6 +829,7 @@ export default function RobofestDashboardClient({
                   {stats.registrations === 1 ? '' : 's'}
                 </p>
               </div>
+              {canViewPayments ? (
               <div className="rounded-xl bg-emerald-50/70 border border-emerald-100 p-3.5">
                 <div className="flex items-center gap-2 text-emerald-700/80 mb-2">
                   <CreditCard className="w-3.5 h-3.5" />
@@ -822,6 +844,7 @@ export default function RobofestDashboardClient({
                   {stats.paidCount} payment{stats.paidCount === 1 ? '' : 's'}
                 </p>
               </div>
+              ) : null}
             </div>
 
             <div className="xl:col-span-5 p-4 sm:p-5">
@@ -1048,6 +1071,8 @@ export default function RobofestDashboardClient({
             </div>
 
             <div className="flex flex-wrap items-center gap-2 pt-1">
+              {(canExportCsv || canExportExcel || canExportPdf) ? (
+                <>
               <span
                 className={cn(
                   'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize',
@@ -1056,6 +1081,7 @@ export default function RobofestDashboardClient({
               >
                 Export {filtered.length} {statusTab}
               </span>
+              {canExportCsv ? (
               <Button
                 type="button"
                 variant="outline"
@@ -1067,6 +1093,8 @@ export default function RobofestDashboardClient({
                 <FileText className="w-3.5 h-3.5" />
                 CSV
               </Button>
+              ) : null}
+              {canExportExcel ? (
               <Button
                 type="button"
                 size="sm"
@@ -1077,6 +1105,8 @@ export default function RobofestDashboardClient({
                 <FileSpreadsheet className="w-3.5 h-3.5" />
                 Excel
               </Button>
+              ) : null}
+              {canExportPdf ? (
               <Button
                 type="button"
                 size="sm"
@@ -1087,6 +1117,8 @@ export default function RobofestDashboardClient({
                 <Download className="w-3.5 h-3.5" />
                 PDF
               </Button>
+              ) : null}
+              {canExportPdf ? (
               <Button
                 type="button"
                 size="sm"
@@ -1098,8 +1130,11 @@ export default function RobofestDashboardClient({
                 <Award className="w-3.5 h-3.5" />
                 Certificates
               </Button>
+              ) : null}
               {exportPending ? (
                 <span className="text-xs text-slate-500">Exporting…</span>
+              ) : null}
+                </>
               ) : null}
             </div>
           </div>
@@ -1125,7 +1160,9 @@ export default function RobofestDashboardClient({
                     <TableHead className="min-w-[11rem]">Members</TableHead>
                     <TableHead className="min-w-[8rem]">Contact</TableHead>
                     <TableHead className="whitespace-nowrap">Status</TableHead>
-                    <TableHead className="whitespace-nowrap">Payment</TableHead>
+                    {canViewPayments ? (
+                      <TableHead className="whitespace-nowrap">Payment</TableHead>
+                    ) : null}
                     <TableHead className="whitespace-nowrap hidden 2xl:table-cell">
                       Created
                     </TableHead>
@@ -1138,7 +1175,7 @@ export default function RobofestDashboardClient({
                   {filtered.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={11}
+                        colSpan={canViewPayments ? 11 : 10}
                         className="text-center text-slate-500 py-12"
                       >
                         <p className="font-medium text-slate-700">
@@ -1205,15 +1242,26 @@ export default function RobofestDashboardClient({
                             members={r.teamMembers}
                             awardCategories={content.awardCategories || []}
                             canDownloadCertificate={
+                              canExportPdf &&
                               Boolean(r.registrationId) &&
                               r.status !== 'cancelled'
                             }
                             certificatePending={pending}
-                            onDownloadCertificate={(memberIndex) =>
-                              downloadMemberCertificate(r, memberIndex)
+                            onDownloadCertificate={
+                              canExportPdf
+                                ? (memberIndex) =>
+                                    downloadMemberCertificate(r, memberIndex)
+                                : undefined
                             }
-                            onAwardChange={(memberIndex, awardCategoryId) =>
-                              setMemberAward(r.id, memberIndex, awardCategoryId)
+                            onAwardChange={
+                              canEdit
+                                ? (memberIndex, awardCategoryId) =>
+                                    setMemberAward(
+                                      r.id,
+                                      memberIndex,
+                                      awardCategoryId,
+                                    )
+                                : undefined
                             }
                           />
                         </TableCell>
@@ -1234,6 +1282,7 @@ export default function RobofestDashboardClient({
                             {r.status}
                           </Badge>
                         </TableCell>
+                        {canViewPayments ? (
                         <TableCell className="text-xs whitespace-nowrap">
                           <div>{r.paymentStatus || '—'}</div>
                           {r.amountPaid != null ? (
@@ -1242,6 +1291,7 @@ export default function RobofestDashboardClient({
                             </div>
                           ) : null}
                         </TableCell>
+                        ) : null}
                         <TableCell className="text-xs whitespace-nowrap hidden 2xl:table-cell">
                           {r.createdAt
                             ? format(new Date(r.createdAt), 'dd MMM yyyy HH:mm')
@@ -1249,6 +1299,8 @@ export default function RobofestDashboardClient({
                         </TableCell>
                         <TableCell className="text-right sticky right-0 bg-white shadow-[-8px_0_12px_-12px_rgba(0,0,0,0.25)]">
                           <div className="flex flex-wrap justify-end gap-1">
+                            {canEdit ? (
+                              <>
                             <Button
                               type="button"
                               size="sm"
@@ -1267,11 +1319,18 @@ export default function RobofestDashboardClient({
                             >
                               Cancel
                             </Button>
+                              </>
+                            ) : null}
+                            {canSendMail ? (
                             <Button
                               type="button"
                               size="sm"
                               variant="outline"
-                              disabled={pending || !r.registrationId}
+                              disabled={
+                                pending ||
+                                !r.registrationId ||
+                                r.status === 'cancelled'
+                              }
                               onClick={() => resendEmail(r.id)}
                               title={
                                 (r.emailSendCount ?? 0) > 0
@@ -1287,6 +1346,8 @@ export default function RobofestDashboardClient({
                                 </span>
                               ) : null}
                             </Button>
+                            ) : null}
+                            {canExportPdf ? (
                             <Button
                               type="button"
                               size="sm"
@@ -1297,6 +1358,7 @@ export default function RobofestDashboardClient({
                             >
                               <Download className="w-3.5 h-3.5" />
                             </Button>
+                            ) : null}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -2339,6 +2401,8 @@ export default function RobofestDashboardClient({
         </ContentSection>
 
         <div className="flex flex-wrap gap-3">
+          {canEdit ? (
+            <>
           <Button type="button" onClick={saveContent} disabled={pending}>
             {pending ? 'Saving…' : 'Save content'}
           </Button>
@@ -2350,11 +2414,22 @@ export default function RobofestDashboardClient({
           >
             Reset to defaults
           </Button>
+            </>
+          ) : (
+            <p className="text-sm text-slate-500">
+              View only — you do not have permission to edit Robofest content.
+            </p>
+          )}
         </div>
       </TabsContent>
 
       <TabsContent value="ambassadors" className="space-y-4 w-full min-w-0">
-        <CampusAmbassadorsManager ambassadors={campusAmbassadors} />
+        <CampusAmbassadorsManager
+          ambassadors={campusAmbassadors}
+          canCreate={canCreate}
+          canEdit={canEdit}
+          canDelete={canDelete}
+        />
       </TabsContent>
     </Tabs>
   )

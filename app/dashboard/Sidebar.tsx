@@ -11,20 +11,23 @@ import {
   getDashboardNavItems,
   isDashboardNavActive,
 } from './nav-items'
+import type { DashboardPermission, DashboardRole } from '@/lib/dashboard-permissions'
 
 interface SidebarProps {
-  role?: 'superAdmin' | 'admin'
+  role?: DashboardRole
+  permissions?: DashboardPermission[]
   collapsed: boolean
   onToggleCollapsed: () => void
 }
 
 export default function Sidebar({
   role,
+  permissions,
   collapsed,
   onToggleCollapsed,
 }: SidebarProps) {
   const pathname = usePathname()
-  const navItems = getDashboardNavItems(role)
+  const navItems = getDashboardNavItems(role, permissions)
 
   return (
     <aside

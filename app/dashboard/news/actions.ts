@@ -2,7 +2,7 @@
 
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, canCreateArea, canEditResource, canDeleteResource } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase-admin'
 import type { NewsArticle } from '@/types/news'
 import {
@@ -116,6 +116,9 @@ export async function createNewsArticle(input: {
   displayDate?: string
 }) {
   const session = await requireAuth()
+  if (!canCreateArea(session, 'news')) {
+    throw new Error('You do not have permission to create news articles.')
+  }
   if (!adminDb) throw new Error('Firebase Admin SDK is not configured.')
 
   const title = sanitizeNewsTitle(input.title)
@@ -174,9 +177,7 @@ export async function updateNewsArticle(
   if (!existing.exists) throw new Error('Article not found.')
 
   const data = existing.data() as Record<string, unknown>
-  const isOwner = data.createdBy === session.uid
-  const role = session.role
-  if (!isOwner && role !== 'superAdmin') {
+  if (!canEditResource(session, 'news', data.createdBy as string | undefined)) {
     throw new Error('You do not have permission to edit this article.')
   }
 
@@ -232,8 +233,7 @@ export async function deleteNewsArticle(id: string) {
   if (!existing.exists) throw new Error('Article not found.')
 
   const data = existing.data() as Record<string, unknown>
-  const isOwner = data.createdBy === session.uid
-  if (!isOwner && session.role !== 'superAdmin') {
+  if (!canDeleteResource(session, 'news', data.createdBy as string | undefined)) {
     throw new Error('You do not have permission to delete this article.')
   }
 

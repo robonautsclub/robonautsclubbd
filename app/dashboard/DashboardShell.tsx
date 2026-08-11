@@ -19,11 +19,13 @@ import {
   getDashboardNavItems,
   isDashboardNavActive,
 } from './nav-items'
+import type { DashboardPermission, DashboardRole } from '@/lib/dashboard-permissions'
 
 const COLLAPSED_STORAGE_KEY = 'dashboard-sidebar-collapsed'
 
 type DashboardShellProps = {
-  role?: 'superAdmin' | 'admin'
+  role?: DashboardRole
+  permissions?: DashboardPermission[]
   userName: string
   userEmail: string
   headerActions: ReactNode
@@ -32,6 +34,7 @@ type DashboardShellProps = {
 
 export default function DashboardShell({
   role,
+  permissions,
   userName,
   userEmail,
   headerActions,
@@ -40,7 +43,7 @@ export default function DashboardShell({
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const navItems = getDashboardNavItems(role)
+  const navItems = getDashboardNavItems(role, permissions)
 
   useEffect(() => {
     try {
@@ -155,6 +158,7 @@ export default function DashboardShell({
       <div className="flex flex-1 min-h-0 w-full min-w-0 flex-col lg:flex-row">
         <Sidebar
           role={role}
+          permissions={permissions}
           collapsed={collapsed}
           onToggleCollapsed={toggleCollapsed}
         />

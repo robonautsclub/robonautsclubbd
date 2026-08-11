@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils'
 
 type Props = {
   template: CertificateTemplate
+  canDownload?: boolean
 }
 
 const A4_RATIO = {
@@ -32,7 +33,10 @@ const A4_RATIO = {
   portrait: 210 / 297,
 }
 
-export default function CertificateTemplateEditor({ template }: Props) {
+export default function CertificateTemplateEditor({
+  template,
+  canDownload = false,
+}: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [name, setName] = useState(template.name)
@@ -328,14 +332,16 @@ export default function CertificateTemplateEditor({ template }: Props) {
           <Button asChild variant="outline">
             <Link href="/dashboard/certificates">Back</Link>
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={sampleDownloading || pending}
-            onClick={() => void downloadSample()}
-          >
-            {sampleDownloading ? 'Preparing…' : 'Download sample PDF'}
-          </Button>
+          {canDownload ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={sampleDownloading || pending}
+              onClick={() => void downloadSample()}
+            >
+              {sampleDownloading ? 'Preparing…' : 'Download sample PDF'}
+            </Button>
+          ) : null}
           <Button
             type="button"
             className="bg-cyan-700 hover:bg-cyan-800 text-white"

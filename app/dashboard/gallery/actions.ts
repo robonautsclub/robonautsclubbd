@@ -2,7 +2,7 @@
 
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, canCreateArea, canEditResource, canDeleteResource } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase-admin'
 import type { GalleryGroup, GalleryImage } from '@/types/gallery'
 import { sanitizeGalleryLocation, sanitizeGalleryTitle } from '@/lib/multilingualText'
@@ -98,6 +98,9 @@ export async function createGalleryGroup(input: {
   displayDate?: string
 }) {
   const session = await requireAuth()
+  if (!canCreateArea(session, 'gallery')) {
+    throw new Error('You do not have permission to create gallery groups.')
+  }
   if (!adminDb) throw new Error('Firebase Admin SDK is not configured.')
 
   const title = sanitizeGalleryTitle(input.title)
@@ -144,8 +147,7 @@ export async function updateGalleryGroup(
   if (!existing.exists) throw new Error('Group not found.')
 
   const data = existing.data() as Record<string, unknown>
-  const isOwner = data.createdBy === session.uid
-  if (!isOwner && session.role !== 'superAdmin') {
+  if (!canEditResource(session, 'gallery', data.createdBy as string | undefined)) {
     throw new Error('You do not have permission to edit this group.')
   }
 
@@ -182,8 +184,7 @@ export async function deleteGalleryGroup(id: string) {
   if (!existing.exists) throw new Error('Group not found.')
 
   const data = existing.data() as Record<string, unknown>
-  const isOwner = data.createdBy === session.uid
-  if (!isOwner && session.role !== 'superAdmin') {
+  if (!canDeleteResource(session, 'gallery', data.createdBy as string | undefined)) {
     throw new Error('You do not have permission to delete this group.')
   }
 

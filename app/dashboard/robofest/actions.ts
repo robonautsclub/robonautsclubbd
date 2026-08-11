@@ -2,7 +2,13 @@
 
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { FieldValue } from 'firebase-admin/firestore'
-import { requireAuth } from '@/lib/auth'
+import {
+  requireAuth,
+  canCreateArea,
+  canEditOthersArea,
+  canDeleteArea,
+  hasPermission,
+} from '@/lib/auth'
 import { adminDb } from '@/lib/firebase-admin'
 import {
   ROBOFEST_CONTENT_CACHE_TAG,
@@ -63,6 +69,9 @@ export async function updateRobofestContent(
   input: RobofestContent,
 ): Promise<{ success: boolean; error?: string }> {
   const session = await requireAuth()
+  if (!canEditOthersArea(session, 'robofest')) {
+    return { success: false, error: 'You do not have permission to edit Robofest.' }
+  }
   if (!adminDb) {
     return { success: false, error: 'Database unavailable.' }
   }
@@ -185,7 +194,10 @@ export async function updateRobofestRegistrationStatus(
   status: RobofestRegistrationStatus,
   adminNotes?: string,
 ): Promise<{ success: boolean; error?: string }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!canEditOthersArea(session, 'robofest')) {
+    return { success: false, error: 'You do not have permission to edit Robofest.' }
+  }
   if (!adminDb) return { success: false, error: 'Database unavailable.' }
 
   if (!['pending', 'confirmed', 'cancelled'].includes(status)) {
@@ -214,7 +226,10 @@ export async function updateRobofestMemberAwardCategory(
   memberIndex: number,
   awardCategoryId: string,
 ): Promise<{ success: boolean; error?: string }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!canEditOthersArea(session, 'robofest')) {
+    return { success: false, error: 'You do not have permission to edit Robofest.' }
+  }
   if (!adminDb) return { success: false, error: 'Database unavailable.' }
 
   const trimmedId = (registrationDocId || '').trim()
@@ -280,7 +295,13 @@ export async function resendRobofestRegistrationEmail(
   recipientCount?: number
   emailSendCount?: number
 }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!hasPermission(session, 'mail.send')) {
+    return {
+      success: false,
+      error: 'You do not have permission to send emails from the dashboard.',
+    }
+  }
   const registration = await getRobofestRegistrationById(id)
   if (!registration) {
     return { success: false, error: 'Registration not found.' }
@@ -316,7 +337,10 @@ export async function createRobofestRegistrationManual(
   registrationDocId?: string
   teamNumber?: string
 }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!canCreateArea(session, 'robofest')) {
+    return { success: false, error: 'You do not have permission to create Robofest items.' }
+  }
   if (!adminDb) {
     return { success: false, error: 'Database unavailable.' }
   }
@@ -368,6 +392,12 @@ export async function createRobofestRegistrationManual(
       | undefined
 
     if (input.paymentMode === 'paid_offline') {
+      if (!hasPermission(session, 'payments.view')) {
+        return {
+          success: false,
+          error: 'You do not have permission to set paid amounts.',
+        }
+      }
       const amountPaid =
         typeof input.amountPaid === 'number' && input.amountPaid >= 0
           ? input.amountPaid
@@ -388,7 +418,8 @@ export async function createRobofestRegistrationManual(
         notes: input.notes?.trim() || validated.data.notes || '',
       },
       {
-        sendEmail: input.sendEmail !== false,
+        sendEmail:
+          input.sendEmail !== false && hasPermission(session, 'mail.send'),
         paymentMeta,
       },
     )
@@ -413,6 +444,9 @@ export async function resetRobofestContentToDefaults(): Promise<{
   content?: RobofestContent
 }> {
   const session = await requireAuth()
+  if (!canEditOthersArea(session, 'robofest')) {
+    return { success: false, error: 'You do not have permission to edit Robofest.' }
+  }
   if (!adminDb) return { success: false, error: 'Database unavailable.' }
 
   const defaults = getDefaultRobofestContent()
@@ -459,7 +493,10 @@ export async function getRobofestCampusAmbassadors(): Promise<
 export async function createRobofestCampusAmbassador(
   input: RobofestCampusAmbassadorWriteInput,
 ): Promise<{ success: boolean; error?: string; id?: string }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!canCreateArea(session, 'robofest')) {
+    return { success: false, error: 'You do not have permission to create Robofest items.' }
+  }
   if (!adminDb) return { success: false, error: 'Database unavailable.' }
 
   const name = (input.name || '').trim()
@@ -497,7 +534,10 @@ export async function updateRobofestCampusAmbassador(
   id: string,
   input: RobofestCampusAmbassadorWriteInput,
 ): Promise<{ success: boolean; error?: string }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!canEditOthersArea(session, 'robofest')) {
+    return { success: false, error: 'You do not have permission to edit Robofest.' }
+  }
   if (!adminDb) return { success: false, error: 'Database unavailable.' }
 
   const trimmedId = (id || '').trim()
@@ -538,7 +578,10 @@ export async function updateRobofestCampusAmbassador(
 export async function deleteRobofestCampusAmbassador(
   id: string,
 ): Promise<{ success: boolean; error?: string }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!canDeleteArea(session, 'robofest')) {
+    return { success: false, error: 'You do not have permission to delete Robofest items.' }
+  }
   if (!adminDb) return { success: false, error: 'Database unavailable.' }
 
   const trimmedId = (id || '').trim()
@@ -561,7 +604,10 @@ export async function seedRobofestCampusAmbassadors(): Promise<{
   success: boolean
   message: string
 }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!canCreateArea(session, 'robofest') && !canEditOthersArea(session, 'robofest')) {
+    return { success: false, message: 'You do not have permission to edit Robofest.' }
+  }
   if (!adminDb) return { success: false, message: 'Database unavailable.' }
 
   const collection = adminDb.collection(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION)

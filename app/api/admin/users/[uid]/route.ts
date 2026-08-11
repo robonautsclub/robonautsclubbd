@@ -1,11 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { requireSuperAdmin } from '@/lib/auth'
+import {
+  getDefaultPermissionsForRole,
+  isDashboardRole,
+  normalizePermissionGrants,
+  sanitizePermissions,
+  PERMISSIONS_VERSION,
+  type DashboardPermission,
+  type DashboardRole,
+} from '@/lib/dashboard-permissions'
 
-/**
- * User Management API Routes - Individual User Operations
- * Super Admin only - Get, update, and delete users
- */
+function resolveUserRoleAndPerms(user: {
+  customClaims?: Record<string, unknown> | null
+}): { role: DashboardRole; permissions: DashboardPermission[] } {
+  const role = (isDashboardRole(user.customClaims?.role)
+    ? user.customClaims!.role
+    : 'admin') as DashboardRole
+  const version = user.customClaims?.permissionsVersion
+  const sanitized = sanitizePermissions(user.customClaims?.permissions, {
+    permissionsVersion: version,
+  })
+  const permissions =
+    role === 'superAdmin'
+      ? getDefaultPermissionsForRole('superAdmin')
+      : sanitized.length > 0
+        ? sanitized
+        : getDefaultPermissionsForRole(role)
+  return { role, permissions }
+}
 
 /**
  * GET /api/admin/users/[uid]
@@ -38,9 +61,7 @@ export async function GET(
 
     // Get user
     const user = await adminAuth.getUser(uid)
-    
-    // Get role from custom claims
-    const role = (user.customClaims?.role as 'superAdmin' | 'admin' | undefined) || 'admin'
+    const { role, permissions } = resolveUserRoleAndPerms(user)
 
     return NextResponse.json({
       success: true,
@@ -50,6 +71,7 @@ export async function GET(
         displayName: user.displayName || '',
         emailVerified: user.emailVerified,
         role,
+        permissions,
         createdAt: user.metadata.creationTime,
         lastSignIn: user.metadata.lastSignInTime,
         disabled: user.disabled,
@@ -102,33 +124,33 @@ export async function PUT(
 
     const { uid } = await params
     const body = await request.json()
-    const { displayName, password, disabled } = body
+    const { displayName, password, disabled, role: rawRole, permissions: rawPerms } =
+      body
 
     if (!uid) {
       return NextResponse.json(
         { error: 'User UID is required' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
     // Prevent Super Admins from editing any Super Admin account via this endpoint.
-    // Super Admins should manage their own profile via /dashboard/profile only.
     const superAdminEmailsEnv = process.env.SUPER_ADMIN_EMAILS || ''
     const superAdminEmails = superAdminEmailsEnv
       .split(',')
       .map((email) => email.trim().toLowerCase())
       .filter((email) => email.length > 0)
 
-    // Email updates are not allowed - even for Super Admin
-    // This ensures email addresses remain stable and secure
     if (body.email !== undefined) {
       return NextResponse.json(
-        { error: 'Email address cannot be changed. Email addresses are permanent for security reasons.' },
-        { status: 400 }
+        {
+          error:
+            'Email address cannot be changed. Email addresses are permanent for security reasons.',
+        },
+        { status: 400 },
       )
     }
 
-    // Build update object
     const updateData: {
       displayName?: string
       password?: string
@@ -140,11 +162,10 @@ export async function PUT(
     }
 
     if (password !== undefined) {
-      // Validate password strength
       if (password.length < 6) {
         return NextResponse.json(
           { error: 'Password must be at least 6 characters long' },
-          { status: 400 }
+          { status: 400 },
         )
       }
       updateData.password = password
@@ -154,35 +175,71 @@ export async function PUT(
       updateData.disabled = disabled
     }
 
-    // Get current user data for notification + Super Admin protection check
     const currentUser = await adminAuth.getUser(uid)
-    const currentRole =
-      (currentUser.customClaims?.role as 'superAdmin' | 'admin' | undefined) || 'admin'
+    const { role: currentRole, permissions: currentPermissions } =
+      resolveUserRoleAndPerms(currentUser)
     const currentEmail = (currentUser.email || '').toLowerCase()
     const isProtectedSuperAdmin =
-      currentRole === 'superAdmin' || (currentEmail && superAdminEmails.includes(currentEmail))
+      currentRole === 'superAdmin' ||
+      (currentEmail && superAdminEmails.includes(currentEmail))
 
     if (isProtectedSuperAdmin) {
       return NextResponse.json(
-        { error: 'Super Admin accounts cannot be edited via user management.' },
-        { status: 403 }
+        {
+          error:
+            'Super Admin accounts cannot be edited via user management.',
+        },
+        { status: 403 },
       )
     }
 
     const changes: string[] = []
-    if (updateData.displayName && updateData.displayName !== currentUser.displayName) changes.push('display name')
+    if (
+      updateData.displayName &&
+      updateData.displayName !== currentUser.displayName
+    ) {
+      changes.push('display name')
+    }
     if (updateData.password) changes.push('password')
-    if (updateData.disabled !== undefined && updateData.disabled !== currentUser.disabled) {
+    if (
+      updateData.disabled !== undefined &&
+      updateData.disabled !== currentUser.disabled
+    ) {
       changes.push(updateData.disabled ? 'disabled' : 'enabled')
     }
 
-    // Update user
-    const user = await adminAuth.updateUser(uid, updateData)
+    const nextRole: DashboardRole =
+      rawRole === 'moderator' || rawRole === 'admin' ? rawRole : currentRole
+    const nextPermissions = normalizePermissionGrants(
+      Array.isArray(rawPerms)
+        ? sanitizePermissions(rawPerms, {
+            permissionsVersion: PERMISSIONS_VERSION,
+          })
+        : currentPermissions,
+    )
 
-    // Get role from custom claims
-    const role = (user.customClaims?.role as 'superAdmin' | 'admin' | undefined) || 'admin'
+    if (nextRole !== currentRole) changes.push(`role:${nextRole}`)
+    const permsChanged =
+      nextPermissions.length !== currentPermissions.length ||
+      nextPermissions.some((p) => !currentPermissions.includes(p))
+    if (permsChanged) changes.push('permissions')
 
-    // Create notification for user update
+    if (Object.keys(updateData).length > 0) {
+      await adminAuth.updateUser(uid, updateData)
+    }
+
+    if (nextRole !== currentRole || permsChanged) {
+      await adminAuth.setCustomUserClaims(uid, {
+        role: nextRole,
+        permissions: nextPermissions,
+        permissionsVersion: PERMISSIONS_VERSION,
+      })
+      await adminAuth.revokeRefreshTokens(uid)
+    }
+
+    const user = await adminAuth.getUser(uid)
+    const { role, permissions } = resolveUserRoleAndPerms(user)
+
     if (adminDb && changes.length > 0) {
       try {
         await adminDb.collection('notifications').add({
@@ -195,7 +252,7 @@ export async function PUT(
           readBy: [],
           createdAt: new Date(),
         })
-      } catch (error) {
+      } catch {
         // Silently fail
       }
     }
@@ -208,6 +265,7 @@ export async function PUT(
         displayName: user.displayName || '',
         emailVerified: user.emailVerified,
         role,
+        permissions,
         disabled: user.disabled,
       },
       message: 'User updated successfully',
@@ -285,11 +343,13 @@ export async function DELETE(
         .map((email) => email.trim().toLowerCase())
         .filter((email) => email.length > 0)
 
-      const targetRole =
-        (user.customClaims?.role as 'superAdmin' | 'admin' | undefined) || 'admin'
+      const targetRole = isDashboardRole(user.customClaims?.role)
+        ? user.customClaims!.role
+        : 'admin'
       const targetEmail = (user.email || '').toLowerCase()
       const isProtectedSuperAdmin =
-        targetRole === 'superAdmin' || (targetEmail && superAdminEmails.includes(targetEmail))
+        targetRole === 'superAdmin' ||
+        (targetEmail && superAdminEmails.includes(targetEmail))
 
       if (isProtectedSuperAdmin) {
         return NextResponse.json(

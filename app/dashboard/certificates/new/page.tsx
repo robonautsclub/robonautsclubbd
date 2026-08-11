@@ -1,12 +1,12 @@
 import Link from 'next/link'
-import { requireAuth } from '@/lib/auth'
+import { requirePermission } from '@/lib/auth'
 import CreateCertificateTemplateForm from '../CreateCertificateTemplateForm'
 import { Button } from '@/components/ui/button'
 
 export const dynamic = 'force-dynamic'
 
 export default async function NewCertificateTemplatePage() {
-  await requireAuth()
+  await requirePermission('create:certificates')
 
   return (
     <div className="w-full min-w-0 max-w-3xl mx-auto space-y-6">
