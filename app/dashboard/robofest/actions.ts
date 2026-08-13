@@ -42,9 +42,23 @@ import {
   type RobofestCampusAmbassador,
   type RobofestCampusAmbassadorWriteInput,
 } from '@/lib/robofest-campus-ambassadors'
-import { listRobofestCampusAmbassadorsFromDb } from '@/lib/robofest-campus-ambassadors-db'
+import {
+  listRobofestCampusAmbassadorsCached,
+  DASHBOARD_ROBOFEST_AMBASSADORS_TAG,
+} from '@/lib/robofest-campus-ambassadors-db'
 import { sanitizeRobofestCertificateSignatures } from '@/lib/robofest-certificate-signatures'
-import { loadRobofestRegistrationsCached } from './registrations-data'
+import {
+  loadRobofestRegistrationsForExport,
+  loadRobofestRegistrationsPage,
+  loadRobofestRegistrationStatusCounts,
+  ROBOFEST_REGISTRATIONS_PAGE_SIZE,
+} from './registrations-data'
+import type {
+  RobofestRegistrationCursor,
+  RobofestRegistrationListFilters,
+  RobofestRegistrationPage,
+  RobofestRegistrationStatusCounts,
+} from './registrations-types'
 
 function revalidateRobofestPublic() {
   revalidateTag(ROBOFEST_CONTENT_CACHE_TAG, 'max')
@@ -55,6 +69,7 @@ function revalidateRobofestPublic() {
 
 function revalidateRobofestAmbassadors() {
   revalidateTag(PUBLIC_ROBOFEST_AMBASSADORS_TAG, 'max')
+  revalidateTag(DASHBOARD_ROBOFEST_AMBASSADORS_TAG, 'max')
   revalidatePath('/dashboard/robofest')
   revalidatePath('/robofest')
   revalidatePath('/robofest', 'layout')
@@ -184,9 +199,55 @@ export async function updateRobofestContent(
   }
 }
 
+export async function getRobofestRegistrationsPage(input: {
+  filters: RobofestRegistrationListFilters
+  cursor?: RobofestRegistrationCursor | null
+  pageSize?: number
+}): Promise<RobofestRegistrationPage> {
+  await requireAuth()
+  try {
+    return await loadRobofestRegistrationsPage(input)
+  } catch (error) {
+    console.error('[robofest-dashboard] list registrations page failed:', error)
+    return { items: [], nextCursor: null, hasMore: false }
+  }
+}
+
+export async function getRobofestRegistrationStatusCounts(): Promise<RobofestRegistrationStatusCounts> {
+  await requireAuth()
+  try {
+    return await loadRobofestRegistrationStatusCounts()
+  } catch (error) {
+    console.error('[robofest-dashboard] status counts failed:', error)
+    return { pending: 0, confirmed: 0, cancelled: 0 }
+  }
+}
+
+/** Full filtered list for CSV/Excel/PDF/certificate export (not for table paint). */
+export async function getRobofestRegistrationsForExport(
+  filters: RobofestRegistrationListFilters,
+): Promise<{ success: boolean; items?: RobofestRegistration[]; error?: string }> {
+  await requireAuth()
+  try {
+    const items = await loadRobofestRegistrationsForExport(filters)
+    return { success: true, items }
+  } catch (error) {
+    console.error('[robofest-dashboard] export list failed:', error)
+    return {
+      success: false,
+      error: 'Failed to load registrations for export. Please try again.',
+    }
+  }
+}
+
+/** @deprecated Prefer getRobofestRegistrationsPage — kept for any leftover callers. */
 export async function getRobofestRegistrations(): Promise<RobofestRegistration[]> {
   await requireAuth()
-  return loadRobofestRegistrationsCached()
+  const page = await loadRobofestRegistrationsPage({
+    filters: { status: 'pending' },
+    pageSize: ROBOFEST_REGISTRATIONS_PAGE_SIZE,
+  })
+  return page.items
 }
 
 export async function updateRobofestRegistrationStatus(
@@ -487,7 +548,7 @@ export async function getRobofestCampusAmbassadors(): Promise<
       await batch.commit()
     }
   }
-  return listRobofestCampusAmbassadorsFromDb(true)
+  return listRobofestCampusAmbassadorsCached(true)
 }
 
 export async function createRobofestCampusAmbassador(

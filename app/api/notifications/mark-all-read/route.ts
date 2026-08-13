@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
 import { requireAuth } from '@/lib/auth'
 
+const MARK_ALL_READ_LIMIT = 200
+
 /**
- * Mark all notifications as read for the current user
+ * Mark unread notifications as read for the current user.
+ * Only scans a recent window (not the entire collection).
  */
 export async function POST(request: NextRequest) {
   try {
@@ -16,9 +19,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get all unread notifications
     const snapshot = await adminDb
       .collection('notifications')
+      .orderBy('createdAt', 'desc')
+      .limit(MARK_ALL_READ_LIMIT)
       .get()
 
     const batch = adminDb.batch()
@@ -26,9 +30,8 @@ export async function POST(request: NextRequest) {
 
     snapshot.docs.forEach((doc) => {
       const data = doc.data()
-      const readBy = data.readBy || []
+      const readBy: string[] = Array.isArray(data.readBy) ? data.readBy : []
 
-      // If user hasn't read this notification, add them to readBy
       if (!readBy.includes(session.uid)) {
         batch.update(doc.ref, {
           readBy: [...readBy, session.uid],
@@ -37,7 +40,6 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Commit all updates
     if (updatedCount > 0) {
       await batch.commit()
     }
@@ -48,6 +50,7 @@ export async function POST(request: NextRequest) {
       message: `Marked ${updatedCount} notification(s) as read`,
     })
   } catch (error) {
+    console.error('mark-all-read failed:', error)
     return NextResponse.json(
       { error: 'Failed to mark notifications as read' },
       { status: 500 }

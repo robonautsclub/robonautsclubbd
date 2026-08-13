@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
 import { FieldValue } from 'firebase-admin/firestore'
 import { requireAuth, canCreateArea, canEditOthersArea, canDeleteArea } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase-admin'
@@ -13,13 +13,15 @@ import {
   type CertificatePageLayout,
 } from '@/lib/certificate-templates'
 
+const CERTIFICATE_TEMPLATES_CACHE_TAG = 'certificate-templates'
+
 function revalidateCertificatePaths(id?: string) {
+  revalidateTag(CERTIFICATE_TEMPLATES_CACHE_TAG, 'max')
   revalidatePath('/dashboard/certificates')
   if (id) revalidatePath(`/dashboard/certificates/${id}/edit`)
 }
 
-export async function listCertificateTemplates(): Promise<CertificateTemplate[]> {
-  await requireAuth()
+async function fetchCertificateTemplatesFromDb(): Promise<CertificateTemplate[]> {
   if (!adminDb) return []
   const snap = await adminDb.collection(CERTIFICATE_TEMPLATES_COLLECTION).get()
   const list = snap.docs.map((doc) =>
@@ -27,6 +29,21 @@ export async function listCertificateTemplates(): Promise<CertificateTemplate[]>
   )
   list.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))
   return list
+}
+
+export async function listCertificateTemplates(): Promise<CertificateTemplate[]> {
+  await requireAuth()
+  if (!adminDb) return []
+  try {
+    return await unstable_cache(
+      fetchCertificateTemplatesFromDb,
+      [CERTIFICATE_TEMPLATES_CACHE_TAG],
+      { tags: [CERTIFICATE_TEMPLATES_CACHE_TAG], revalidate: 600 },
+    )()
+  } catch (error) {
+    console.error('[certificate-templates] list failed:', error)
+    return []
+  }
 }
 
 export async function listActiveCertificateTemplates(): Promise<

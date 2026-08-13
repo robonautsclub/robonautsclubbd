@@ -88,12 +88,14 @@ export default function CreateRobofestRegistrationForm({
   campusAmbassadors,
   canViewPayments = true,
   canSendMail = true,
+  onCreated,
 }: {
   content: RobofestContent
   schools: string[]
   campusAmbassadors: RobofestCampusAmbassador[]
   canViewPayments?: boolean
   canSendMail?: boolean
+  onCreated?: () => void
 }) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
@@ -266,6 +268,7 @@ export default function CreateRobofestRegistrationForm({
             result.registrationId ? ` (${result.registrationId})` : ''
           }${result.teamNumber ? ` · Team ${result.teamNumber}` : ''}.`,
       )
+      onCreated?.()
       router.refresh()
       setTimeout(() => handleOpenChange(false), 800)
     } catch {
