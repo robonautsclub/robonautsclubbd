@@ -60,6 +60,8 @@ export type Event = {
   registrationDisabled?: boolean // When true, registration is closed regardless of date (Super Admin or event creator can toggle)
   customFormFields?: EventCustomFormField[]
   defaultRegistrationFields?: EventDefaultRegistrationFields
+  /** Assigned certificate template from Certificates dashboard. */
+  certificateTemplateId?: string | null
   // Firestore metadata
   createdAt: Date | string
   updatedAt: Date | string

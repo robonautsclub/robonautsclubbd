@@ -1,5 +1,6 @@
 /**
  * Premium Robofest certificate PDFs — A4 landscape, left robot panel + right content.
+ * When content.certificateTemplateId is set, uses the background template engine instead.
  */
 
 import { existsSync, readFileSync } from 'fs'
@@ -11,11 +12,19 @@ import type {
 } from '@/lib/robofest-content'
 import { resolveRobofestRoundVenueLabel } from '@/lib/robofest-content'
 import {
+  resolveRobofestCertificateSignatures,
+  type RobofestCertificateSignature,
+} from '@/lib/robofest-certificate-signatures'
+import {
   resolveRobofestAwardCategory,
   type RobofestAwardAccent,
   type RobofestAwardCategory,
   type RobofestCertificateType,
 } from '@/lib/robofest-award-categories'
+import { generateCertificatesFromTemplate } from '@/lib/certificate-template-pdf'
+import type { CertificateRenderValues } from '@/lib/certificate-template-pdf'
+import { resolveCertificateAwardFields } from '@/lib/certificate-templates'
+import { loadActiveCertificateTemplateById } from '@/lib/certificate-templates-db'
 import { loadLogoBuffer, setupPDFKitFonts } from '@/lib/pdfGenerator'
 import { SITE_CONFIG } from '@/lib/site-config'
 import { sanitizeTextForPDF } from '@/lib/textSanitizer'
@@ -38,6 +47,9 @@ type CertificatePageInput = {
   verificationUrl: string
   qrBuffer: Buffer | null
   certificateId: string
+  signatures: RobofestCertificateSignature[]
+  /** signature id → image buffer */
+  signatureImages: Record<string, Buffer>
 }
 
 const ACCENT_HEX: Record<RobofestAwardAccent, string> = {
@@ -134,20 +146,41 @@ function organizerLine(content: RobofestContent): string {
   return 'Robonauts Ltd Presents'
 }
 
-function signatureNames(content: RobofestContent): {
-  director: string
-  judge: string
-  organizer: string
-} {
-  const host =
-    sanitizeTextForPDF(content.hostName)?.trim() || 'Robonauts Ltd'
-  return {
-    director:
-      sanitizeTextForPDF(content.competitionDirector)?.trim() || host,
-    judge: sanitizeTextForPDF(content.headJudge)?.trim() || 'Head Judge',
-    organizer:
-      sanitizeTextForPDF(content.eventOrganizer)?.trim() || host,
+async function fetchSignatureImageBuffer(
+  url: string,
+): Promise<Buffer | null> {
+  try {
+    const response = await fetch(url)
+    if (!response.ok) return null
+    return Buffer.from(await response.arrayBuffer())
+  } catch {
+    return null
   }
+}
+
+function buildTemplateSignatureSlots(
+  content: RobofestContent,
+): NonNullable<CertificateRenderValues['signatureSlots']> {
+  return resolveRobofestCertificateSignatures(content).map((sig) => ({
+    imageUrl: sig.imageUrl?.trim() || undefined,
+    name: sig.name?.trim() || undefined,
+    title: sig.title?.trim() || undefined,
+  }))
+}
+
+async function loadSignatureImages(
+  signatures: RobofestCertificateSignature[],
+): Promise<Record<string, Buffer>> {
+  const images: Record<string, Buffer> = {}
+  await Promise.all(
+    signatures.map(async (sig) => {
+      const url = sig.imageUrl?.trim()
+      if (!url) return
+      const buf = await fetchSignatureImageBuffer(url)
+      if (buf) images[sig.id] = buf
+    }),
+  )
+  return images
 }
 
 function isParticipationAward(award: RobofestAwardCategory): boolean {
@@ -276,8 +309,24 @@ function drawSignatureBlock(
   width: number,
   name: string,
   role: string,
+  imageBuffer?: Buffer | null,
 ) {
-  const lineY = y + 18
+  const imageH = 32
+  const imageY = y
+  const lineY = y + imageH + 4
+
+  if (imageBuffer) {
+    try {
+      doc.image(imageBuffer, x + 4, imageY, {
+        fit: [width - 8, imageH],
+        align: 'center',
+        valign: 'bottom',
+      })
+    } catch {
+      // blank line still drawn below
+    }
+  }
+
   doc
     .moveTo(x, lineY)
     .lineTo(x + width, lineY)
@@ -307,6 +356,8 @@ function drawCertificatePage(doc: any, input: CertificatePageInput): void {
     award,
     qrBuffer,
     certificateId,
+    signatures,
+    signatureImages,
   } = input
 
   const pageWidth = doc.page.width as number
@@ -574,35 +625,29 @@ function drawCertificatePage(doc: any, input: CertificatePageInput): void {
       align: 'right',
     })
 
-  // Signatures
-  const sigs = signatureNames(content)
-  const sigY = innerY + innerH - 118
-  const sigGap = 16
-  const sigW = (contentWidth - qrSize - 28 - sigGap * 2) / 3
-  drawSignatureBlock(
-    doc,
-    contentLeft,
-    sigY,
-    sigW,
-    sigs.director,
-    'Competition Director',
-  )
-  drawSignatureBlock(
-    doc,
-    contentLeft + sigW + sigGap,
-    sigY,
-    sigW,
-    sigs.judge,
-    'Head Judge',
-  )
-  drawSignatureBlock(
-    doc,
-    contentLeft + (sigW + sigGap) * 2,
-    sigY,
-    sigW,
-    sigs.organizer,
-    'Event Organizer',
-  )
+  // Signatures — auto-arrange 1–4 across content left of QR
+  const sigCount = Math.max(signatures.length, 1)
+  const sigY = innerY + innerH - 132
+  const sigGap = 12
+  const sigAreaW = contentWidth - qrSize - 28
+  const sigW = (sigAreaW - sigGap * (sigCount - 1)) / sigCount
+  signatures.forEach((sig, index) => {
+    const name =
+      sanitizeTextForPDF(sig.name)?.trim() ||
+      sanitizeTextForPDF(sig.title)?.trim() ||
+      'Signatory'
+    const role =
+      sanitizeTextForPDF(sig.title)?.trim() || 'Signatory'
+    drawSignatureBlock(
+      doc,
+      contentLeft + index * (sigW + sigGap),
+      sigY,
+      sigW,
+      name,
+      role,
+      signatureImages[sig.id] || null,
+    )
+  })
 
   // QR bottom-right of content
   const qrX = rightX + rightW - contentPad - qrSize
@@ -765,6 +810,8 @@ async function buildPageInputs(
   robotBuffer: Buffer | null,
   participants: CertificateParticipant[],
   baseUrl: string,
+  signatures: RobofestCertificateSignature[],
+  signatureImages: Record<string, Buffer>,
 ): Promise<CertificatePageInput[]> {
   const { generateQRCodeBuffer } = await import('./qrCode')
   const registrationId = registration.registrationId || ''
@@ -799,6 +846,8 @@ async function buildPageInputs(
         registrationId,
         participant.memberIndex,
       ),
+      signatures,
+      signatureImages,
     })
   }
   return pages
@@ -830,9 +879,72 @@ export async function generateRobofestParticipationCertificatesPDF(input: {
     return { error: 'Participant not found on this registration.' }
   }
 
+  const templateId = content.certificateTemplateId?.trim()
+  if (templateId) {
+    const template = await loadActiveCertificateTemplateById(templateId)
+    if (!template) {
+      return {
+        error:
+          'Assigned certificate template is missing or inactive. Clear it in Robofest Content or fix the template.',
+      }
+    }
+    const signatureSlots = buildTemplateSignatureSlots(content)
+    const pages = selected.map((participant) => {
+      const award = resolveRobofestAwardCategory(
+        content.awardCategories,
+        participant.awardCategoryId,
+      )
+      const category = registration.category || ''
+      const awardFields = resolveCertificateAwardFields(award, { category })
+      const certificateId = buildRobofestCertificateId(
+        registration.registrationId!,
+        participant.memberIndex,
+      )
+      return {
+        recipientName: participant.name,
+        school: participant.school || registration.school || '',
+        grade: participant.grade || '',
+        category,
+        eventTitle: content.headline || 'RoboFest Bangladesh 2026',
+        eventDate: content.dateLabel || '',
+        venue: resolveRobofestRoundVenueLabel(content, registration.roundCity),
+        teamNumber: registration.teamNumber || registration.name || '',
+        certificateTitle: awardFields.certificateTitle,
+        certificateBody: awardFields.certificateBody,
+        awardLabel: awardFields.awardLabel,
+        registrationId: registration.registrationId!,
+        certificateId,
+        issueDate: format(
+          registration.createdAt
+            ? new Date(registration.createdAt)
+            : new Date(),
+          'dd MMMM yyyy',
+        ),
+        verificationUrl: buildCertificateVerificationUrl(
+          baseUrl,
+          registration.registrationId!,
+          participant.memberIndex,
+        ),
+        signatureSlots,
+      }
+    })
+
+    const result = await generateCertificatesFromTemplate({
+      template,
+      pages,
+      filename:
+        typeof memberIndex === 'number' && selected[0]
+          ? `Robofest-Certificate-${registration.registrationId}-${memberIndex + 1}.pdf`
+          : `Robofest-Certificate-${registration.registrationId}.pdf`,
+    })
+    return result
+  }
+
   try {
     const logoBuffer = await loadCertLogo(baseUrl)
     const robotBuffer = loadRobotBuffer()
+    const signatures = resolveRobofestCertificateSignatures(content)
+    const signatureImages = await loadSignatureImages(signatures)
     const pages = await buildPageInputs(
       registration,
       content,
@@ -840,6 +952,8 @@ export async function generateRobofestParticipationCertificatesPDF(input: {
       robotBuffer,
       selected,
       baseUrl,
+      signatures,
+      signatureImages,
     )
     const buffer = await buildCertificatesPdf(pages)
 
@@ -871,8 +985,78 @@ export async function generateRobofestBulkParticipationCertificatesPDF(input: {
   const { registrations, content, statusLabel } = input
   const baseUrl = resolveBaseUrl(input.baseUrl)
   const eligible = registrations.filter((r) => r.status !== 'cancelled')
+
+  const templateId = content.certificateTemplateId?.trim()
+  if (templateId) {
+    const template = await loadActiveCertificateTemplateById(templateId)
+    if (!template) {
+      return {
+        error:
+          'Assigned certificate template is missing or inactive. Clear it in Robofest Content or fix the template.',
+      }
+    }
+    const signatureSlots = buildTemplateSignatureSlots(content)
+    const pages = []
+    for (const registration of eligible) {
+      if (!registration.registrationId) continue
+      for (const participant of resolveCertificateParticipants(registration)) {
+        const award = resolveRobofestAwardCategory(
+          content.awardCategories,
+          participant.awardCategoryId,
+        )
+        const category = registration.category || ''
+        const awardFields = resolveCertificateAwardFields(award, { category })
+        pages.push({
+          recipientName: participant.name,
+          school: participant.school || registration.school || '',
+          grade: participant.grade || '',
+          category,
+          eventTitle: content.headline || 'RoboFest Bangladesh 2026',
+          eventDate: content.dateLabel || '',
+          venue: resolveRobofestRoundVenueLabel(
+            content,
+            registration.roundCity,
+          ),
+          teamNumber: registration.teamNumber || registration.name || '',
+          certificateTitle: awardFields.certificateTitle,
+          certificateBody: awardFields.certificateBody,
+          awardLabel: awardFields.awardLabel,
+          registrationId: registration.registrationId,
+          certificateId: buildRobofestCertificateId(
+            registration.registrationId,
+            participant.memberIndex,
+          ),
+          issueDate: format(
+            registration.createdAt
+              ? new Date(registration.createdAt)
+              : new Date(),
+            'dd MMMM yyyy',
+          ),
+          verificationUrl: buildCertificateVerificationUrl(
+            baseUrl,
+            registration.registrationId,
+            participant.memberIndex,
+          ),
+          signatureSlots,
+        })
+      }
+    }
+    if (pages.length === 0) {
+      return { error: 'No participants found to generate certificates for.' }
+    }
+    const stamp = format(new Date(), 'yyyy-MM-dd')
+    const statusPart = safeFilenamePart(statusLabel || 'export')
+    return generateCertificatesFromTemplate({
+      template,
+      pages,
+      filename: `Robofest-Certificates-${statusPart}-${stamp}.pdf`,
+    })
+  }
+
   const logoBuffer = await loadCertLogo(baseUrl)
   const robotBuffer = loadRobotBuffer()
+  const signatures = resolveRobofestCertificateSignatures(content)
+  const signatureImages = await loadSignatureImages(signatures)
   const pages: CertificatePageInput[] = []
 
   for (const registration of eligible) {
@@ -885,6 +1069,8 @@ export async function generateRobofestBulkParticipationCertificatesPDF(input: {
         robotBuffer,
         resolveCertificateParticipants(registration),
         baseUrl,
+        signatures,
+        signatureImages,
       )),
     )
   }

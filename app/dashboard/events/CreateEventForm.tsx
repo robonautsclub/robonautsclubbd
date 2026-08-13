@@ -10,6 +10,7 @@ import { Plus, X, Calendar, Clock, MapPin, FileText, Users, Image as ImageIcon, 
 import MultiDatePicker from './MultiDatePicker'
 import TimePicker from './TimePicker'
 import CustomFormBuilder from './CustomFormBuilder'
+import CertificateTemplateSelect from './CertificateTemplateSelect'
 import type { Event, EventDefaultRegistrationFields } from '@/types/event'
 import { dashboardEventFormSchema, type DashboardEventFormValues } from '@/lib/validation/events'
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
@@ -46,6 +47,7 @@ const createEventFormDefaults: DashboardEventFormValues = {
     category: { enabled: true, required: false },
     information: { enabled: true, required: false },
   } as EventDefaultRegistrationFields,
+  certificateTemplateId: '',
 }
 
 export default function CreateEventForm() {
@@ -722,6 +724,12 @@ export default function CreateEventForm() {
                 </p>
               </div>
             </div>
+
+            <CertificateTemplateSelect
+              value={formData.certificateTemplateId || ''}
+              onChange={(v) => form.setValue('certificateTemplateId', v)}
+              disabled={loading}
+            />
 
             {/* Contact person */}
             <div className="space-y-3">

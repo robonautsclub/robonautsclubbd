@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from '@/lib/auth'
+import { getServerSession, hasPermission } from '@/lib/auth'
 import type { RobofestContent, RobofestRegistration } from '@/lib/robofest-content'
 import { generateRobofestBulkParticipationCertificatesPDF } from '@/lib/robofest-certificate-pdf'
 import { SITE_CONFIG } from '@/lib/site-config'
@@ -26,6 +26,10 @@ export async function POST(request: NextRequest) {
   const session = await getServerSession()
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (!hasPermission(session, 'exports.pdf')) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   let body: {

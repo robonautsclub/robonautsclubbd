@@ -6,6 +6,12 @@ import { useForm } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { Plus, X, Mail, User, Lock, Sparkles } from 'lucide-react'
 import { createUserFormSchema, type CreateUserFormValues } from '@/lib/validation/members'
+import {
+  getDefaultAdminPermissions,
+  getDefaultModeratorPermissions,
+  type DashboardPermission,
+} from '@/lib/dashboard-permissions'
+import StaffPermissionsEditor from './StaffPermissionsEditor'
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -23,6 +29,10 @@ export default function CreateUserForm() {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [apiError, setApiError] = useState('')
+  const [role, setRole] = useState<'admin' | 'moderator'>('admin')
+  const [permissions, setPermissions] = useState<DashboardPermission[]>(
+    getDefaultAdminPermissions(),
+  )
 
   const form = useForm<CreateUserFormValues>({
     resolver: standardSchemaResolver(createUserFormSchema),
@@ -30,6 +40,15 @@ export default function CreateUserForm() {
   })
 
   const loading = form.formState.isSubmitting
+
+  const onRoleChange = (next: 'admin' | 'moderator') => {
+    setRole(next)
+    setPermissions(
+      next === 'moderator'
+        ? getDefaultModeratorPermissions()
+        : getDefaultAdminPermissions(),
+    )
+  }
 
   const onSubmit = async (values: CreateUserFormValues) => {
     setApiError('')
@@ -42,6 +61,8 @@ export default function CreateUserForm() {
           email: values.email.trim(),
           password: values.password,
           displayName: values.displayName.trim() || '',
+          role,
+          permissions,
         }),
       })
 
@@ -52,11 +73,15 @@ export default function CreateUserForm() {
       }
 
       form.reset({ email: '', password: '', displayName: '' })
+      setRole('admin')
+      setPermissions(getDefaultAdminPermissions())
       setIsOpen(false)
       router.refresh()
     } catch (err) {
       console.error('Error creating user:', err)
-      setApiError(err instanceof Error ? err.message : 'Failed to create user. Please try again.')
+      setApiError(
+        err instanceof Error ? err.message : 'Failed to create user. Please try again.',
+      )
     }
   }
 
@@ -66,20 +91,25 @@ export default function CreateUserForm() {
     if (!open) {
       setApiError('')
       form.reset({ email: '', password: '', displayName: '' })
+      setRole('admin')
+      setPermissions(getDefaultAdminPermissions())
     }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
       <DialogTrigger asChild>
-        <Button type="button" className="bg-cyan-500 hover:bg-cyan-700 text-white shadow-md hover:shadow-lg">
+        <Button
+          type="button"
+          className="bg-cyan-500 hover:bg-cyan-700 text-white shadow-md hover:shadow-lg"
+        >
           <Plus className="w-5 h-5" />
           Create User
         </Button>
       </DialogTrigger>
       <DialogContent
         showCloseButton={false}
-        className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[95vh]"
+        className="sm:max-w-lg p-0 gap-0 overflow-hidden flex flex-col max-h-[95vh]"
       >
         <div className="bg-linear-to-r from-cyan-500 to-blue-600 px-4 sm:px-6 py-4 sm:py-5 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -87,9 +117,11 @@ export default function CreateUserForm() {
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
-              <DialogTitle className="text-lg sm:text-xl font-bold text-white">Create New User</DialogTitle>
+              <DialogTitle className="text-lg sm:text-xl font-bold text-white">
+                Create New User
+              </DialogTitle>
               <DialogDescription className="text-xs sm:text-sm text-cyan-100">
-                Add a new admin user to the system
+                Add staff with role and access permissions
               </DialogDescription>
             </div>
           </div>
@@ -107,7 +139,10 @@ export default function CreateUserForm() {
 
         <div className="flex-1 overflow-y-auto">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="p-4 sm:p-6 space-y-4 sm:space-y-6"
+            >
               {apiError && (
                 <Alert variant="destructive">
                   <AlertDescription>{apiError}</AlertDescription>
@@ -155,7 +190,9 @@ export default function CreateUserForm() {
                         {...field}
                       />
                     </FormControl>
-                    <p className="text-xs text-gray-500">Password must be at least 6 characters long</p>
+                    <p className="text-xs text-gray-500">
+                      Password must be at least 6 characters long
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -184,33 +221,30 @@ export default function CreateUserForm() {
                 )}
               />
 
-              <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
-                <p className="text-sm text-blue-800">
-                  <strong>Note:</strong> New users will be created with <strong>Admin</strong> role. Only Super Admins
-                  can create users.
-                </p>
-              </div>
+              <StaffPermissionsEditor
+                role={role}
+                permissions={permissions}
+                onRoleChange={onRoleChange}
+                onPermissionsChange={setPermissions}
+                disabled={loading}
+              />
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                <Button type="button" variant="outline" onClick={() => handleDialogOpenChange(false)} disabled={loading}>
+              <div className="flex gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  disabled={loading}
+                  onClick={() => handleDialogOpenChange(false)}
+                >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
+                  className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white"
                   disabled={loading}
-                  className="bg-cyan-500 hover:bg-cyan-700 text-white shadow-md hover:shadow-lg"
                 >
-                  {loading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      Create User
-                    </>
-                  )}
+                  {loading ? 'Creating…' : 'Create user'}
                 </Button>
               </div>
             </form>

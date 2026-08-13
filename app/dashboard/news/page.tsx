@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { requireAuth } from '@/lib/auth'
+import { requireTabAccess, canCreateArea, canEditResource, canDeleteResource } from '@/lib/auth'
 import { Newspaper, Plus, ExternalLink, Calendar } from 'lucide-react'
 import { effectiveNewsDisplayRaw } from '@/lib/publicContentDates'
 import { getNewsArticles } from './actions'
@@ -26,7 +26,8 @@ function formatListDate(raw: string | Date | null) {
 }
 
 export default async function DashboardNewsPage() {
-  await requireAuth()
+  const session = await requireTabAccess('news')
+  const canCreate = canCreateArea(session, 'news')
   const articles = await getNewsArticles()
 
   return (
@@ -36,12 +37,14 @@ export default async function DashboardNewsPage() {
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">News</h2>
           <p className="text-sm sm:text-base text-slate-600 mt-1">Create and publish club news articles</p>
         </div>
-        <Button asChild className="bg-cyan-700 hover:bg-cyan-800 text-white shadow-sm">
-          <Link href="/dashboard/news/new" prefetch={false}>
-            <Plus className="w-4 h-4" />
-            New article
-          </Link>
-        </Button>
+        {canCreate ? (
+          <Button asChild className="bg-cyan-700 hover:bg-cyan-800 text-white shadow-sm">
+            <Link href="/dashboard/news/new" prefetch={false}>
+              <Plus className="w-4 h-4" />
+              New article
+            </Link>
+          </Button>
+        ) : null}
       </div>
 
       {articles.length === 0 ? (
@@ -49,11 +52,13 @@ export default async function DashboardNewsPage() {
           <CardContent className="p-12 text-center">
             <Newspaper className="w-12 h-12 mx-auto text-gray-300 mb-4" />
             <p className="text-slate-600 mb-6">No articles yet.</p>
-            <Button asChild variant="link" className="text-cyan-700 hover:text-cyan-800 h-auto p-0">
-              <Link href="/dashboard/news/new" prefetch={false}>
-                Write the first article
-              </Link>
-            </Button>
+            {canCreate ? (
+              <Button asChild variant="link" className="text-cyan-700 hover:text-cyan-800 h-auto p-0">
+                <Link href="/dashboard/news/new" prefetch={false}>
+                  Write the first article
+                </Link>
+              </Button>
+            ) : null}
           </CardContent>
         </Card>
       ) : (
@@ -103,12 +108,16 @@ export default async function DashboardNewsPage() {
                       </Link>
                     </Button>
                   ) : null}
-                  <Button asChild variant="outline" size="sm" className="text-cyan-800 bg-cyan-50 border-cyan-200 hover:bg-cyan-100 hover:text-cyan-800">
-                    <Link href={`/dashboard/news/${a.id}/edit`} prefetch={false}>
-                      Edit
-                    </Link>
-                  </Button>
-                  <DeleteNewsButton id={a.id} title={a.title} />
+                  {canEditResource(session, 'news', a.createdBy) ? (
+                    <Button asChild variant="outline" size="sm" className="text-cyan-800 bg-cyan-50 border-cyan-200 hover:bg-cyan-100 hover:text-cyan-800">
+                      <Link href={`/dashboard/news/${a.id}/edit`} prefetch={false}>
+                        Edit
+                      </Link>
+                    </Button>
+                  ) : null}
+                  {canDeleteResource(session, 'news', a.createdBy) ? (
+                    <DeleteNewsButton id={a.id} title={a.title} />
+                  ) : null}
                 </div>
               </li>
             )})}

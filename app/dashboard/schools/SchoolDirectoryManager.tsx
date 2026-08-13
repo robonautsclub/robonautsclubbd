@@ -30,6 +30,9 @@ import {
 
 type Props = {
   schools: SchoolDirectoryEntry[]
+  canCreate?: boolean
+  canEdit?: boolean
+  canDelete?: boolean
 }
 
 type Tab = 'directory' | 'pending'
@@ -40,7 +43,12 @@ const emptyDefaults: SchoolDirectoryFormValues = {
   isActive: true,
 }
 
-export default function SchoolDirectoryManager({ schools }: Props) {
+export default function SchoolDirectoryManager({
+  schools,
+  canCreate = false,
+  canEdit = false,
+  canDelete = false,
+}: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [editId, setEditId] = useState<string | null>(null)
@@ -152,9 +160,11 @@ export default function SchoolDirectoryManager({ schools }: Props) {
 
       {tab === 'directory' ? (
         <>
+          {canCreate || canEdit ? (
           <Card className="p-5">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
               <h3 className="text-lg font-semibold text-slate-900">{editId ? 'Edit School' : 'Add School'}</h3>
+              {canCreate ? (
               <Button
                 type="button"
                 variant="secondary"
@@ -164,6 +174,7 @@ export default function SchoolDirectoryManager({ schools }: Props) {
               >
                 Seed Major Schools
               </Button>
+              ) : null}
             </div>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -237,6 +248,7 @@ export default function SchoolDirectoryManager({ schools }: Props) {
             </Form>
             {feedback && <p className="mt-3 text-sm text-gray-700">{feedback}</p>}
           </Card>
+          ) : null}
 
           <Card className="overflow-hidden p-0">
             <div className="px-4 py-3 border-b border-slate-200">
@@ -271,15 +283,17 @@ export default function SchoolDirectoryManager({ schools }: Props) {
                       </Badge>
                     </TableCell>
                     <TableCell className="px-4 py-2 text-right">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => startEdit(school)}
-                        className="text-cyan-700 hover:text-cyan-800"
-                      >
-                        Edit
-                      </Button>
+                      {canEdit ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => startEdit(school)}
+                          className="text-cyan-700 hover:text-cyan-800"
+                        >
+                          Edit
+                        </Button>
+                      ) : null}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -328,25 +342,29 @@ export default function SchoolDirectoryManager({ schools }: Props) {
                       {school.source || '—'}
                     </TableCell>
                     <TableCell className="px-4 py-2 text-right space-x-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        disabled={isPending}
-                        onClick={() => handleConfirm(school.id)}
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        Confirm
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={isPending}
-                        onClick={() => handleReject(school.id)}
-                        className="text-red-600 border-red-200 hover:bg-red-50"
-                      >
-                        Reject
-                      </Button>
+                      {canEdit ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={isPending}
+                          onClick={() => handleConfirm(school.id)}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          Confirm
+                        </Button>
+                      ) : null}
+                      {canDelete || canEdit ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={isPending}
+                          onClick={() => handleReject(school.id)}
+                          className="text-red-600 border-red-200 hover:bg-red-50"
+                        >
+                          Reject
+                        </Button>
+                      ) : null}
                     </TableCell>
                   </TableRow>
                 ))

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { format } from 'date-fns'
-import { Calendar, Clock, MapPin, Users, Mail, User, Banknote } from 'lucide-react'
+import { Calendar, Clock, MapPin, Users, Mail, User, Banknote, Award } from 'lucide-react'
 import type { Booking } from '@/types/booking'
 import type { Event } from '@/types/event'
 import BookingActions from './BookingActions'
@@ -13,16 +13,33 @@ import { Badge } from '@/components/ui/badge'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { downloadPdfFromResponse } from '@/lib/downloadPdfBlob'
 
 type Props = {
   event: Event
   bookings: Booking[]
+  canEdit?: boolean
+  canDelete?: boolean
+  canViewPayments?: boolean
+  canExportExcel?: boolean
+  canExportPdf?: boolean
 }
 
-export default function EventDetailsClient({ event, bookings }: Props) {
+export default function EventDetailsClient({
+  event,
+  bookings,
+  canEdit = false,
+  canDelete = false,
+  canViewPayments = false,
+  canExportExcel = false,
+  canExportPdf = false,
+}: Props) {
   const [showDetails, setShowDetails] = useState(false)
   const [nameFilter, setNameFilter] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
+  const [bulkCertPending, setBulkCertPending] = useState(false)
+
+  const hasCertificateTemplate = Boolean(event.certificateTemplateId?.trim())
 
   const eventDates = parseEventDates(event.date)
 
@@ -63,6 +80,27 @@ export default function EventDetailsClient({ event, bookings }: Props) {
     }
     return Array.from(map.entries())
   }, [bookings])
+
+  const downloadBulkCertificates = async () => {
+    if (!hasCertificateTemplate) {
+      alert('Assign a certificate template on this event first (Edit event).')
+      return
+    }
+    if (filteredBookings.length === 0) return
+    setBulkCertPending(true)
+    try {
+      const response = await fetch(`/api/dashboard/events/${event.id}/certificates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event, bookings: filteredBookings }),
+      })
+      await downloadPdfFromResponse(response, `Certificates-${event.id}.pdf`)
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to download certificates')
+    } finally {
+      setBulkCertPending(false)
+    }
+  }
 
   return (
     <>
@@ -181,13 +219,17 @@ export default function EventDetailsClient({ event, bookings }: Props) {
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-slate-500">Paid Registrations</p>
-            <p className="text-2xl font-bold text-slate-900">{paidCount}</p>
+            <p className="text-2xl font-bold text-slate-900">
+              {canViewPayments ? paidCount : '—'}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-slate-500">Money Collected</p>
-            <p className="text-2xl font-bold text-green-700">BDT {totalCollected}</p>
+            <p className="text-2xl font-bold text-green-700">
+              {canViewPayments ? `BDT ${totalCollected}` : '—'}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -219,7 +261,31 @@ export default function EventDetailsClient({ event, bookings }: Props) {
               Registrations
               <span className="text-xs sm:text-sm font-normal text-slate-500">({filteredBookings.length})</span>
             </h3>
-            <ExportBookingsButton bookings={bookings} eventTitle={event.title} />
+            <div className="flex flex-wrap items-center gap-2">
+              {canExportPdf && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={bulkCertPending || !hasCertificateTemplate || filteredBookings.length === 0}
+                  onClick={() => void downloadBulkCertificates()}
+                  title={
+                    hasCertificateTemplate
+                      ? 'Download certificates for filtered registrations'
+                      : 'Assign a certificate template on the event first'
+                  }
+                >
+                  <Award className="w-4 h-4" />
+                  {bulkCertPending ? 'Certificates…' : 'Certificates'}
+                </Button>
+              )}
+              <ExportBookingsButton
+                bookings={bookings}
+                eventTitle={event.title}
+                canExportExcel={canExportExcel}
+                canExportPdf={canExportPdf}
+              />
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <input
@@ -264,7 +330,9 @@ export default function EventDetailsClient({ event, bookings }: Props) {
                 <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">School</TableHead>
                 <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Email</TableHead>
                 <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider hidden lg:table-cell">Phone</TableHead>
-                <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Paid</TableHead>
+                <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  {canViewPayments ? 'Paid' : 'Status'}
+                </TableHead>
                 <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-xs font-semibold text-gray-700 uppercase tracking-wider">Booked At</TableHead>
                 <TableHead className="px-3 sm:px-6 py-2 sm:py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</TableHead>
               </TableRow>
@@ -307,15 +375,26 @@ export default function EventDetailsClient({ event, bookings }: Props) {
                     </TableCell>
                     <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="text-xs sm:text-sm text-slate-900 flex items-center gap-1">
-                        <Banknote className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
-                        {booking.amountPaid ? `BDT ${booking.amountPaid}` : '—'}
+                        {canViewPayments ? (
+                          <>
+                            <Banknote className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
+                            {booking.amountPaid ? `BDT ${booking.amountPaid}` : '—'}
+                          </>
+                        ) : (
+                          '—'
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="text-xs sm:text-sm text-slate-500">{formattedDate}</div>
                     </TableCell>
                     <TableCell className="px-3 sm:px-6 py-3 sm:py-4 text-right">
-                      <BookingActions booking={booking} event={event} />
+                      <BookingActions
+                        booking={booking}
+                        event={event}
+                        canCancel={canEdit || canDelete}
+                        canDownloadPdf={canExportPdf}
+                      />
                     </TableCell>
                   </TableRow>
                 )

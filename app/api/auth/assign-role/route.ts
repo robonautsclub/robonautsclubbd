@@ -1,46 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth } from '@/lib/firebase-admin'
+import {
+  getDefaultAdminPermissions,
+  getDefaultPermissionsForRole,
+  isDashboardRole,
+  PERMISSIONS_VERSION,
+  sanitizePermissions,
+  type DashboardRole,
+} from '@/lib/dashboard-permissions'
 
 /**
  * Role Assignment API Route
- * Server-side only endpoint that assigns roles via Firebase Custom Claims
- *
- * This endpoint:
- * - Verifies the user's ID token
- * - Checks if email is in SUPER_ADMIN_EMAILS environment variable
- * - Sets custom claim: role = 'superAdmin' or 'admin'
- * - Returns success/error
- *
- * Must be called after login and on token refresh
+ * - SUPER_ADMIN_EMAILS → superAdmin + full permissions
+ * - Otherwise preserve existing admin/moderator role + permissions
+ * - New users with no claims → admin + default admin permissions
  */
 export async function POST(request: NextRequest) {
   try {
-    // Get the ID token from the request
     const authHeader = request.headers.get('authorization')
-    const token = authHeader?.replace('Bearer ', '') || request.cookies.get('auth-token')?.value
+    const token =
+      authHeader?.replace('Bearer ', '') ||
+      request.cookies.get('auth-token')?.value
 
     if (!token) {
       return NextResponse.json(
         { error: 'No authentication token provided' },
-        { status: 401 }
+        { status: 401 },
       )
     }
 
     if (!adminAuth) {
       return NextResponse.json(
         { error: 'Firebase Admin SDK is not configured' },
-        { status: 500 }
+        { status: 500 },
       )
     }
 
-    // Verify the ID token
     let decodedToken
     try {
       decodedToken = await adminAuth.verifyIdToken(token)
-    } catch (error) {
+    } catch {
       return NextResponse.json(
         { error: 'Invalid or expired token' },
-        { status: 401 }
+        { status: 401 },
       )
     }
 
@@ -50,56 +52,94 @@ export async function POST(request: NextRequest) {
     if (!userEmail) {
       return NextResponse.json(
         { error: 'User email not found in token' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
-    // Get Super Admin emails from environment variable
     const superAdminEmailsEnv = process.env.SUPER_ADMIN_EMAILS || ''
     const superAdminEmails = superAdminEmailsEnv
       .split(',')
-      .map(email => email.trim().toLowerCase())
-      .filter(email => email.length > 0)
+      .map((email) => email.trim().toLowerCase())
+      .filter((email) => email.length > 0)
 
-    // Warn if no super admin emails configured (development only)
-    if (superAdminEmails.length === 0 && process.env.NODE_ENV === 'development') {
-      console.warn('WARNING: SUPER_ADMIN_EMAILS environment variable is not set or empty. All users will be assigned admin role.')
+    if (
+      superAdminEmails.length === 0 &&
+      process.env.NODE_ENV === 'development'
+    ) {
+      console.warn(
+        'WARNING: SUPER_ADMIN_EMAILS environment variable is not set or empty.',
+      )
     }
 
-    // Determine role based on email
     const normalizedEmail = userEmail.toLowerCase()
-    const isSuperAdmin = superAdminEmails.includes(normalizedEmail)
-    const role = isSuperAdmin ? 'superAdmin' : 'admin'
+    const isEnvSuperAdmin = superAdminEmails.includes(normalizedEmail)
 
-    // Get current user to check existing claims
     const user = await adminAuth.getUser(uid)
-    const currentRole = user.customClaims?.role as string | undefined
+    const existingRole = isDashboardRole(user.customClaims?.role)
+      ? (user.customClaims!.role as DashboardRole)
+      : undefined
+    const existingVersion = user.customClaims?.permissionsVersion
+    const existingPermissions = sanitizePermissions(
+      user.customClaims?.permissions,
+      { permissionsVersion: existingVersion },
+    )
 
-    // Skip writes when role is already correct to keep login fast.
-    if (currentRole !== role) {
+    let role: DashboardRole
+    let permissions: string[]
+
+    if (isEnvSuperAdmin) {
+      role = 'superAdmin'
+      permissions = getDefaultPermissionsForRole('superAdmin')
+    } else if (existingRole === 'admin' || existingRole === 'moderator') {
+      role = existingRole
+      permissions =
+        existingPermissions.length > 0
+          ? existingPermissions
+          : getDefaultPermissionsForRole(role)
+    } else if (existingRole === 'superAdmin' && !isEnvSuperAdmin) {
+      role = 'admin'
+      permissions = getDefaultAdminPermissions()
+    } else {
+      role = 'admin'
+      permissions = getDefaultAdminPermissions()
+    }
+
+    const currentRole = existingRole
+    const currentPerms = existingPermissions
+    const currentVersion =
+      typeof existingVersion === 'number' ? existingVersion : 0
+    const permsChanged =
+      currentPerms.length !== permissions.length ||
+      permissions.some((p) => !currentPerms.includes(p as never))
+    const versionChanged = currentVersion < PERMISSIONS_VERSION
+
+    if (currentRole !== role || permsChanged || versionChanged) {
       await adminAuth.setCustomUserClaims(uid, {
         role,
+        permissions,
+        permissionsVersion: PERMISSIONS_VERSION,
       })
     }
 
-    // Only revoke tokens if role changed for an existing user
-    // During initial login (currentRole is undefined), we don't revoke tokens
-    // to avoid breaking the login flow. The token will be refreshed naturally.
-    if (currentRole !== undefined && currentRole !== role) {
-      // Role changed for existing user - revoke tokens to force refresh
+    if (
+      currentRole !== undefined &&
+      (currentRole !== role || permsChanged || versionChanged)
+    ) {
       await adminAuth.revokeRefreshTokens(uid)
     }
 
     return NextResponse.json({
       success: true,
       role,
+      permissions,
+      permissionsVersion: PERMISSIONS_VERSION,
       message: `Role assigned: ${role}`,
     })
   } catch (error) {
     console.error('Error assigning role:', error)
     return NextResponse.json(
       { error: 'Failed to assign role' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

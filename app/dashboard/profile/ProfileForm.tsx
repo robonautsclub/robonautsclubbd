@@ -178,11 +178,17 @@ export default function ProfileForm({ session }: ProfileFormProps) {
                 variant="secondary"
                 className={
                   session.role === 'superAdmin'
-                    ? 'bg-slate-100 text-purple-800 hover:bg-slate-100'
-                    : 'bg-blue-100 text-blue-800 hover:bg-blue-100'
+                    ? 'bg-slate-100 text-slate-800 hover:bg-slate-100'
+                    : session.role === 'moderator'
+                      ? 'bg-amber-50 text-amber-800 hover:bg-amber-50'
+                      : 'bg-cyan-50 text-cyan-800 hover:bg-cyan-50'
                 }
               >
-                {session.role === 'superAdmin' ? 'Super Admin' : 'Admin'}
+                {session.role === 'superAdmin'
+                  ? 'Super Admin'
+                  : session.role === 'moderator'
+                    ? 'Moderator'
+                    : 'Admin'}
               </Badge>
             </p>
             <p className="text-xs text-slate-500">Your role is managed by the system and cannot be changed here.</p>

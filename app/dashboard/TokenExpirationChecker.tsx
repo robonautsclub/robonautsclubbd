@@ -99,7 +99,6 @@ export default function TokenExpirationChecker() {
             return
           }
 
-          // Throttle assign-role: most navigations only refresh the cookie (fewer edge hits).
           if (shouldSyncAssignRole()) {
             try {
               const roleResponse = await fetch('/api/auth/assign-role', {
@@ -112,15 +111,32 @@ export default function TokenExpirationChecker() {
               })
 
               if (roleResponse.ok) {
+                const roleData = await roleResponse.json()
                 token = await user.getIdToken(true)
                 markAssignRoleSynced()
+                const remaining = getRemainingSessionSeconds()
+                const userInfo = {
+                  uid: user.uid,
+                  email: user.email || '',
+                  name: user.displayName || user.email || 'Admin',
+                  emailVerified: user.emailVerified,
+                  role: roleData.role || 'admin',
+                  permissions: Array.isArray(roleData.permissions)
+                    ? roleData.permissions
+                    : [],
+                  permissionsVersion:
+                    typeof roleData.permissionsVersion === 'number'
+                      ? roleData.permissionsVersion
+                      : 2,
+                }
+                document.cookie = `user-info=${JSON.stringify(userInfo)}; path=/; max-age=${remaining}; SameSite=Lax`
               }
             } catch (roleError) {
               console.error('Error assigning role during token refresh:', roleError)
             }
           }
 
-          document.cookie = `auth-token=${token}; path=/; max-age=${remainingSeconds}; SameSite=Lax`
+          document.cookie = `auth-token=${token}; path=/; max-age=${getRemainingSessionSeconds()}; SameSite=Lax`
         } catch (error: unknown) {
           console.error('Token refresh error:', error)
           clearSessionCookies()

@@ -1,4 +1,4 @@
-import { requireAuth } from '@/lib/auth'
+import { requireTabAccess } from '@/lib/auth'
 import { getCourses } from '../actions'
 import CoursesClient from './CoursesClient'
 
@@ -6,7 +6,7 @@ import CoursesClient from './CoursesClient'
 export const dynamic = 'force-dynamic'
 
 export default async function CoursesPage() {
-  const session = await requireAuth()
+  const session = await requireTabAccess('courses')
   const courses = await getCourses()
 
   const activeCourses = courses.filter((c) => !c.isArchived)
@@ -19,6 +19,7 @@ export default async function CoursesPage() {
       archivedCourses={archivedCourses}
       sessionId={session.uid}
       userRole={session.role}
+      permissions={session.permissions}
     />
   )
 }

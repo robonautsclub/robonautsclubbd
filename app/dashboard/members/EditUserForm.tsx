@@ -6,10 +6,16 @@ import { useForm } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { X, Mail, User, Lock, Save, Loader2 } from 'lucide-react'
 import { editUserFormSchema, type EditUserFormValues } from '@/lib/validation/members'
+import {
+  getDefaultAdminPermissions,
+  getDefaultModeratorPermissions,
+  type DashboardPermission,
+  type DashboardRole,
+} from '@/lib/dashboard-permissions'
+import StaffPermissionsEditor from './StaffPermissionsEditor'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -26,7 +32,8 @@ type AdminUser = {
   email: string
   displayName: string
   emailVerified: boolean
-  role: 'superAdmin' | 'admin'
+  role: DashboardRole
+  permissions?: DashboardPermission[]
   disabled: boolean
 }
 
@@ -38,6 +45,16 @@ interface EditUserFormProps {
 export default function EditUserForm({ user, onClose }: EditUserFormProps) {
   const router = useRouter()
   const [apiError, setApiError] = useState('')
+  const initialRole: 'admin' | 'moderator' =
+    user.role === 'moderator' ? 'moderator' : 'admin'
+  const [role, setRole] = useState<'admin' | 'moderator'>(initialRole)
+  const [permissions, setPermissions] = useState<DashboardPermission[]>(
+    user.permissions?.length
+      ? user.permissions
+      : initialRole === 'moderator'
+        ? getDefaultModeratorPermissions()
+        : getDefaultAdminPermissions(),
+  )
 
   const form = useForm<EditUserFormValues>({
     resolver: standardSchemaResolver(editUserFormSchema),
@@ -50,6 +67,18 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
 
   const loading = form.formState.isSubmitting
 
+  const onRoleChange = (next: 'admin' | 'moderator') => {
+    setRole(next)
+    // Only reset permissions when switching role type if current set is empty
+    if (permissions.length === 0) {
+      setPermissions(
+        next === 'moderator'
+          ? getDefaultModeratorPermissions()
+          : getDefaultAdminPermissions(),
+      )
+    }
+  }
+
   const onSubmit = async (values: EditUserFormValues) => {
     setApiError('')
     try {
@@ -57,7 +86,12 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
         displayName?: string
         password?: string
         disabled?: boolean
-      } = {}
+        role: 'admin' | 'moderator'
+        permissions: DashboardPermission[]
+      } = {
+        role,
+        permissions,
+      }
 
       if (values.displayName !== user.displayName) {
         updateData.displayName = values.displayName.trim()
@@ -67,11 +101,6 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
       }
       if (values.disabled !== user.disabled) {
         updateData.disabled = values.disabled
-      }
-
-      if (Object.keys(updateData).length === 0) {
-        onClose()
-        return
       }
 
       const response = await fetch(`/api/admin/users/${user.uid}`, {
@@ -90,7 +119,9 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
       onClose()
       router.refresh()
     } catch (err) {
-      setApiError(err instanceof Error ? err.message : 'Failed to update user. Please try again.')
+      setApiError(
+        err instanceof Error ? err.message : 'Failed to update user. Please try again.',
+      )
     }
   }
 
@@ -98,7 +129,7 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
     <Dialog open onOpenChange={(open) => { if (!open && !loading) onClose() }}>
       <DialogContent
         showCloseButton={false}
-        className="sm:max-w-md p-0 gap-0 overflow-hidden flex flex-col max-h-[95vh]"
+        className="sm:max-w-lg p-0 gap-0 overflow-hidden flex flex-col max-h-[95vh]"
       >
         <div className="bg-linear-to-r from-cyan-500 to-blue-600 px-4 sm:px-6 py-4 sm:py-5 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -106,8 +137,12 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
               <User className="w-5 h-5 text-white" />
             </div>
             <div>
-              <DialogTitle className="text-lg sm:text-xl font-bold text-white">Edit User</DialogTitle>
-              <DialogDescription className="text-xs sm:text-sm text-cyan-100">Update user information</DialogDescription>
+              <DialogTitle className="text-lg sm:text-xl font-bold text-white">
+                Edit User
+              </DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm text-cyan-100">
+                Update profile, role, and access
+              </DialogDescription>
             </div>
           </div>
           <Button
@@ -124,7 +159,10 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
 
         <div className="flex-1 overflow-y-auto">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="p-4 sm:p-6 space-y-4 sm:space-y-6"
+            >
               {apiError && (
                 <Alert variant="destructive">
                   <AlertDescription>{apiError}</AlertDescription>
@@ -132,7 +170,10 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
               )}
 
               <div className="space-y-2">
-                <label htmlFor="email" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <label
+                  htmlFor="email"
+                  className="flex items-center gap-2 text-sm font-semibold text-gray-700"
+                >
                   <Mail className="w-4 h-4 text-cyan-700" />
                   Email Address
                 </label>
@@ -141,10 +182,8 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
                   type="email"
                   value={user.email}
                   disabled
-                  placeholder="user@example.com"
                   className="border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-600 cursor-not-allowed opacity-100"
                 />
-                <p className="text-xs text-gray-500">Email address cannot be changed for security reasons.</p>
               </div>
 
               <FormField
@@ -188,7 +227,6 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
                         {...field}
                       />
                     </FormControl>
-                    <p className="text-xs text-gray-500">Only enter a new password if you want to change it</p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -208,30 +246,21 @@ export default function EditUserForm({ user, onClose }: EditUserFormProps) {
                     </FormControl>
                     <div className="space-y-1 leading-none">
                       <FormLabel>Disable user account</FormLabel>
-                      <p className="text-xs text-gray-500">Disabled users cannot sign in</p>
+                      <p className="text-xs text-gray-500">
+                        Disabled users cannot sign in
+                      </p>
                     </div>
                   </FormItem>
                 )}
               />
 
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <p className="text-sm text-gray-700 flex items-center gap-2">
-                  <strong>Role:</strong>{' '}
-                  <Badge
-                    variant="secondary"
-                    className={
-                      user.role === 'superAdmin'
-                        ? 'bg-slate-100 text-purple-800 hover:bg-slate-100'
-                        : 'bg-blue-100 text-blue-800 hover:bg-blue-100'
-                    }
-                  >
-                    {user.role === 'superAdmin' ? 'Super Admin' : 'Admin'}
-                  </Badge>
-                </p>
-                <p className="text-xs text-gray-500 mt-2">
-                  User roles are managed via environment variables and cannot be changed here.
-                </p>
-              </div>
+              <StaffPermissionsEditor
+                role={role}
+                permissions={permissions}
+                onRoleChange={onRoleChange}
+                onPermissionsChange={setPermissions}
+                disabled={loading}
+              />
 
               <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
                 <Button type="button" variant="outline" onClick={onClose} disabled={loading}>

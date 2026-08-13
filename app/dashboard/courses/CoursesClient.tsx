@@ -10,13 +10,19 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import type {
+  DashboardPermission,
+  DashboardRole,
+} from '@/lib/dashboard-permissions'
+import { canCreateArea } from '@/lib/dashboard-permissions'
 
 interface CoursesClientProps {
   courses: Course[]
   activeCourses: Course[]
   archivedCourses: Course[]
   sessionId: string
-  userRole?: 'superAdmin' | 'admin'
+  userRole?: DashboardRole
+  permissions?: DashboardPermission[]
 }
 
 export default function CoursesClient({
@@ -25,8 +31,13 @@ export default function CoursesClient({
   archivedCourses,
   sessionId,
   userRole,
+  permissions = [],
 }: CoursesClientProps) {
   const [filter, setFilter] = useState<'all' | 'active' | 'archived'>('all')
+  const canCreate = canCreateArea(
+    { role: userRole || 'admin', permissions },
+    'courses',
+  )
 
   // Filter courses based on selected filter
   const filteredCourses = courses.filter((course) => {
@@ -43,7 +54,7 @@ export default function CoursesClient({
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Courses Management</h2>
           <p className="text-sm sm:text-base text-slate-600 mt-1">Manage and view all your courses</p>
         </div>
-        <CreateCourseForm />
+        {canCreate ? <CreateCourseForm /> : null}
       </div>
 
       {/* Stats Cards */}
@@ -132,7 +143,7 @@ export default function CoursesClient({
                 ? 'Create your first course to get started'
                 : 'Create your first course to get started'}
             </p>
-            {filter !== 'archived' && <CreateCourseForm />}
+            {filter !== 'archived' && canCreate ? <CreateCourseForm /> : null}
           </CardContent>
         </Card>
       ) : (
@@ -251,7 +262,12 @@ export default function CoursesClient({
                     )}
                   </TableCell>
                   <TableCell className="px-3 sm:px-6 py-4 text-right">
-                    <CourseActions course={course} currentUserId={sessionId} userRole={userRole} />
+                    <CourseActions
+                      course={course}
+                      currentUserId={sessionId}
+                      userRole={userRole}
+                      permissions={permissions}
+                    />
                   </TableCell>
                 </TableRow>
               ))}

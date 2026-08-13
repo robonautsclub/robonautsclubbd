@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from '@/lib/auth'
+import { getServerSession, hasPermission } from '@/lib/auth'
 import { generateBookingConfirmationPDF } from '@/lib/pdfGenerator'
 import { SITE_CONFIG } from '@/lib/site-config'
 import type { Booking } from '@/types/booking'
@@ -19,6 +19,10 @@ export async function POST(
   const session = await getServerSession()
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (!hasPermission(session, 'exports.pdf')) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const { bookingId } = await context.params
