@@ -2,6 +2,7 @@ import {
   getActiveRobofestCategories,
   getRobofestCategoryHref,
   getRobofestCategoryImage,
+  getRobofestCategoryRulesPdf,
   getRobofestContent,
 } from "@/lib/robofest-content";
 import { Button } from "@/components/ui/button";
@@ -142,12 +143,11 @@ export default async function RobofestLocalRoundPage() {
       <section className="relative overflow-hidden px-4 sm:px-6 pt-16 sm:pt-20 md:pt-24 pb-10 sm:pb-14">
         <div className="absolute inset-0 bg-[#5c74b0]" aria-hidden />
         <Image
-          src="/robobanner.gif"
+          src="/robofest/robofestbg.jpeg"
           alt=""
           fill
           priority
-          unoptimized
-          className="object-cover object-center"
+          className="object-cover object-top"
           sizes="100vw"
         />
         <div
@@ -361,6 +361,7 @@ export default async function RobofestLocalRoundPage() {
             <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-5 sm:gap-6">
               {categories.map((category, index) => {
                 const cover = getRobofestCategoryImage(category);
+                const rulesPdf = getRobofestCategoryRulesPdf(category);
                 return (
                   <article
                     key={category.slug}
@@ -397,7 +398,27 @@ export default async function RobofestLocalRoundPage() {
                       <p className="text-sm text-slate-600 leading-relaxed flex-1">
                         {category.description}
                       </p>
-                      <div className="mt-5">
+                      <div className="mt-5 space-y-2">
+                        {rulesPdf ? (
+                          <Button
+                            asChild
+                            variant="outline"
+                            className="w-full border-slate-200 bg-white text-slate-800 hover:bg-slate-50 hover:text-slate-900 font-semibold"
+                          >
+                            <a
+                              href={rulesPdf}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center gap-1.5"
+                            >
+                              <RobofestIcon
+                                name="open_in_new"
+                                className="text-base"
+                              />
+                              View Rulebook
+                            </a>
+                          </Button>
+                        ) : null}
                         <Button
                           asChild
                           className="w-full bg-cyan-600 text-white hover:bg-cyan-700 font-semibold"
