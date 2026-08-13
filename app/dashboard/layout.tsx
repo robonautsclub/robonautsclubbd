@@ -21,6 +21,7 @@ export default async function DashboardLayout({
       <SessionTimer />
       <DashboardShell
         role={session.role}
+        permissions={session.permissions}
         userName={session.name}
         userEmail={session.email}
         headerActions={

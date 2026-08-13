@@ -9,6 +9,8 @@ import {
   type RobofestCampusAmbassador,
 } from '@/lib/robofest-campus-ambassadors'
 
+export const DASHBOARD_ROBOFEST_AMBASSADORS_TAG = 'dashboard-robofest-ambassadors'
+
 export async function listRobofestCampusAmbassadorsFromDb(
   includeInactive = true,
 ): Promise<RobofestCampusAmbassador[]> {
@@ -44,6 +46,20 @@ export async function listRobofestCampusAmbassadorsFromDb(
   }
 
   return sortRobofestCampusAmbassadors(list)
+}
+
+/** Cached dashboard list (invalidate via DASHBOARD_ROBOFEST_AMBASSADORS_TAG). */
+export async function listRobofestCampusAmbassadorsCached(
+  includeInactive = true,
+): Promise<RobofestCampusAmbassador[]> {
+  return unstable_cache(
+    () => listRobofestCampusAmbassadorsFromDb(includeInactive),
+    [DASHBOARD_ROBOFEST_AMBASSADORS_TAG, includeInactive ? 'all' : 'active'],
+    {
+      tags: [DASHBOARD_ROBOFEST_AMBASSADORS_TAG, PUBLIC_ROBOFEST_AMBASSADORS_TAG],
+      revalidate: 600,
+    },
+  )()
 }
 
 /** Active ambassador by id for registration validation. */

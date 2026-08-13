@@ -39,6 +39,9 @@ import {
 
 type Props = {
   ambassadors: RobofestCampusAmbassador[]
+  canCreate?: boolean
+  canEdit?: boolean
+  canDelete?: boolean
 }
 
 const emptyDefaults: CampusAmbassadorFormValues = {
@@ -49,7 +52,12 @@ const emptyDefaults: CampusAmbassadorFormValues = {
   isActive: true,
 }
 
-export default function CampusAmbassadorsManager({ ambassadors }: Props) {
+export default function CampusAmbassadorsManager({
+  ambassadors,
+  canCreate = false,
+  canEdit = false,
+  canDelete = false,
+}: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [editId, setEditId] = useState<string | null>(null)
@@ -168,6 +176,7 @@ export default function CampusAmbassadorsManager({ ambassadors }: Props) {
 
   return (
     <div className="space-y-6">
+      {canCreate || canEdit ? (
       <Card className="p-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div>
@@ -178,6 +187,7 @@ export default function CampusAmbassadorsManager({ ambassadors }: Props) {
               Inactive ambassadors are hidden from public registration forms.
             </p>
           </div>
+          {canCreate ? (
           <Button
             type="button"
             variant="secondary"
@@ -187,6 +197,7 @@ export default function CampusAmbassadorsManager({ ambassadors }: Props) {
           >
             Seed / Sync Roster
           </Button>
+          ) : null}
         </div>
         <Form {...form}>
           <form
@@ -308,6 +319,7 @@ export default function CampusAmbassadorsManager({ ambassadors }: Props) {
           <p className="mt-3 text-sm text-gray-700">{feedback}</p>
         ) : null}
       </Card>
+      ) : null}
 
       <Card className="overflow-hidden p-0">
         <div className="px-4 py-3 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -387,6 +399,8 @@ export default function CampusAmbassadorsManager({ ambassadors }: Props) {
                     </Badge>
                   </TableCell>
                   <TableCell className="px-4 py-2 text-right space-x-1 whitespace-nowrap">
+                    {canEdit ? (
+                      <>
                     <Button
                       type="button"
                       variant="ghost"
@@ -407,6 +421,9 @@ export default function CampusAmbassadorsManager({ ambassadors }: Props) {
                     >
                       {ambassador.isActive ? 'Deactivate' : 'Activate'}
                     </Button>
+                      </>
+                    ) : null}
+                    {canDelete ? (
                     <Button
                       type="button"
                       variant="ghost"
@@ -417,6 +434,7 @@ export default function CampusAmbassadorsManager({ ambassadors }: Props) {
                     >
                       Delete
                     </Button>
+                    ) : null}
                   </TableCell>
                 </TableRow>
               ))

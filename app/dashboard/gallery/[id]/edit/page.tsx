@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { requireAuth } from '@/lib/auth'
+import { requireCreateOrEdit } from '@/lib/auth'
 import { getGalleryGroupForDashboard } from '../../actions'
 import GalleryGroupForm from '../../GalleryGroupForm'
 
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 type Props = { params: Promise<{ id: string }> }
 
 export default async function EditGalleryPage({ params }: Props) {
-  await requireAuth()
+  await requireCreateOrEdit('gallery')
   const { id } = await params
   const group = await getGalleryGroupForDashboard(id)
   if (!group) notFound()

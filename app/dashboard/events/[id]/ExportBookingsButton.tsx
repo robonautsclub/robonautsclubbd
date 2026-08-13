@@ -8,9 +8,16 @@ import { Button } from '@/components/ui/button'
 interface ExportBookingsButtonProps {
   bookings: Booking[]
   eventTitle: string
+  canExportExcel?: boolean
+  canExportPdf?: boolean
 }
 
-export default function ExportBookingsButton({ bookings, eventTitle }: ExportBookingsButtonProps) {
+export default function ExportBookingsButton({
+  bookings,
+  eventTitle,
+  canExportExcel = false,
+  canExportPdf = false,
+}: ExportBookingsButtonProps) {
   const [isPending, startTransition] = useTransition()
 
   const formatBookedAt = (booking: Booking) => {
@@ -185,32 +192,36 @@ export default function ExportBookingsButton({ bookings, eventTitle }: ExportBoo
     })
   }
 
-  if (bookings.length === 0) {
+  if (bookings.length === 0 || (!canExportExcel && !canExportPdf)) {
     return null
   }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Button
-        type="button"
-        onClick={exportToExcel}
-        disabled={isPending}
-        className="bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md"
-        title="Download registrations as Excel file"
-      >
-        <Download className="w-4 h-4" />
-        {isPending ? 'Exporting...' : 'Export to Excel'}
-      </Button>
-      <Button
-        type="button"
-        onClick={exportToPdf}
-        disabled={isPending}
-        className="bg-red-600 hover:bg-red-700 text-white shadow-sm hover:shadow-md"
-        title="Download registrations as PDF file"
-      >
-        <Download className="w-4 h-4" />
-        {isPending ? 'Exporting...' : 'Export as PDF'}
-      </Button>
+      {canExportExcel ? (
+        <Button
+          type="button"
+          onClick={exportToExcel}
+          disabled={isPending}
+          className="bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md"
+          title="Download registrations as Excel file"
+        >
+          <Download className="w-4 h-4" />
+          {isPending ? 'Exporting...' : 'Export to Excel'}
+        </Button>
+      ) : null}
+      {canExportPdf ? (
+        <Button
+          type="button"
+          onClick={exportToPdf}
+          disabled={isPending}
+          className="bg-red-600 hover:bg-red-700 text-white shadow-sm hover:shadow-md"
+          title="Download registrations as PDF file"
+        >
+          <Download className="w-4 h-4" />
+          {isPending ? 'Exporting...' : 'Export as PDF'}
+        </Button>
+      ) : null}
     </div>
   )
 }

@@ -2,6 +2,11 @@ import { format } from 'date-fns'
 import type { RobofestRegistration } from '@/lib/robofest-content'
 import { formatAgeCategoryLabel } from '@/lib/robofest-registration-options'
 
+export type RobofestExportOptions = {
+  /** When false, omit payment status / amounts / trx from exports. */
+  includePayments?: boolean
+}
+
 function dateStamp() {
   return format(new Date(), 'yyyy-MM-dd')
 }
@@ -46,7 +51,11 @@ function memberCells(r: RobofestRegistration) {
   })
 }
 
-export function exportRobofestCsv(rows: RobofestRegistration[]) {
+export function exportRobofestCsv(
+  rows: RobofestRegistration[],
+  options: RobofestExportOptions = {},
+) {
+  const includePayments = options.includePayments !== false
   const memberHeaders = [1, 2, 3, 4].flatMap((n) => [
     `Member ${n} Name`,
     `Member ${n} Email`,
@@ -69,9 +78,7 @@ export function exportRobofestCsv(rows: RobofestRegistration[]) {
     'Division',
     'Competition',
     'Status',
-    'Payment',
-    'Amount Paid',
-    'Trx ID',
+    ...(includePayments ? (['Payment', 'Amount Paid', 'Trx ID'] as const) : []),
     'Created At',
     'Notes',
     ...memberHeaders,
@@ -91,9 +98,9 @@ export function exportRobofestCsv(rows: RobofestRegistration[]) {
       r.roundCity,
       r.category,
       r.status,
-      r.paymentStatus || '',
-      r.amountPaid ?? '',
-      r.trxId || '',
+      ...(includePayments
+        ? [r.paymentStatus || '', r.amountPaid ?? '', r.trxId || '']
+        : []),
       r.createdAt || '',
       r.notes || '',
       ...memberCells(r),
@@ -112,7 +119,11 @@ export function exportRobofestCsv(rows: RobofestRegistration[]) {
   URL.revokeObjectURL(url)
 }
 
-export async function exportRobofestExcel(rows: RobofestRegistration[]) {
+export async function exportRobofestExcel(
+  rows: RobofestRegistration[],
+  options: RobofestExportOptions = {},
+) {
+  const includePayments = options.includePayments !== false
   const XLSX = await import('xlsx')
   const exportData = rows.map((r, index) => {
     const row: Record<string, string | number> = {
@@ -130,9 +141,13 @@ export async function exportRobofestExcel(rows: RobofestRegistration[]) {
       'Campus Ambassador': r.campusAmbassadorName || '',
       'Ambassador School': r.campusAmbassadorSchool || '',
       Status: r.status || '',
-      Payment: r.paymentStatus || '',
-      'Amount Paid': r.amountPaid ?? '',
-      'Trx ID': r.trxId || '',
+      ...(includePayments
+        ? {
+            Payment: r.paymentStatus || '',
+            'Amount Paid': r.amountPaid ?? '',
+            'Trx ID': r.trxId || '',
+          }
+        : {}),
       'Created At': createdLabel(r),
       Notes: r.notes || '',
     }
@@ -158,7 +173,11 @@ export async function exportRobofestExcel(rows: RobofestRegistration[]) {
   XLSX.writeFile(wb, `robofest-registrations-${dateStamp()}.xlsx`)
 }
 
-export async function exportRobofestPdf(rows: RobofestRegistration[]) {
+export async function exportRobofestPdf(
+  rows: RobofestRegistration[],
+  options: RobofestExportOptions = {},
+) {
+  const includePayments = options.includePayments !== false
   const [{ jsPDF }, autoTableModule] = await Promise.all([
     import('jspdf'),
     import('jspdf-autotable'),
@@ -179,16 +198,19 @@ export async function exportRobofestPdf(rows: RobofestRegistration[]) {
   doc.text(`Matching registrations: ${rows.length}`, 40, 60)
   doc.text(`Exported at: ${exportedAt}`, 40, 76)
 
-  const body = rows.map((r, index) => [
-    String(index + 1),
-    r.name || '',
-    r.category || '',
-    r.roundCity || '',
-    ageLabel(r) || '—',
-    membersLabel(r),
-    r.status || '',
-    r.paymentStatus || '—',
-  ])
+  const body = rows.map((r, index) => {
+    const cells = [
+      String(index + 1),
+      r.name || '',
+      r.category || '',
+      r.roundCity || '',
+      ageLabel(r) || '—',
+      membersLabel(r),
+      r.status || '',
+    ]
+    if (includePayments) cells.push(r.paymentStatus || '—')
+    return cells
+  })
 
   autoTable(doc, {
     startY: 92,
@@ -201,7 +223,7 @@ export async function exportRobofestPdf(rows: RobofestRegistration[]) {
         'Age',
         'Team members',
         'Status',
-        'Payment',
+        ...(includePayments ? (['Payment'] as const) : []),
       ],
     ],
     body,

@@ -1,4 +1,4 @@
-import { requireAuth } from '@/lib/auth'
+import { requireTabAccess, canEditArea, canDeleteArea, hasPermission } from '@/lib/auth'
 import { getEvent, getBookings } from '../../actions'
 import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
@@ -14,7 +14,7 @@ export default async function EventDetailsPage({
 }: {
   params: Promise<{ id: string }>
 }) {
-  const session = await requireAuth()
+  const session = await requireTabAccess('events')
   const { id } = await params
   const [event, bookings] = await Promise.all([getEvent(id), getBookings(id)])
 
@@ -31,7 +31,12 @@ export default async function EventDetailsPage({
           <p className="text-sm sm:text-base text-gray-600 mt-1">View event information and registrations</p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-          <EventHeaderActions event={event} currentUserId={session.uid} />
+          <EventHeaderActions
+            event={event}
+            currentUserId={session.uid}
+            userRole={session.role}
+            permissions={session.permissions}
+          />
           <Link
             href="/dashboard/events"
             prefetch={false}
@@ -42,7 +47,15 @@ export default async function EventDetailsPage({
         </div>
       </div>
 
-      <EventDetailsClient event={event} bookings={bookings} />
+      <EventDetailsClient
+        event={event}
+        bookings={bookings}
+        canEdit={canEditArea(session, 'events')}
+        canDelete={canDeleteArea(session, 'events')}
+        canViewPayments={hasPermission(session, 'payments.view')}
+        canExportExcel={hasPermission(session, 'exports.excel')}
+        canExportPdf={hasPermission(session, 'exports.pdf')}
+      />
     </div>
   )
 }

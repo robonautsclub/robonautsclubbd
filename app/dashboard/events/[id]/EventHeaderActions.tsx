@@ -8,20 +8,37 @@ import EditEventForm from '../EditEventForm'
 import DeleteConfirmation from '../DeleteConfirmation'
 import type { Event } from '@/types/event'
 import { Button } from '@/components/ui/button'
+import type {
+  DashboardPermission,
+  DashboardRole,
+} from '@/lib/dashboard-permissions'
+import { canDeleteResource, canEditResource } from '@/lib/dashboard-permissions'
 
 interface EventHeaderActionsProps {
   event: Event
   currentUserId?: string
+  userRole?: DashboardRole
+  permissions?: DashboardPermission[]
 }
 
-export default function EventHeaderActions({ event, currentUserId }: EventHeaderActionsProps) {
+export default function EventHeaderActions({
+  event,
+  currentUserId,
+  userRole,
+  permissions = [],
+}: EventHeaderActionsProps) {
   const router = useRouter()
   const [showEditForm, setShowEditForm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
-  
-  // Only show delete button if current user is the creator
-  const canDelete = currentUserId && event.createdBy === currentUserId
+
+  const session = {
+    role: userRole || 'admin',
+    permissions,
+    uid: currentUserId,
+  }
+  const canEdit = canEditResource(session, 'events', event.createdBy)
+  const canDelete = canDeleteResource(session, 'events', event.createdBy)
 
   const handleDelete = async () => {
     setDeleting(true)
@@ -41,18 +58,22 @@ export default function EventHeaderActions({ event, currentUserId }: EventHeader
     }
   }
 
+  if (!canEdit && !canDelete) return null
+
   return (
     <>
       <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setShowEditForm(true)}
-          className="text-cyan-700 bg-cyan-50 border-cyan-200 hover:bg-cyan-100 hover:text-cyan-700"
-        >
-          <Edit className="w-4 h-4" />
-          Edit Event
-        </Button>
+        {canEdit && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowEditForm(true)}
+            className="text-cyan-700 bg-cyan-50 border-cyan-200 hover:bg-cyan-100 hover:text-cyan-700"
+          >
+            <Edit className="w-4 h-4" />
+            Edit Event
+          </Button>
+        )}
         {canDelete && (
           <Button
             type="button"
@@ -66,14 +87,11 @@ export default function EventHeaderActions({ event, currentUserId }: EventHeader
         )}
       </div>
 
-      {showEditForm && (
-        <EditEventForm
-          event={event}
-          onClose={() => setShowEditForm(false)}
-        />
+      {showEditForm && canEdit && (
+        <EditEventForm event={event} onClose={() => setShowEditForm(false)} />
       )}
 
-      {showDeleteConfirm && (
+      {showDeleteConfirm && canDelete && (
         <DeleteConfirmation
           title="Delete Event"
           message="Are you sure you want to delete this event? All associated bookings will also be deleted."
@@ -85,4 +103,3 @@ export default function EventHeaderActions({ event, currentUserId }: EventHeader
     </>
   )
 }
-

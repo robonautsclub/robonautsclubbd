@@ -21,7 +21,8 @@ export type DashboardMember = {
   email: string
   displayName: string
   emailVerified: boolean
-  role: 'superAdmin' | 'admin'
+  role: 'superAdmin' | 'admin' | 'moderator'
+  permissions?: string[]
   createdAt: string
   lastSignIn: string | null
   disabled: boolean

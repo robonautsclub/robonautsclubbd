@@ -2,7 +2,13 @@
 
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { FieldValue } from 'firebase-admin/firestore'
-import { requireAuth } from '@/lib/auth'
+import {
+  requireAuth,
+  canCreateArea,
+  canEditOthersArea,
+  canDeleteArea,
+  hasPermission,
+} from '@/lib/auth'
 import { adminDb } from '@/lib/firebase-admin'
 import {
   ROBOFEST_CONTENT_CACHE_TAG,
@@ -36,8 +42,23 @@ import {
   type RobofestCampusAmbassador,
   type RobofestCampusAmbassadorWriteInput,
 } from '@/lib/robofest-campus-ambassadors'
-import { listRobofestCampusAmbassadorsFromDb } from '@/lib/robofest-campus-ambassadors-db'
-import { loadRobofestRegistrationsCached } from './registrations-data'
+import {
+  listRobofestCampusAmbassadorsCached,
+  DASHBOARD_ROBOFEST_AMBASSADORS_TAG,
+} from '@/lib/robofest-campus-ambassadors-db'
+import { sanitizeRobofestCertificateSignatures } from '@/lib/robofest-certificate-signatures'
+import {
+  loadRobofestRegistrationsForExport,
+  loadRobofestRegistrationsPage,
+  loadRobofestRegistrationStatusCounts,
+  ROBOFEST_REGISTRATIONS_PAGE_SIZE,
+} from './registrations-data'
+import type {
+  RobofestRegistrationCursor,
+  RobofestRegistrationListFilters,
+  RobofestRegistrationPage,
+  RobofestRegistrationStatusCounts,
+} from './registrations-types'
 
 function revalidateRobofestPublic() {
   revalidateTag(ROBOFEST_CONTENT_CACHE_TAG, 'max')
@@ -48,6 +69,7 @@ function revalidateRobofestPublic() {
 
 function revalidateRobofestAmbassadors() {
   revalidateTag(PUBLIC_ROBOFEST_AMBASSADORS_TAG, 'max')
+  revalidateTag(DASHBOARD_ROBOFEST_AMBASSADORS_TAG, 'max')
   revalidatePath('/dashboard/robofest')
   revalidatePath('/robofest')
   revalidatePath('/robofest', 'layout')
@@ -62,6 +84,9 @@ export async function updateRobofestContent(
   input: RobofestContent,
 ): Promise<{ success: boolean; error?: string }> {
   const session = await requireAuth()
+  if (!canEditOthersArea(session, 'robofest')) {
+    return { success: false, error: 'You do not have permission to edit Robofest.' }
+  }
   if (!adminDb) {
     return { success: false, error: 'Database unavailable.' }
   }
@@ -125,17 +150,11 @@ export async function updateRobofestContent(
         description: step.description.trim(),
       })),
       awardCategories: sanitizeRobofestAwardCategories(input.awardCategories),
-      competitionDirector: (
-        input.competitionDirector ||
-        input.hostName ||
-        defaults.competitionDirector
-      ).trim(),
-      headJudge: (input.headJudge || defaults.headJudge).trim(),
-      eventOrganizer: (
-        input.eventOrganizer ||
-        input.hostName ||
-        defaults.eventOrganizer
-      ).trim(),
+      certificateSignatures: sanitizeRobofestCertificateSignatures(
+        input.certificateSignatures,
+        (input.hostName || defaults.hostName).trim(),
+      ),
+      certificateTemplateId: input.certificateTemplateId?.trim() || null,
       isPaid: Boolean(input.isPaid),
       amount: Number(input.amount) || 0,
       registrationClosingDate: (() => {
@@ -180,9 +199,55 @@ export async function updateRobofestContent(
   }
 }
 
+export async function getRobofestRegistrationsPage(input: {
+  filters: RobofestRegistrationListFilters
+  cursor?: RobofestRegistrationCursor | null
+  pageSize?: number
+}): Promise<RobofestRegistrationPage> {
+  await requireAuth()
+  try {
+    return await loadRobofestRegistrationsPage(input)
+  } catch (error) {
+    console.error('[robofest-dashboard] list registrations page failed:', error)
+    return { items: [], nextCursor: null, hasMore: false }
+  }
+}
+
+export async function getRobofestRegistrationStatusCounts(): Promise<RobofestRegistrationStatusCounts> {
+  await requireAuth()
+  try {
+    return await loadRobofestRegistrationStatusCounts()
+  } catch (error) {
+    console.error('[robofest-dashboard] status counts failed:', error)
+    return { pending: 0, confirmed: 0, cancelled: 0 }
+  }
+}
+
+/** Full filtered list for CSV/Excel/PDF/certificate export (not for table paint). */
+export async function getRobofestRegistrationsForExport(
+  filters: RobofestRegistrationListFilters,
+): Promise<{ success: boolean; items?: RobofestRegistration[]; error?: string }> {
+  await requireAuth()
+  try {
+    const items = await loadRobofestRegistrationsForExport(filters)
+    return { success: true, items }
+  } catch (error) {
+    console.error('[robofest-dashboard] export list failed:', error)
+    return {
+      success: false,
+      error: 'Failed to load registrations for export. Please try again.',
+    }
+  }
+}
+
+/** @deprecated Prefer getRobofestRegistrationsPage — kept for any leftover callers. */
 export async function getRobofestRegistrations(): Promise<RobofestRegistration[]> {
   await requireAuth()
-  return loadRobofestRegistrationsCached()
+  const page = await loadRobofestRegistrationsPage({
+    filters: { status: 'pending' },
+    pageSize: ROBOFEST_REGISTRATIONS_PAGE_SIZE,
+  })
+  return page.items
 }
 
 export async function updateRobofestRegistrationStatus(
@@ -190,7 +255,10 @@ export async function updateRobofestRegistrationStatus(
   status: RobofestRegistrationStatus,
   adminNotes?: string,
 ): Promise<{ success: boolean; error?: string }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!canEditOthersArea(session, 'robofest')) {
+    return { success: false, error: 'You do not have permission to edit Robofest.' }
+  }
   if (!adminDb) return { success: false, error: 'Database unavailable.' }
 
   if (!['pending', 'confirmed', 'cancelled'].includes(status)) {
@@ -219,7 +287,10 @@ export async function updateRobofestMemberAwardCategory(
   memberIndex: number,
   awardCategoryId: string,
 ): Promise<{ success: boolean; error?: string }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!canEditOthersArea(session, 'robofest')) {
+    return { success: false, error: 'You do not have permission to edit Robofest.' }
+  }
   if (!adminDb) return { success: false, error: 'Database unavailable.' }
 
   const trimmedId = (registrationDocId || '').trim()
@@ -285,7 +356,13 @@ export async function resendRobofestRegistrationEmail(
   recipientCount?: number
   emailSendCount?: number
 }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!hasPermission(session, 'mail.send')) {
+    return {
+      success: false,
+      error: 'You do not have permission to send emails from the dashboard.',
+    }
+  }
   const registration = await getRobofestRegistrationById(id)
   if (!registration) {
     return { success: false, error: 'Registration not found.' }
@@ -321,7 +398,10 @@ export async function createRobofestRegistrationManual(
   registrationDocId?: string
   teamNumber?: string
 }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!canCreateArea(session, 'robofest')) {
+    return { success: false, error: 'You do not have permission to create Robofest items.' }
+  }
   if (!adminDb) {
     return { success: false, error: 'Database unavailable.' }
   }
@@ -373,6 +453,12 @@ export async function createRobofestRegistrationManual(
       | undefined
 
     if (input.paymentMode === 'paid_offline') {
+      if (!hasPermission(session, 'payments.view')) {
+        return {
+          success: false,
+          error: 'You do not have permission to set paid amounts.',
+        }
+      }
       const amountPaid =
         typeof input.amountPaid === 'number' && input.amountPaid >= 0
           ? input.amountPaid
@@ -393,7 +479,8 @@ export async function createRobofestRegistrationManual(
         notes: input.notes?.trim() || validated.data.notes || '',
       },
       {
-        sendEmail: input.sendEmail !== false,
+        sendEmail:
+          input.sendEmail !== false && hasPermission(session, 'mail.send'),
         paymentMeta,
       },
     )
@@ -418,6 +505,9 @@ export async function resetRobofestContentToDefaults(): Promise<{
   content?: RobofestContent
 }> {
   const session = await requireAuth()
+  if (!canEditOthersArea(session, 'robofest')) {
+    return { success: false, error: 'You do not have permission to edit Robofest.' }
+  }
   if (!adminDb) return { success: false, error: 'Database unavailable.' }
 
   const defaults = getDefaultRobofestContent()
@@ -458,13 +548,16 @@ export async function getRobofestCampusAmbassadors(): Promise<
       await batch.commit()
     }
   }
-  return listRobofestCampusAmbassadorsFromDb(true)
+  return listRobofestCampusAmbassadorsCached(true)
 }
 
 export async function createRobofestCampusAmbassador(
   input: RobofestCampusAmbassadorWriteInput,
 ): Promise<{ success: boolean; error?: string; id?: string }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!canCreateArea(session, 'robofest')) {
+    return { success: false, error: 'You do not have permission to create Robofest items.' }
+  }
   if (!adminDb) return { success: false, error: 'Database unavailable.' }
 
   const name = (input.name || '').trim()
@@ -502,7 +595,10 @@ export async function updateRobofestCampusAmbassador(
   id: string,
   input: RobofestCampusAmbassadorWriteInput,
 ): Promise<{ success: boolean; error?: string }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!canEditOthersArea(session, 'robofest')) {
+    return { success: false, error: 'You do not have permission to edit Robofest.' }
+  }
   if (!adminDb) return { success: false, error: 'Database unavailable.' }
 
   const trimmedId = (id || '').trim()
@@ -543,7 +639,10 @@ export async function updateRobofestCampusAmbassador(
 export async function deleteRobofestCampusAmbassador(
   id: string,
 ): Promise<{ success: boolean; error?: string }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!canDeleteArea(session, 'robofest')) {
+    return { success: false, error: 'You do not have permission to delete Robofest items.' }
+  }
   if (!adminDb) return { success: false, error: 'Database unavailable.' }
 
   const trimmedId = (id || '').trim()
@@ -566,7 +665,10 @@ export async function seedRobofestCampusAmbassadors(): Promise<{
   success: boolean
   message: string
 }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!canCreateArea(session, 'robofest') && !canEditOthersArea(session, 'robofest')) {
+    return { success: false, message: 'You do not have permission to edit Robofest.' }
+  }
   if (!adminDb) return { success: false, message: 'Database unavailable.' }
 
   const collection = adminDb.collection(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION)

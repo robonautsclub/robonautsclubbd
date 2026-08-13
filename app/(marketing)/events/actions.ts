@@ -195,20 +195,41 @@ export const getPublicEnglishMediumSchools = cache(async (): Promise<string[]> =
   try {
     return unstable_cache(
       async (): Promise<string[]> => {
-        const snapshot = await db
-          .collection(SCHOOL_DIRECTORY_COLLECTION)
-          .get()
-        return snapshot.docs
-          .map((doc) => {
-            const data = doc.data()
-            const name = typeof data.name === 'string' ? data.name.trim() : ''
-            const isActive = typeof data.isActive === 'boolean' ? data.isActive : true
-            const status = data.status === 'pending' ? 'pending' : 'approved'
-            if (!name || !isActive || status !== 'approved') return ''
-            return name
-          })
-          .filter((name): name is string => Boolean(name))
-          .sort((a, b) => a.localeCompare(b))
+        try {
+          const snapshot = await db
+            .collection(SCHOOL_DIRECTORY_COLLECTION)
+            .where('status', '==', 'approved')
+            .where('isActive', '==', true)
+            .select('name')
+            .get()
+          return snapshot.docs
+            .map((doc) => {
+              const name =
+                typeof doc.data().name === 'string' ? doc.data().name.trim() : ''
+              return name
+            })
+            .filter((name): name is string => Boolean(name))
+            .sort((a, b) => a.localeCompare(b))
+        } catch (queryError) {
+          // Missing composite index or legacy docs without status → fall back once.
+          console.warn(
+            'Filtered school query failed; falling back to full scan:',
+            queryError,
+          )
+          const snapshot = await db.collection(SCHOOL_DIRECTORY_COLLECTION).get()
+          return snapshot.docs
+            .map((doc) => {
+              const data = doc.data()
+              const name = typeof data.name === 'string' ? data.name.trim() : ''
+              const isActive =
+                typeof data.isActive === 'boolean' ? data.isActive : true
+              const status = data.status === 'pending' ? 'pending' : 'approved'
+              if (!name || !isActive || status !== 'approved') return ''
+              return name
+            })
+            .filter((name): name is string => Boolean(name))
+            .sort((a, b) => a.localeCompare(b))
+        }
       },
       [PUBLIC_SCHOOLS_TAG],
       { tags: [PUBLIC_SCHOOLS_TAG], revalidate: 3600 }

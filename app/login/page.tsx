@@ -65,7 +65,9 @@ function LoginForm() {
       const token = await userCredential.user.getIdToken()
       const user = userCredential.user
 
-      let assignedRole: 'superAdmin' | 'admin' = 'admin'
+      let assignedRole: 'superAdmin' | 'admin' | 'moderator' = 'admin'
+      let assignedPermissions: string[] = []
+      let assignedPermissionsVersion = 2
       const finalToken = token
 
       try {
@@ -81,6 +83,13 @@ function LoginForm() {
         if (roleResponse.ok) {
           const roleData = await roleResponse.json()
           assignedRole = roleData.role || 'admin'
+          assignedPermissions = Array.isArray(roleData.permissions)
+            ? roleData.permissions
+            : []
+          assignedPermissionsVersion =
+            typeof roleData.permissionsVersion === 'number'
+              ? roleData.permissionsVersion
+              : 2
           try {
             sessionStorage.setItem(ASSIGN_ROLE_LAST_SYNC_STORAGE_KEY, String(Date.now()))
           } catch {
@@ -99,6 +108,8 @@ function LoginForm() {
         name: user.displayName || user.email || 'Admin',
         emailVerified: user.emailVerified,
         role: assignedRole,
+        permissions: assignedPermissions,
+        permissionsVersion: assignedPermissionsVersion,
       }
       document.cookie = `user-info=${JSON.stringify(userInfo)}; path=/; max-age=${SESSION_DURATION_SECONDS}; SameSite=Lax`
 

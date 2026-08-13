@@ -1,4 +1,4 @@
-import { requireAuth } from '@/lib/auth'
+import { requireTabAccess, canCreateArea } from '@/lib/auth'
 import { getEvents } from '../actions'
 import { Calendar, MapPin, Clock, Users, User, Archive } from 'lucide-react'
 import CreateEventForm from './CreateEventForm'
@@ -13,7 +13,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 export const dynamic = 'force-dynamic'
 
 export default async function EventsPage() {
-  const session = await requireAuth()
+  const session = await requireTabAccess('events')
+  const canCreate = canCreateArea(session, 'events')
   const events = await getEvents()
 
   // Separate upcoming and past events
@@ -33,7 +34,7 @@ export default async function EventsPage() {
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Events Management</h2>
           <p className="text-sm sm:text-base text-slate-600 mt-1">Manage and view all your events</p>
         </div>
-        <CreateEventForm />
+        {canCreate ? <CreateEventForm /> : null}
       </div>
 
       {/* Stats Cards */}
@@ -87,7 +88,7 @@ export default async function EventsPage() {
             </div>
             <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">No events yet</h3>
             <p className="text-sm sm:text-base text-slate-600 mb-6">Create your first event to get started</p>
-            <CreateEventForm />
+            {canCreate ? <CreateEventForm /> : null}
           </CardContent>
         </Card>
       ) : (
@@ -194,7 +195,7 @@ export default async function EventsPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="px-3 sm:px-6 py-4 text-right">
-                          <EventActions event={event} currentUserId={session.uid} userRole={session.role} />
+                          <EventActions event={event} currentUserId={session.uid} userRole={session.role} permissions={session.permissions} />
                         </TableCell>
                       </TableRow>
                     )
@@ -306,7 +307,7 @@ export default async function EventsPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="px-3 sm:px-6 py-4 text-right">
-                          <EventActions event={event} currentUserId={session.uid} userRole={session.role} />
+                          <EventActions event={event} currentUserId={session.uid} userRole={session.role} permissions={session.permissions} />
                         </TableCell>
                       </TableRow>
                     )
@@ -325,7 +326,7 @@ export default async function EventsPage() {
                 </div>
                 <h3 className="text-lg sm:text-xl font-semibold text-slate-900 mb-2">No events yet</h3>
                 <p className="text-sm sm:text-base text-slate-600 mb-6">Create your first event to get started</p>
-                <CreateEventForm />
+                {canCreate ? <CreateEventForm /> : null}
               </CardContent>
             </Card>
           )}

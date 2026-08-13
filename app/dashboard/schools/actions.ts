@@ -1,7 +1,7 @@
 'use server'
 
-import { revalidatePath, revalidateTag } from 'next/cache'
-import { requireAuth } from '@/lib/auth'
+import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
+import { requireAuth, canCreateArea, canEditOthersArea, canDeleteArea } from '@/lib/auth'
 import { adminDb } from '@/lib/firebase-admin'
 import {
   BANGLADESH_ENGLISH_MEDIUM_SCHOOLS,
@@ -14,6 +14,19 @@ import { getRobofestCampusAmbassadorSchools } from '@/lib/robofest-campus-ambass
 import { normalizeSchoolName } from '@/lib/pendingSchool'
 
 const PUBLIC_SCHOOLS_TAG = 'public-schools'
+const DASHBOARD_SCHOOLS_TAG = 'dashboard-schools'
+
+function toSerializableDate(
+  value: { toDate?: () => Date } | Date | string | undefined,
+): string | undefined {
+  if (!value) return undefined
+  if (typeof value === 'string') return value
+  if (value instanceof Date) return value.toISOString()
+  if (typeof value === 'object' && typeof value.toDate === 'function') {
+    return value.toDate().toISOString()
+  }
+  return undefined
+}
 
 function mapSchoolDoc(
   id: string,
@@ -25,10 +38,6 @@ function mapSchoolDoc(
   const isActive = typeof data.isActive === 'boolean' ? data.isActive : true
   const status: SchoolDirectoryStatus =
     data.status === 'pending' ? 'pending' : 'approved'
-
-  const requestedAt = data.requestedAt as { toDate?: () => Date } | Date | string | undefined
-  const createdAt = data.createdAt as { toDate?: () => Date } | Date | string | undefined
-  const updatedAt = data.updatedAt as { toDate?: () => Date } | Date | string | undefined
 
   return {
     id,
@@ -50,26 +59,35 @@ function mapSchoolDoc(
       typeof data.requestedByEmail === 'string' && data.requestedByEmail.trim()
         ? data.requestedByEmail.trim()
         : undefined,
-    requestedAt:
-      requestedAt && typeof requestedAt === 'object' && 'toDate' in requestedAt && typeof requestedAt.toDate === 'function'
-        ? requestedAt.toDate()
-        : (requestedAt as Date | string | undefined),
-    createdAt:
-      createdAt && typeof createdAt === 'object' && 'toDate' in createdAt && typeof createdAt.toDate === 'function'
-        ? createdAt.toDate()
-        : (createdAt as Date | string | undefined),
-    updatedAt:
-      updatedAt && typeof updatedAt === 'object' && 'toDate' in updatedAt && typeof updatedAt.toDate === 'function'
-        ? updatedAt.toDate()
-        : (updatedAt as Date | string | undefined),
+    requestedAt: toSerializableDate(
+      data.requestedAt as { toDate?: () => Date } | Date | string | undefined,
+    ),
+    createdAt: toSerializableDate(
+      data.createdAt as { toDate?: () => Date } | Date | string | undefined,
+    ),
+    updatedAt: toSerializableDate(
+      data.updatedAt as { toDate?: () => Date } | Date | string | undefined,
+    ),
   }
 }
 
-export async function getSchoolDirectory(includeInactive = true): Promise<SchoolDirectoryEntry[]> {
-  await requireAuth()
-  if (!adminDb) return []
+function isQuotaExceededError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const err = error as { code?: number | string; message?: string; details?: string }
+  return (
+    err.code === 8 ||
+    err.code === '8' ||
+    err.code === 'resource-exhausted' ||
+    /RESOURCE_EXHAUSTED|Quota exceeded/i.test(String(err.message || '')) ||
+    /Quota exceeded/i.test(String(err.details || ''))
+  )
+}
 
-  const snapshot = await adminDb.collection(SCHOOL_DIRECTORY_COLLECTION).get()
+async function fetchSchoolDirectoryFromDb(
+  includeInactive: boolean,
+): Promise<SchoolDirectoryEntry[]> {
+  const db = adminDb!
+  const snapshot = await db.collection(SCHOOL_DIRECTORY_COLLECTION).get()
   const schools: SchoolDirectoryEntry[] = []
   snapshot.docs.forEach((doc) => {
     const mapped = mapSchoolDoc(doc.id, doc.data() as Record<string, unknown>)
@@ -80,8 +98,40 @@ export async function getSchoolDirectory(includeInactive = true): Promise<School
   return schools.sort((a, b) => a.name.localeCompare(b.name))
 }
 
-export async function createSchoolDirectoryEntry(input: SchoolDirectoryWriteInput): Promise<{ success: boolean; error?: string }> {
+export async function getSchoolDirectory(
+  includeInactive = true,
+): Promise<{ schools: SchoolDirectoryEntry[]; error?: string }> {
   await requireAuth()
+  if (!adminDb) return { schools: [] }
+
+  try {
+    const schools = await unstable_cache(
+      () => fetchSchoolDirectoryFromDb(includeInactive),
+      [DASHBOARD_SCHOOLS_TAG, includeInactive ? 'all' : 'active'],
+      { tags: [DASHBOARD_SCHOOLS_TAG, PUBLIC_SCHOOLS_TAG], revalidate: 600 },
+    )()
+    return { schools }
+  } catch (error) {
+    console.error('Error fetching school directory:', error)
+    if (isQuotaExceededError(error)) {
+      return {
+        schools: [],
+        error:
+          'Firestore quota exceeded. Wait a bit or check usage in the Firebase console, then refresh.',
+      }
+    }
+    return {
+      schools: [],
+      error: 'Failed to load school directory. Please try again.',
+    }
+  }
+}
+
+export async function createSchoolDirectoryEntry(input: SchoolDirectoryWriteInput): Promise<{ success: boolean; error?: string }> {
+  const session = await requireAuth()
+  if (!canCreateArea(session, 'schools')) {
+    return { success: false, error: 'You do not have permission to create schools.' }
+  }
   if (!adminDb) return { success: false, error: 'Service unavailable.' }
 
   const name = normalizeSchoolName(input.name || '')
@@ -115,6 +165,7 @@ export async function createSchoolDirectoryEntry(input: SchoolDirectoryWriteInpu
   revalidatePath('/events')
   revalidatePath('/robofest')
   revalidateTag(PUBLIC_SCHOOLS_TAG, 'max')
+  revalidateTag(DASHBOARD_SCHOOLS_TAG, 'max')
   return { success: true }
 }
 
@@ -122,7 +173,10 @@ export async function updateSchoolDirectoryEntry(
   id: string,
   input: SchoolDirectoryWriteInput
 ): Promise<{ success: boolean; error?: string }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!canEditOthersArea(session, 'schools')) {
+    return { success: false, error: 'You do not have permission to edit schools.' }
+  }
   if (!adminDb) return { success: false, error: 'Service unavailable.' }
   if (!id) return { success: false, error: 'School id is required.' }
 
@@ -150,13 +204,17 @@ export async function updateSchoolDirectoryEntry(
   revalidatePath('/events')
   revalidatePath('/robofest')
   revalidateTag(PUBLIC_SCHOOLS_TAG, 'max')
+  revalidateTag(DASHBOARD_SCHOOLS_TAG, 'max')
   return { success: true }
 }
 
 export async function confirmPendingSchool(
   id: string,
 ): Promise<{ success: boolean; error?: string }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!canEditOthersArea(session, 'schools')) {
+    return { success: false, error: 'You do not have permission to edit schools.' }
+  }
   if (!adminDb) return { success: false, error: 'Service unavailable.' }
   if (!id) return { success: false, error: 'School id is required.' }
 
@@ -200,13 +258,17 @@ export async function confirmPendingSchool(
   revalidatePath('/events')
   revalidatePath('/robofest')
   revalidateTag(PUBLIC_SCHOOLS_TAG, 'max')
+  revalidateTag(DASHBOARD_SCHOOLS_TAG, 'max')
   return { success: true }
 }
 
 export async function rejectPendingSchool(
   id: string,
 ): Promise<{ success: boolean; error?: string }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!canDeleteArea(session, 'schools') && !canEditOthersArea(session, 'schools')) {
+    return { success: false, error: 'You do not have permission to reject schools.' }
+  }
   if (!adminDb) return { success: false, error: 'Service unavailable.' }
   if (!id) return { success: false, error: 'School id is required.' }
 
@@ -224,11 +286,15 @@ export async function rejectPendingSchool(
   await ref.delete()
 
   revalidatePath('/dashboard/schools')
+  revalidateTag(DASHBOARD_SCHOOLS_TAG, 'max')
   return { success: true }
 }
 
 export async function seedEnglishMediumSchools(): Promise<{ success: boolean; message: string }> {
-  await requireAuth()
+  const session = await requireAuth()
+  if (!canCreateArea(session, 'schools') && !canEditOthersArea(session, 'schools')) {
+    return { success: false, message: 'You do not have permission to seed schools.' }
+  }
   if (!adminDb) return { success: false, message: 'Service unavailable.' }
 
   const existingSnapshot = await adminDb.collection(SCHOOL_DIRECTORY_COLLECTION).get()
@@ -279,5 +345,6 @@ export async function seedEnglishMediumSchools(): Promise<{ success: boolean; me
   revalidatePath('/events')
   revalidatePath('/robofest')
   revalidateTag(PUBLIC_SCHOOLS_TAG, 'max')
+  revalidateTag(DASHBOARD_SCHOOLS_TAG, 'max')
   return { success: true, message: created > 0 ? `Added ${created} schools.` : 'Directory already up to date.' }
 }

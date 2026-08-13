@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { requireAuth } from '@/lib/auth'
+import { requireCreateOrEdit } from '@/lib/auth'
 import { getNewsArticleForDashboard } from '../../actions'
 import NewsArticleForm from '../../NewsArticleForm'
 
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 type Props = { params: Promise<{ id: string }> }
 
 export default async function EditNewsPage({ params }: Props) {
-  await requireAuth()
+  await requireCreateOrEdit('news')
   const { id } = await params
   const article = await getNewsArticleForDashboard(id)
   if (!article) notFound()

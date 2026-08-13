@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useTransition, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import {
@@ -23,6 +23,11 @@ import type {
   RobofestRegistrationStatus,
   RobofestTeamMember,
 } from '@/lib/robofest-content'
+import {
+  ROBOFEST_MAX_CERTIFICATE_SIGNATURES,
+  getDefaultCertificateSignatures,
+  type RobofestCertificateSignature,
+} from '@/lib/robofest-certificate-signatures'
 import type { RobofestCampusAmbassador } from '@/lib/robofest-campus-ambassadors'
 import {
   getActiveRobofestAwardCategories,
@@ -36,12 +41,19 @@ import {
 import { formatAgeCategoryLabel } from '@/lib/robofest-registration-options'
 import { cn } from '@/lib/utils'
 import {
+  getRobofestRegistrationsForExport,
+  getRobofestRegistrationsPage,
+  getRobofestRegistrationStatusCounts,
   resendRobofestRegistrationEmail,
   resetRobofestContentToDefaults,
   updateRobofestContent,
   updateRobofestMemberAwardCategory,
   updateRobofestRegistrationStatus,
 } from './actions'
+import type {
+  RobofestRegistrationCursor,
+  RobofestRegistrationStatusCounts,
+} from './registrations-types'
 import {
   exportRobofestCsv,
   exportRobofestExcel,
@@ -50,6 +62,7 @@ import {
 import { downloadPdfFromResponse } from '@/lib/downloadPdfBlob'
 import CreateRobofestRegistrationForm from './CreateRobofestRegistrationForm'
 import CampusAmbassadorsManager from './CampusAmbassadorsManager'
+import CertificateTemplateSelect from '@/app/dashboard/events/CertificateTemplateSelect'
 import DatePicker from '@/app/dashboard/events/DatePicker'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
@@ -138,9 +151,20 @@ function ContentSection({
 
 type Props = {
   initialContent: RobofestContent
-  registrations: RobofestRegistration[]
+  initialRegistrations: RobofestRegistration[]
+  initialNextCursor: RobofestRegistrationCursor | null
+  initialHasMore: boolean
+  initialStatusCounts: RobofestRegistrationStatusCounts
   schools: string[]
   campusAmbassadors: RobofestCampusAmbassador[]
+  canCreate?: boolean
+  canEdit?: boolean
+  canDelete?: boolean
+  canViewPayments?: boolean
+  canSendMail?: boolean
+  canExportCsv?: boolean
+  canExportExcel?: boolean
+  canExportPdf?: boolean
 }
 
 function statusBadgeClass(status: string) {
@@ -296,15 +320,30 @@ function CollapsibleTeamMembers({
 
 export default function RobofestDashboardClient({
   initialContent,
-  registrations,
+  initialRegistrations,
+  initialNextCursor,
+  initialHasMore,
+  initialStatusCounts,
   schools,
   campusAmbassadors,
+  canCreate = false,
+  canEdit = false,
+  canDelete = false,
+  canViewPayments = false,
+  canSendMail = false,
+  canExportCsv = false,
+  canExportExcel = false,
+  canExportPdf = false,
 }: Props) {
   const router = useRouter()
   const [content, setContent] = useState(initialContent)
   const [pending, startTransition] = useTransition()
+  const [listPending, startListTransition] = useTransition()
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [uploadingSignatureId, setUploadingSignatureId] = useState<string | null>(
+    null,
+  )
 
   const [categoryFilter, setCategoryFilter] = useState('')
   const [roundFilter, setRoundFilter] = useState('')
@@ -314,72 +353,96 @@ export default function RobofestDashboardClient({
   const [nameFilter, setNameFilter] = useState('')
   const [exportPending, startExportTransition] = useTransition()
 
-  const statusCounts = useMemo(() => {
-    let pendingCount = 0
-    let confirmedCount = 0
-    let cancelledCount = 0
-    for (const r of registrations) {
-      if (r.status === 'confirmed') confirmedCount += 1
-      else if (r.status === 'cancelled') cancelledCount += 1
-      else pendingCount += 1
-    }
-    return {
-      pending: pendingCount,
-      confirmed: confirmedCount,
-      cancelled: cancelledCount,
-    }
-  }, [registrations])
+  const [registrations, setRegistrations] = useState(initialRegistrations)
+  const [nextCursor, setNextCursor] = useState<RobofestRegistrationCursor | null>(
+    initialNextCursor,
+  )
+  const [hasMore, setHasMore] = useState(initialHasMore)
+  const [statusCounts, setStatusCounts] =
+    useState<RobofestRegistrationStatusCounts>(initialStatusCounts)
 
   const statusScopedCount = statusCounts[statusTab]
 
-  const filtersActive = Boolean(
-    categoryFilter ||
-      roundFilter ||
-      ageCategoryFilter ||
-      nameFilter.trim(),
+  const serverFiltersActive = Boolean(
+    categoryFilter || roundFilter || ageCategoryFilter,
   )
+  const filtersActive = Boolean(serverFiltersActive || nameFilter.trim())
+
+  const listFilters = useMemo(
+    () => ({
+      status: statusTab,
+      category: categoryFilter || undefined,
+      roundCity: roundFilter || undefined,
+      ageCategory: ageCategoryFilter || undefined,
+    }),
+    [statusTab, categoryFilter, roundFilter, ageCategoryFilter],
+  )
+
+  const reloadFirstPage = (filters = listFilters) => {
+    startListTransition(async () => {
+      const [page, counts] = await Promise.all([
+        getRobofestRegistrationsPage({ filters }),
+        getRobofestRegistrationStatusCounts(),
+      ])
+      setRegistrations(page.items)
+      setNextCursor(page.nextCursor)
+      setHasMore(page.hasMore)
+      setStatusCounts(counts)
+    })
+  }
+
+  const skipFilterFetchRef = useRef(true)
+  useEffect(() => {
+    if (skipFilterFetchRef.current) {
+      skipFilterFetchRef.current = false
+      return
+    }
+    reloadFirstPage(listFilters)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refetch when server filters change
+  }, [statusTab, categoryFilter, roundFilter, ageCategoryFilter])
+
+  const loadMore = () => {
+    if (!hasMore || !nextCursor || listPending) return
+    startListTransition(async () => {
+      const page = await getRobofestRegistrationsPage({
+        filters: listFilters,
+        cursor: nextCursor,
+      })
+      setRegistrations((prev) => {
+        const seen = new Set(prev.map((r) => r.id))
+        const appended = page.items.filter((r) => !seen.has(r.id))
+        return [...prev, ...appended]
+      })
+      setNextCursor(page.nextCursor)
+      setHasMore(page.hasMore)
+    })
+  }
 
   const filtered = useMemo(() => {
     const name = nameFilter.trim().toLowerCase()
+    if (!name) return registrations
     return registrations.filter((r) => {
-      const status = r.status === 'confirmed' || r.status === 'cancelled'
-        ? r.status
-        : 'pending'
-      if (status !== statusTab) return false
-      if (categoryFilter && r.category !== categoryFilter) return false
-      if (roundFilter && r.roundCity !== roundFilter) return false
-      if (ageCategoryFilter && r.ageCategory !== ageCategoryFilter) return false
-      if (name) {
-        const haystack = [
-          r.name,
-          r.teamNumber,
-          r.registrationId,
-          r.email,
-          r.phone,
-          r.school,
-          r.campusAmbassadorName,
-          ...(r.teamMembers || []).flatMap((m) => [
-            m.name,
-            m.email,
-            m.phone,
-            m.school,
-          ]),
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase()
-        if (!haystack.includes(name)) return false
-      }
-      return true
+      const haystack = [
+        r.name,
+        r.teamNumber,
+        r.registrationId,
+        r.email,
+        r.phone,
+        r.school,
+        r.campusAmbassadorName,
+        ...(r.teamMembers || []).flatMap((m) => [
+          m.name,
+          m.email,
+          m.phone,
+          m.school,
+        ]),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      return haystack.includes(name)
     })
-  }, [
-    registrations,
-    statusTab,
-    categoryFilter,
-    roundFilter,
-    ageCategoryFilter,
-    nameFilter,
-  ])
+  }, [registrations, nameFilter])
 
   const stats = useMemo(() => {
     const source = filtered
@@ -432,9 +495,44 @@ export default function RobofestDashboardClient({
     startExportTransition(() => {
       ;(async () => {
         try {
-          if (kind === 'csv') exportRobofestCsv(filtered)
-          else if (kind === 'excel') await exportRobofestExcel(filtered)
-          else await exportRobofestPdf(filtered)
+          const result = await getRobofestRegistrationsForExport(listFilters)
+          if (!result.success || !result.items) {
+            alert(result.error || 'Failed to load registrations for export.')
+            return
+          }
+          let items = result.items
+          const name = nameFilter.trim().toLowerCase()
+          if (name) {
+            items = items.filter((r) => {
+              const haystack = [
+                r.name,
+                r.teamNumber,
+                r.registrationId,
+                r.email,
+                r.phone,
+                r.school,
+                r.campusAmbassadorName,
+                ...(r.teamMembers || []).flatMap((m) => [
+                  m.name,
+                  m.email,
+                  m.phone,
+                  m.school,
+                ]),
+              ]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase()
+              return haystack.includes(name)
+            })
+          }
+          if (items.length === 0) {
+            alert('No registrations to export.')
+            return
+          }
+          const opts = { includePayments: canViewPayments }
+          if (kind === 'csv') exportRobofestCsv(items, opts)
+          else if (kind === 'excel') await exportRobofestExcel(items, opts)
+          else await exportRobofestPdf(items, opts)
         } catch (err) {
           console.error(`Robofest ${kind} export failed:`, err)
           alert(`Failed to export ${kind.toUpperCase()}. Please try again.`)
@@ -502,7 +600,7 @@ export default function RobofestDashboardClient({
         alert(result.error || 'Failed to update status')
         return
       }
-      router.refresh()
+      reloadFirstPage()
     })
   }
 
@@ -539,7 +637,17 @@ export default function RobofestDashboardClient({
           ? `Confirmation email sent to ${n} team member${n === 1 ? '' : 's'} (send #${times}).`
           : 'Confirmation email resent.',
       )
-      router.refresh()
+      setRegistrations((prev) =>
+        prev.map((r) =>
+          r.id === id
+            ? {
+                ...r,
+                emailSent: true,
+                emailSendCount: times || (r.emailSendCount ?? 0) + 1,
+              }
+            : r,
+        ),
+      )
     })
   }
 
@@ -605,17 +713,47 @@ export default function RobofestDashboardClient({
   }
 
   const downloadBulkCertificates = () => {
-    if (filtered.length === 0) {
-      alert('No registrations to export.')
-      return
-    }
     startExportTransition(async () => {
       try {
+        const result = await getRobofestRegistrationsForExport(listFilters)
+        if (!result.success || !result.items) {
+          alert(result.error || 'Failed to load registrations for certificates.')
+          return
+        }
+        let items = result.items
+        const name = nameFilter.trim().toLowerCase()
+        if (name) {
+          items = items.filter((r) => {
+            const haystack = [
+              r.name,
+              r.teamNumber,
+              r.registrationId,
+              r.email,
+              r.phone,
+              r.school,
+              r.campusAmbassadorName,
+              ...(r.teamMembers || []).flatMap((m) => [
+                m.name,
+                m.email,
+                m.phone,
+                m.school,
+              ]),
+            ]
+              .filter(Boolean)
+              .join(' ')
+              .toLowerCase()
+            return haystack.includes(name)
+          })
+        }
+        if (items.length === 0) {
+          alert('No registrations to export.')
+          return
+        }
         const response = await fetch('/api/dashboard/robofest/certificates', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            registrations: filtered,
+            registrations: items,
             content,
             statusLabel: statusTab,
           }),
@@ -750,13 +888,12 @@ export default function RobofestDashboardClient({
                   <span className="tabular-nums text-cyan-800">
                     {filtered.length}
                   </span>{' '}
-                  {statusTab} registration
+                  loaded {statusTab} registration
                   {filtered.length === 1 ? '' : 's'}
-                  {filtersActive ? (
-                    <span className="ml-1.5 text-sm font-medium text-slate-500">
-                      of {statusScopedCount} in this tab
-                    </span>
-                  ) : null}
+                  <span className="ml-1.5 text-sm font-medium text-slate-500">
+                    of {statusScopedCount} in this tab
+                    {hasMore ? ' · more available' : ''}
+                  </span>
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2 shrink-0">
@@ -771,13 +908,18 @@ export default function RobofestDashboardClient({
                     Clear filters
                   </Button>
                 ) : null}
-                <CreateRobofestRegistrationForm
-                  content={content}
-                  schools={schools}
-                  campusAmbassadors={campusAmbassadors.filter(
-                    (a) => a.isActive,
-                  )}
-                />
+                {canCreate ? (
+                  <CreateRobofestRegistrationForm
+                    content={content}
+                    schools={schools}
+                    campusAmbassadors={campusAmbassadors.filter(
+                      (a) => a.isActive,
+                    )}
+                    canViewPayments={canViewPayments}
+                    canSendMail={canSendMail}
+                    onCreated={() => reloadFirstPage()}
+                  />
+                ) : null}
               </div>
             </div>
           </div>
@@ -795,15 +937,16 @@ export default function RobofestDashboardClient({
                   {stats.total}
                 </p>
                 <p className="text-xs font-medium text-slate-500 mt-1 tabular-nums">
-                  {stats.registrations} team
+                  {stats.registrations} loaded team
                   {stats.registrations === 1 ? '' : 's'}
                 </p>
               </div>
+              {canViewPayments ? (
               <div className="rounded-xl bg-emerald-50/70 border border-emerald-100 p-3.5">
                 <div className="flex items-center gap-2 text-emerald-700/80 mb-2">
                   <CreditCard className="w-3.5 h-3.5" />
                   <p className="text-[11px] font-semibold uppercase tracking-wide">
-                    Paid
+                    Paid (loaded)
                   </p>
                 </div>
                 <p className="text-3xl font-bold tabular-nums text-emerald-800 tracking-tight">
@@ -813,6 +956,7 @@ export default function RobofestDashboardClient({
                   {stats.paidCount} payment{stats.paidCount === 1 ? '' : 's'}
                 </p>
               </div>
+              ) : null}
             </div>
 
             <div className="xl:col-span-5 p-4 sm:p-5">
@@ -820,7 +964,7 @@ export default function RobofestDashboardClient({
                 <div className="flex items-center gap-2">
                   <Trophy className="w-3.5 h-3.5 text-cyan-700" />
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    By competition
+                    By competition (loaded)
                   </p>
                 </div>
                 <span className="text-[11px] font-medium text-slate-400 tabular-nums">
@@ -985,6 +1129,9 @@ export default function RobofestDashboardClient({
                     className="w-full pl-8 bg-white border-slate-200"
                   />
                 </div>
+                <p className="text-[11px] text-slate-400">
+                  Search within loaded results — load more to include older teams.
+                </p>
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-600">
@@ -1039,58 +1186,70 @@ export default function RobofestDashboardClient({
             </div>
 
             <div className="flex flex-wrap items-center gap-2 pt-1">
+              {(canExportCsv || canExportExcel || canExportPdf) ? (
+                <>
               <span
                 className={cn(
                   'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize',
                   statusTone.chip,
                 )}
               >
-                Export {filtered.length} {statusTab}
+                Export {statusTab} (server)
               </span>
+              {canExportCsv ? (
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => runExport('csv')}
-                disabled={filtered.length === 0 || exportPending}
+                disabled={statusScopedCount === 0 || exportPending}
                 className="bg-white border-slate-200"
               >
                 <FileText className="w-3.5 h-3.5" />
                 CSV
               </Button>
+              ) : null}
+              {canExportExcel ? (
               <Button
                 type="button"
                 size="sm"
                 className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 onClick={() => runExport('excel')}
-                disabled={filtered.length === 0 || exportPending}
+                disabled={statusScopedCount === 0 || exportPending}
               >
                 <FileSpreadsheet className="w-3.5 h-3.5" />
                 Excel
               </Button>
+              ) : null}
+              {canExportPdf ? (
               <Button
                 type="button"
                 size="sm"
                 className="bg-rose-600 hover:bg-rose-700 text-white"
                 onClick={() => runExport('pdf')}
-                disabled={filtered.length === 0 || exportPending}
+                disabled={statusScopedCount === 0 || exportPending}
               >
                 <Download className="w-3.5 h-3.5" />
                 PDF
               </Button>
+              ) : null}
+              {canExportPdf ? (
               <Button
                 type="button"
                 size="sm"
                 className="bg-cyan-700 hover:bg-cyan-800 text-white"
                 onClick={downloadBulkCertificates}
-                disabled={filtered.length === 0 || exportPending}
+                disabled={statusScopedCount === 0 || exportPending}
                 title="Download participation certificates for all participants in this filtered list"
               >
                 <Award className="w-3.5 h-3.5" />
                 Certificates
               </Button>
+              ) : null}
               {exportPending ? (
                 <span className="text-xs text-slate-500">Exporting…</span>
+              ) : null}
+                </>
               ) : null}
             </div>
           </div>
@@ -1116,7 +1275,9 @@ export default function RobofestDashboardClient({
                     <TableHead className="min-w-[11rem]">Members</TableHead>
                     <TableHead className="min-w-[8rem]">Contact</TableHead>
                     <TableHead className="whitespace-nowrap">Status</TableHead>
-                    <TableHead className="whitespace-nowrap">Payment</TableHead>
+                    {canViewPayments ? (
+                      <TableHead className="whitespace-nowrap">Payment</TableHead>
+                    ) : null}
                     <TableHead className="whitespace-nowrap hidden 2xl:table-cell">
                       Created
                     </TableHead>
@@ -1129,7 +1290,7 @@ export default function RobofestDashboardClient({
                   {filtered.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={11}
+                        colSpan={canViewPayments ? 11 : 10}
                         className="text-center text-slate-500 py-12"
                       >
                         <p className="font-medium text-slate-700">
@@ -1196,15 +1357,26 @@ export default function RobofestDashboardClient({
                             members={r.teamMembers}
                             awardCategories={content.awardCategories || []}
                             canDownloadCertificate={
+                              canExportPdf &&
                               Boolean(r.registrationId) &&
                               r.status !== 'cancelled'
                             }
                             certificatePending={pending}
-                            onDownloadCertificate={(memberIndex) =>
-                              downloadMemberCertificate(r, memberIndex)
+                            onDownloadCertificate={
+                              canExportPdf
+                                ? (memberIndex) =>
+                                    downloadMemberCertificate(r, memberIndex)
+                                : undefined
                             }
-                            onAwardChange={(memberIndex, awardCategoryId) =>
-                              setMemberAward(r.id, memberIndex, awardCategoryId)
+                            onAwardChange={
+                              canEdit
+                                ? (memberIndex, awardCategoryId) =>
+                                    setMemberAward(
+                                      r.id,
+                                      memberIndex,
+                                      awardCategoryId,
+                                    )
+                                : undefined
                             }
                           />
                         </TableCell>
@@ -1225,6 +1397,7 @@ export default function RobofestDashboardClient({
                             {r.status}
                           </Badge>
                         </TableCell>
+                        {canViewPayments ? (
                         <TableCell className="text-xs whitespace-nowrap">
                           <div>{r.paymentStatus || '—'}</div>
                           {r.amountPaid != null ? (
@@ -1233,6 +1406,7 @@ export default function RobofestDashboardClient({
                             </div>
                           ) : null}
                         </TableCell>
+                        ) : null}
                         <TableCell className="text-xs whitespace-nowrap hidden 2xl:table-cell">
                           {r.createdAt
                             ? format(new Date(r.createdAt), 'dd MMM yyyy HH:mm')
@@ -1240,6 +1414,8 @@ export default function RobofestDashboardClient({
                         </TableCell>
                         <TableCell className="text-right sticky right-0 bg-white shadow-[-8px_0_12px_-12px_rgba(0,0,0,0.25)]">
                           <div className="flex flex-wrap justify-end gap-1">
+                            {canEdit ? (
+                              <>
                             <Button
                               type="button"
                               size="sm"
@@ -1258,11 +1434,18 @@ export default function RobofestDashboardClient({
                             >
                               Cancel
                             </Button>
+                              </>
+                            ) : null}
+                            {canSendMail ? (
                             <Button
                               type="button"
                               size="sm"
                               variant="outline"
-                              disabled={pending || !r.registrationId}
+                              disabled={
+                                pending ||
+                                !r.registrationId ||
+                                r.status === 'cancelled'
+                              }
                               onClick={() => resendEmail(r.id)}
                               title={
                                 (r.emailSendCount ?? 0) > 0
@@ -1278,6 +1461,8 @@ export default function RobofestDashboardClient({
                                 </span>
                               ) : null}
                             </Button>
+                            ) : null}
+                            {canExportPdf ? (
                             <Button
                               type="button"
                               size="sm"
@@ -1288,6 +1473,7 @@ export default function RobofestDashboardClient({
                             >
                               <Download className="w-3.5 h-3.5" />
                             </Button>
+                            ) : null}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -1296,6 +1482,23 @@ export default function RobofestDashboardClient({
                 </TableBody>
               </Table>
             </div>
+            {hasMore ? (
+              <div className="border-t border-slate-100 px-4 py-3 flex justify-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={listPending}
+                  onClick={loadMore}
+                  className="border-slate-200"
+                >
+                  {listPending ? 'Loading…' : 'Load more'}
+                </Button>
+              </div>
+            ) : null}
+            {listPending && registrations.length === 0 ? (
+              <p className="text-center text-sm text-slate-500 py-6">Loading registrations…</p>
+            ) : null}
           </CardContent>
         </Card>
         </Tabs>
@@ -2096,36 +2299,242 @@ export default function RobofestDashboardClient({
         </ContentSection>
 
         <ContentSection
-          title="Certificate signatures"
-          description="Names printed under the three signature lines on award certificates."
+          title="Certificate template"
+          description="Optional background template from Certificates. When set, downloads use that artwork instead of the built-in Robofest design."
           icon={<Award className="w-4 h-4 text-cyan-500" />}
-          contentClassName="grid sm:grid-cols-3 gap-3"
+          contentClassName="space-y-2"
         >
-          {(
-            [
-              ['competitionDirector', 'Competition Director'],
-              ['headJudge', 'Head Judge'],
-              ['eventOrganizer', 'Event Organizer'],
-            ] as const
-          ).map(([key, label]) => (
-            <div key={key} className="space-y-1">
-              <label className="text-xs text-slate-500">{label}</label>
-              <Input
-                value={content[key] ?? ''}
-                onChange={(e) =>
-                  setContent((prev) => ({ ...prev, [key]: e.target.value }))
-                }
-                placeholder={
-                  key === 'headJudge'
-                    ? 'Head Judge'
-                    : content.hostName || 'Robonauts Ltd'
-                }
-              />
-            </div>
-          ))}
+          <CertificateTemplateSelect
+            value={content.certificateTemplateId || ''}
+            onChange={(v) =>
+              setContent((prev) => ({
+                ...prev,
+                certificateTemplateId: v || null,
+              }))
+            }
+            disabled={pending}
+          />
+        </ContentSection>
+
+        <ContentSection
+          title="Certificate signatures"
+          description="Add up to 4 signatories (name, role/title, optional signature image). They auto-arrange on certificates."
+          icon={<Award className="w-4 h-4 text-cyan-500" />}
+          contentClassName="space-y-3"
+        >
+          {(() => {
+            const signatures =
+              content.certificateSignatures?.length
+                ? content.certificateSignatures
+                : getDefaultCertificateSignatures(content.hostName)
+
+            const ensureList = (
+              prev: RobofestContent,
+            ): RobofestCertificateSignature[] =>
+              prev.certificateSignatures?.length
+                ? [...prev.certificateSignatures]
+                : getDefaultCertificateSignatures(prev.hostName)
+
+            return (
+              <>
+                {signatures.map((sig, index) => {
+                  const updateSig = (
+                    patch: Partial<RobofestCertificateSignature> & {
+                      clearImage?: boolean
+                    },
+                  ) => {
+                    setContent((prev) => {
+                      const list = ensureList(prev)
+                      const next = { ...list[index], ...patch }
+                      if (patch.clearImage || patch.imageUrl === '') {
+                        delete next.imageUrl
+                        delete (next as { clearImage?: boolean }).clearImage
+                      }
+                      list[index] = next
+                      return { ...prev, certificateSignatures: list }
+                    })
+                  }
+                  return (
+                    <div
+                      key={sig.id}
+                      className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 space-y-2"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-xs font-medium text-slate-600">
+                          Signature {index + 1}
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="text-red-600 border-red-200"
+                          disabled={signatures.length <= 1}
+                          onClick={() => {
+                            setContent((prev) => ({
+                              ...prev,
+                              certificateSignatures: ensureList(prev).filter(
+                                (s) => s.id !== sig.id,
+                              ),
+                            }))
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                      <div className="grid sm:grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-xs text-slate-500">Name</label>
+                          <Input
+                            value={sig.name}
+                            onChange={(e) =>
+                              updateSig({ name: e.target.value })
+                            }
+                            placeholder="Signatory name"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs text-slate-500">
+                            Title / position
+                          </label>
+                          <Input
+                            value={sig.title}
+                            onChange={(e) =>
+                              updateSig({ title: e.target.value })
+                            }
+                            placeholder="e.g. Head Judge"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-slate-500">
+                          Signature image (optional)
+                        </label>
+                        <div className="flex flex-wrap items-center gap-3">
+                          {sig.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element -- remote Cloudinary preview
+                            <img
+                              src={sig.imageUrl}
+                              alt={`${sig.name || 'Signature'} preview`}
+                              className="h-12 max-w-[160px] object-contain rounded border border-slate-200 bg-white px-2"
+                            />
+                          ) : (
+                            <span className="text-xs text-slate-400">
+                              No image — blank line on certificate
+                            </span>
+                          )}
+                          <label
+                            className={cn(
+                              'inline-flex h-8 cursor-pointer items-center rounded-md border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 hover:bg-slate-50',
+                              (uploadingSignatureId === sig.id || pending) &&
+                                'pointer-events-none opacity-50',
+                            )}
+                          >
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg,image/webp,image/gif"
+                              className="hidden"
+                              disabled={
+                                uploadingSignatureId === sig.id || pending
+                              }
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0]
+                                e.target.value = ''
+                                if (!file) return
+                                setUploadingSignatureId(sig.id)
+                                setError('')
+                                try {
+                                  const formData = new FormData()
+                                  formData.append('image', file)
+                                  formData.append('folder', 'robofest')
+                                  const response = await fetch(
+                                    '/api/upload-image',
+                                    {
+                                      method: 'POST',
+                                      body: formData,
+                                    },
+                                  )
+                                  const data = await response.json()
+                                  if (!response.ok) {
+                                    throw new Error(
+                                      data.error ||
+                                        'Failed to upload signature',
+                                    )
+                                  }
+                                  updateSig({
+                                    imageUrl: data.secure_url as string,
+                                  })
+                                } catch (err) {
+                                  setError(
+                                    err instanceof Error
+                                      ? err.message
+                                      : 'Failed to upload signature image.',
+                                  )
+                                } finally {
+                                  setUploadingSignatureId(null)
+                                }
+                              }}
+                            />
+                            {uploadingSignatureId === sig.id
+                              ? 'Uploading…'
+                              : sig.imageUrl
+                                ? 'Replace image'
+                                : 'Upload image'}
+                          </label>
+                          {sig.imageUrl ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => updateSig({ clearImage: true })}
+                            >
+                              Clear image
+                            </Button>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+
+                <Button
+                  type="button"
+                  size="sm"
+                  className="bg-cyan-700 hover:bg-cyan-800 text-white"
+                  disabled={
+                    signatures.length >= ROBOFEST_MAX_CERTIFICATE_SIGNATURES
+                  }
+                  onClick={() => {
+                    setContent((prev) => {
+                      const existing = ensureList(prev)
+                      if (
+                        existing.length >= ROBOFEST_MAX_CERTIFICATE_SIGNATURES
+                      ) {
+                        return prev
+                      }
+                      return {
+                        ...prev,
+                        certificateSignatures: [
+                          ...existing,
+                          {
+                            id: `sig-${Date.now().toString(36)}`,
+                            name: '',
+                            title: 'Signatory',
+                          },
+                        ],
+                      }
+                    })
+                  }}
+                >
+                  Add signature
+                </Button>
+              </>
+            )
+          })()}
         </ContentSection>
 
         <div className="flex flex-wrap gap-3">
+          {canEdit ? (
+            <>
           <Button type="button" onClick={saveContent} disabled={pending}>
             {pending ? 'Saving…' : 'Save content'}
           </Button>
@@ -2137,11 +2546,22 @@ export default function RobofestDashboardClient({
           >
             Reset to defaults
           </Button>
+            </>
+          ) : (
+            <p className="text-sm text-slate-500">
+              View only — you do not have permission to edit Robofest content.
+            </p>
+          )}
         </div>
       </TabsContent>
 
       <TabsContent value="ambassadors" className="space-y-4 w-full min-w-0">
-        <CampusAmbassadorsManager ambassadors={campusAmbassadors} />
+        <CampusAmbassadorsManager
+          ambassadors={campusAmbassadors}
+          canCreate={canCreate}
+          canEdit={canEdit}
+          canDelete={canDelete}
+        />
       </TabsContent>
     </Tabs>
   )

@@ -56,6 +56,7 @@ export const dashboardEventFormSchema = z
     contactPersonMobileOrEmail: z.string(),
     customFormFields: z.array(eventCustomFormFieldSchema),
     defaultRegistrationFields: defaultRegistrationFieldsSchema,
+    certificateTemplateId: z.string().optional(),
   })
   .superRefine((formData, ctx) => {
     if (!formData.title.trim()) {

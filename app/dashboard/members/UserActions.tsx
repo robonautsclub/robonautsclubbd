@@ -8,12 +8,15 @@ import DeleteConfirmation from './DeleteConfirmation'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
+import type { DashboardPermission, DashboardRole } from '@/lib/dashboard-permissions'
+
 type User = {
   uid: string
   email: string
   displayName: string
   emailVerified: boolean
-  role: 'superAdmin' | 'admin'
+  role: DashboardRole
+  permissions?: DashboardPermission[]
   disabled: boolean
 }
 

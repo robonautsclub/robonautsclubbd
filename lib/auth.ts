@@ -3,12 +3,90 @@ import { adminAuth } from './firebase-admin'
 import { redirect } from 'next/navigation'
 import { SESSION_DURATION_SECONDS } from './session'
 import { cache } from 'react'
+import {
+  canCreateArea as canCreateAreaPerm,
+  canDeleteArea as canDeleteAreaPerm,
+  canDeleteResource as canDeleteResourcePerm,
+  canEditArea as canEditAreaPerm,
+  canEditOthersArea as canEditOthersAreaPerm,
+  canEditResource as canEditResourcePerm,
+  canViewTab as canViewTabPerm,
+  getDefaultAdminPermissions,
+  getDefaultPermissionsForRole,
+  isDashboardRole,
+  PERMISSIONS_VERSION,
+  sanitizePermissions,
+  sessionHasPermission,
+  type DashboardArea,
+  type DashboardPermission,
+  type DashboardRole,
+} from './dashboard-permissions'
+
+export type {
+  DashboardArea,
+  DashboardPermission,
+  DashboardRole,
+} from './dashboard-permissions'
+
+export {
+  DASHBOARD_AREAS,
+  DASHBOARD_AREA_LABELS,
+  DASHBOARD_STAFF_AREAS,
+  GLOBAL_PERMISSIONS,
+  GLOBAL_PERMISSION_LABELS,
+  PERMISSIONS_VERSION,
+  allDashboardPermissions,
+  getDefaultAdminPermissions,
+  getDefaultModeratorPermissions,
+  getDefaultPermissionsForRole,
+  normalizePermissionGrants,
+  sanitizePermissions,
+  summarizePermissions,
+  tabPermission,
+  createPermission,
+  editPermission,
+  deletePermission,
+} from './dashboard-permissions'
+
+/**
+ * Session type with role + per-area permissions
+ */
+export type Session = {
+  uid: string
+  email: string
+  name: string
+  emailVerified: boolean
+  role: DashboardRole
+  permissions: DashboardPermission[]
+}
+
+function normalizeRole(value: unknown): DashboardRole | undefined {
+  if (isDashboardRole(value)) return value
+  return undefined
+}
+
+function resolvePermissions(
+  role: DashboardRole,
+  claimsPermissions: unknown,
+  permissionsVersion?: unknown,
+): DashboardPermission[] {
+  if (role === 'superAdmin') {
+    return getDefaultPermissionsForRole('superAdmin')
+  }
+  const fromClaims = sanitizePermissions(claimsPermissions, {
+    permissionsVersion,
+  })
+  if (fromClaims.length > 0) return fromClaims
+  // Legacy users with role but no permissions claim → admin defaults
+  if (role === 'admin') return getDefaultAdminPermissions()
+  return getDefaultPermissionsForRole(role)
+}
 
 /**
  * Get the current user session from the auth token cookie (server-side)
  * Returns the decoded token with user info, or null if not authenticated
  */
-export const getServerSession = cache(async () => {
+export const getServerSession = cache(async (): Promise<Session | null> => {
   try {
     const cookieStore = await cookies()
     const token = cookieStore.get('auth-token')?.value
@@ -18,28 +96,35 @@ export const getServerSession = cache(async () => {
       return null
     }
 
-    // If Admin SDK is available, verify the token properly
     if (adminAuth) {
       try {
         const decodedToken = await adminAuth.verifyIdToken(token)
         const uid = decodedToken.uid
 
-        const normalizeRole = (value: unknown): 'superAdmin' | 'admin' | undefined => {
-          if (value === 'superAdmin' || value === 'admin') return value
-          return undefined
-        }
-
         let role = normalizeRole(decodedToken.role)
+        let permissionsVersion = decodedToken.permissionsVersion
+        let rawPermissions = decodedToken.permissions
         let email = (decodedToken.email as string | undefined) ?? ''
         let name = (decodedToken.name as string | undefined) ?? ''
         let emailVerified = Boolean(decodedToken.email_verified)
 
-        // One Firebase Auth round-trip only when the ID token lacks role or email
-        // (e.g. stale token before custom-claim refresh, or missing standard claims).
-        if (!role || !email) {
+        if (
+          !role ||
+          !email ||
+          (role !== 'superAdmin' &&
+            sanitizePermissions(rawPermissions, { permissionsVersion })
+              .length === 0)
+        ) {
           const user = await adminAuth.getUser(uid)
           if (!role) {
             role = normalizeRole(user.customClaims?.role) ?? 'admin'
+          }
+          if (
+            sanitizePermissions(rawPermissions, { permissionsVersion })
+              .length === 0
+          ) {
+            rawPermissions = user.customClaims?.permissions
+            permissionsVersion = user.customClaims?.permissionsVersion
           }
           if (!email) {
             email = user.email ?? ''
@@ -49,54 +134,57 @@ export const getServerSession = cache(async () => {
           }
           emailVerified = user.emailVerified
         } else {
-          role = role ?? 'admin'
           if (!name) {
             name = email || 'Admin'
           }
         }
 
+        const resolvedRole = role ?? 'admin'
         return {
           uid,
           email,
           name,
           emailVerified,
-          role: role ?? 'admin',
+          role: resolvedRole,
+          permissions: resolvePermissions(
+            resolvedRole,
+            rawPermissions,
+            permissionsVersion,
+          ),
         }
       } catch (error: unknown) {
         const errorObj = error as { code?: string; message?: string }
         const errorCode = errorObj.code
-        
-        // Handle expected token expiration/invalidation errors silently
-        // These are normal part of the auth flow and don't need to be logged as errors
-        if (errorCode === 'auth/id-token-expired' || 
-            errorCode === 'auth/argument-error' ||
-            errorCode === 'auth/invalid-id-token') {
-          // Token is expired or invalid - return null to trigger redirect
-          // This is expected behavior and will be handled by redirecting to login
+
+        if (
+          errorCode === 'auth/id-token-expired' ||
+          errorCode === 'auth/argument-error' ||
+          errorCode === 'auth/invalid-id-token'
+        ) {
           return null
         }
-        
-        // Log unexpected errors (network issues, server errors, etc.)
+
         console.error('Unexpected error verifying auth token:', error)
-        
         return null
       }
     }
 
-    // Fallback: If Admin SDK is not available, use stored user info
-    // This is less secure but allows the app to work without Admin SDK
-    // Note: Role will default to 'admin' in fallback mode
     if (userInfo) {
       try {
         const parsed = JSON.parse(userInfo)
-        // Basic validation - ensure it has required fields
         if (parsed.uid && parsed.email) {
+          const role = normalizeRole(parsed.role) ?? 'admin'
           return {
             uid: parsed.uid,
             email: parsed.email,
             name: parsed.name || parsed.email || 'Admin',
             emailVerified: parsed.emailVerified || false,
-            role: (parsed.role === 'superAdmin' || parsed.role === 'admin' ? parsed.role : 'admin') as 'superAdmin' | 'admin', // Default to admin if role not in cookie
+            role,
+            permissions: resolvePermissions(
+              role,
+              parsed.permissions,
+              parsed.permissionsVersion,
+            ),
           }
         }
       } catch (error) {
@@ -104,8 +192,9 @@ export const getServerSession = cache(async () => {
       }
     }
 
-    // If no user info and no Admin SDK, return null (not authenticated)
-    console.warn('Firebase Admin SDK not available and no user info found. Session verification failed.')
+    console.warn(
+      'Firebase Admin SDK not available and no user info found. Session verification failed.',
+    )
     return null
   } catch (error) {
     console.error('Error getting server session:', error)
@@ -115,25 +204,19 @@ export const getServerSession = cache(async () => {
 
 /**
  * Require authentication - redirects to login if not authenticated
- * Also redirects if token is expired or invalid
- * Use this in server components and server actions
  */
 export async function requireAuth() {
   const session = await getServerSession()
-  
+
   if (!session) {
-    // Redirect to login - cookie clearing should be handled in logout route handler
-    // Cookies cannot be modified from page components or server functions,
-    // only from Server Actions or Route Handlers
     redirect('/login')
   }
-  
+
   return session
 }
 
 /**
  * Set auth token in cookie (client-side helper)
- * This should be called after successful login
  */
 export function setAuthToken(token: string) {
   document.cookie = `auth-token=${token}; path=/; max-age=${SESSION_DURATION_SECONDS}; SameSite=Lax`
@@ -141,56 +224,113 @@ export function setAuthToken(token: string) {
 
 /**
  * Clear auth token cookie (client-side helper)
- * This should be called on logout
  */
 export function clearAuthToken() {
   document.cookie = 'auth-token=; path=/; max-age=0'
 }
 
-/**
- * Session type with role information
- */
-export type Session = {
-  uid: string
-  email: string
-  name: string
-  emailVerified: boolean
-  role: 'superAdmin' | 'admin'
-}
-
-/**
- * Check if user is Super Admin
- */
 export function isSuperAdmin(session: Session | null): boolean {
   return session?.role === 'superAdmin'
 }
 
-/**
- * Check if user is Admin (includes Super Admin)
- */
+/** Any staff role that can enter the dashboard. */
 export function isAdmin(session: Session | null): boolean {
-  return session?.role === 'admin' || session?.role === 'superAdmin'
+  return (
+    session?.role === 'admin' ||
+    session?.role === 'superAdmin' ||
+    session?.role === 'moderator'
+  )
 }
 
-/**
- * Get user role from session
- */
-export function getUserRole(session: Session | null): 'superAdmin' | 'admin' | null {
+export function getUserRole(session: Session | null): DashboardRole | null {
   return session?.role || null
 }
 
-/**
- * Require Super Admin - redirects to dashboard if not Super Admin
- * Use this in server components and server actions that require Super Admin access
- */
+export function hasPermission(
+  session: Session | null,
+  permission: DashboardPermission,
+): boolean {
+  return sessionHasPermission(session, permission)
+}
+
+export function canViewTab(
+  session: Session | null,
+  area: DashboardArea,
+): boolean {
+  return canViewTabPerm(session, area)
+}
+
+export function canCreateArea(
+  session: Session | null,
+  area: DashboardArea,
+): boolean {
+  return canCreateAreaPerm(session, area)
+}
+
+export function canEditOthersArea(
+  session: Session | null,
+  area: DashboardArea,
+): boolean {
+  return canEditOthersAreaPerm(session, area)
+}
+
+export function canEditArea(
+  session: Session | null,
+  area: DashboardArea,
+): boolean {
+  return canEditAreaPerm(session, area)
+}
+
+export function canDeleteArea(
+  session: Session | null,
+  area: DashboardArea,
+): boolean {
+  return canDeleteAreaPerm(session, area)
+}
+
+export function canEditResource(
+  session: Session | null,
+  area: DashboardArea,
+  createdBy: string | null | undefined,
+): boolean {
+  return canEditResourcePerm(session, area, createdBy)
+}
+
+export function canDeleteResource(
+  session: Session | null,
+  area: DashboardArea,
+  createdBy: string | null | undefined,
+): boolean {
+  return canDeleteResourcePerm(session, area, createdBy)
+}
+
 export async function requireSuperAdmin() {
   const session = await requireAuth()
-  
+
   if (session.role !== 'superAdmin') {
-    // Redirect to dashboard if not Super Admin
     redirect('/dashboard')
   }
-  
+
   return session
 }
 
+export async function requirePermission(permission: DashboardPermission) {
+  const session = await requireAuth()
+  if (!hasPermission(session, permission)) {
+    redirect('/dashboard')
+  }
+  return session
+}
+
+/** Open create/edit UI if user can create or edit-others in the area. */
+export async function requireCreateOrEdit(area: DashboardArea) {
+  const session = await requireAuth()
+  if (!canCreateArea(session, area) && !canEditOthersArea(session, area)) {
+    redirect('/dashboard')
+  }
+  return session
+}
+
+export async function requireTabAccess(area: DashboardArea) {
+  return requirePermission(`tab:${area}`)
+}
