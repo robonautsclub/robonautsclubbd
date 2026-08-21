@@ -42,7 +42,7 @@ export default async function Home() {
   const initialUpcomingEvents = events.filter((e) => isEventUpcoming(e.date))
 
   return (
-    <main className="flex flex-col w-full min-w-full">
+    <main id="main" className="flex flex-col w-full min-w-full">
       <Feed
         initialCourses={courses}
         initialUpcomingEvents={initialUpcomingEvents}
