@@ -60,38 +60,38 @@ export default function Hero({ upcomingEvents = [] }: { upcomingEvents?: Event[]
           />
         </div>
       )}
-      {/* Dark overlay for text readability */}
-      <div className="absolute inset-0 z-1 bg-black/55" aria-hidden="true" />
+      {/* Cooler slate-tinted scrim for quieter readability */}
+      <div className="absolute inset-0 z-1 bg-slate-950/50" aria-hidden="true" />
       {/* Background decoration */}
-      <div className="absolute inset-0 opacity-30 w-full z-1 pointer-events-none">
-        <div className="absolute top-0 right-0  h-96 bg-blue-200 w-full rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
-        <div className="absolute bottom-0 left-0  h-96 bg-indigo-200 w-full rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2" />
+      <div className="absolute inset-0 opacity-20 w-full z-1 pointer-events-none">
+        <div className="absolute top-0 right-0 h-80 w-80 bg-sky-300/40 rounded-full blur-3xl transform translate-x-1/3 -translate-y-1/3" />
+        <div className="absolute bottom-0 left-0 h-72 w-72 bg-indigo-300/30 rounded-full blur-3xl transform -translate-x-1/3 translate-y-1/3" />
       </div>
 
-      <div className="relative mt-50 z-10 w-full min-w-full px-4 sm:px-6 lg:px-8 py-16 sm:py-20 md:py-24 lg:py-28 xl:py-36">
+      <div className="relative mt-40 sm:mt-48 z-10 w-full min-w-full px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-20 lg:py-24">
         <div className="grid lg:grid-cols-2 gap-8 md:gap-12 lg:gap-16 items-center">
           {/* Left Column - Content */}
-          <div className="text-center lg:ml-12 lg:text-left space-y-6 md:space-y-8 lg:space-y-10">
+          <div className="text-center lg:ml-12 lg:text-left space-y-5 md:space-y-7">
             {/* Main Tagline */}
-            <div className="space-y-4 md:space-y-6">
+            <div className="space-y-3 md:space-y-5">
               <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
                 <span className="block">Build Skills.</span>
                 <span className="block">Break Barriers.</span>
-                <span className="block text-transparent bg-clip-text bg-linear-to-r from-indigo-300 to-blue-300 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+                <span className="block text-transparent bg-clip-text bg-linear-to-r from-sky-200 to-indigo-200 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
                   Go Global.
                 </span>
               </h1>
-              <p className="text-base sm:text-lg md:text-xl text-gray-100 max-w-xl mx-auto lg:mx-0 leading-relaxed px-4 sm:px-0 drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
+              <p className="text-base sm:text-lg md:text-xl text-slate-100/95 max-w-xl mx-auto lg:mx-0 leading-relaxed px-4 sm:px-0 drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
                 Empowering the next generation of robotics innovators through hands-on learning and global competition.
               </p>
             </div>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start pt-2 sm:pt-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start pt-1 sm:pt-2">
               <Button
                 asChild
                 size="lg"
-                className="bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg hover:shadow-xl text-sm sm:text-base"
+                className="bg-indigo-500 text-white hover:bg-indigo-600 shadow-md hover:shadow-lg text-sm sm:text-base"
               >
                 <Link href="/events" prefetch={false}>
                   Explore Events
@@ -102,7 +102,7 @@ export default function Hero({ upcomingEvents = [] }: { upcomingEvents?: Event[]
                 asChild
                 size="lg"
                 variant="outline"
-                className="bg-white text-indigo-500 border-2 border-indigo-100 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 text-sm sm:text-base"
+                className="bg-white/10 text-white border border-white/35 backdrop-blur-sm hover:bg-white/20 hover:text-white hover:border-white/50 text-sm sm:text-base"
               >
                 <Link href="/about" prefetch={false}>
                   Learn More
@@ -160,7 +160,7 @@ export default function Hero({ upcomingEvents = [] }: { upcomingEvents?: Event[]
       ) : null}
 
       {/* Bottom wave decoration */}
-      <div className="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-white to-transparent z-1" />
+      <div className="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-slate-50 to-transparent z-1" />
     </section>
   )
 }

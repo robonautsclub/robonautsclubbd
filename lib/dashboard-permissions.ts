@@ -18,7 +18,7 @@ export const DASHBOARD_ROLES = ['superAdmin', 'admin', 'moderator'] as const
 export type DashboardRole = (typeof DASHBOARD_ROLES)[number]
 
 /** Bump when permission semantics change; used to migrate stored claims. */
-export const PERMISSIONS_VERSION = 4
+export const PERMISSIONS_VERSION = 5
 
 export const DASHBOARD_AREAS = [
   'events',
@@ -26,6 +26,7 @@ export const DASHBOARD_AREAS = [
   'news',
   'gallery',
   'schools',
+  'partners',
   'robofest',
   'certificates',
   'members',
@@ -39,6 +40,7 @@ export const DASHBOARD_AREA_LABELS: Record<DashboardArea, string> = {
   news: 'News',
   gallery: 'Gallery',
   schools: 'Schools',
+  partners: 'Partners & Schools',
   robofest: 'Robofest',
   certificates: 'Certificates',
   members: 'Members',
