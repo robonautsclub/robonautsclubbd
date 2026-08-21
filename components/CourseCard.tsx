@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowRight } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 
 type CourseCardProps = {
   title: string
@@ -10,6 +10,21 @@ type CourseCardProps = {
   blurb: string
   href?: string
   img?: string
+  variant?: 'default' | 'featured'
+}
+
+function getLevelColor(levelText: string) {
+  const lower = levelText.toLowerCase()
+  if (lower.includes('beginner') || lower.includes('junior') || lower.includes('all')) {
+    return 'bg-emerald-50 text-emerald-700 border-emerald-200/80'
+  }
+  if (lower.includes('intermediate') || lower.includes('senior')) {
+    return 'bg-sky-50 text-sky-700 border-sky-200/80'
+  }
+  if (lower.includes('advanced')) {
+    return 'bg-indigo-50 text-indigo-700 border-indigo-200/80'
+  }
+  return 'bg-slate-50 text-slate-700 border-slate-200/80'
 }
 
 export default function CourseCard({
@@ -18,70 +33,116 @@ export default function CourseCard({
   blurb,
   href = '#',
   img,
+  variant = 'default',
 }: CourseCardProps) {
-  // Determine badge color based on level text
-  const getLevelColor = (levelText: string) => {
-    const lower = levelText.toLowerCase()
-    if (lower.includes('beginner') || lower.includes('junior') || lower.includes('all')) {
-      return 'bg-green-100 text-green-700 border-green-200'
-    }
-    if (lower.includes('intermediate') || lower.includes('senior')) {
-      return 'bg-blue-100 text-blue-600 border-blue-200'
-    }
-    if (lower.includes('advanced')) {
-      return 'bg-purple-100 text-purple-600 border-purple-200'
-    }
-    // Default for "For All" or other cases
-    return 'bg-indigo-100 text-indigo-600 border-indigo-200'
+  const featured = variant === 'featured'
+  const shortBlurb = !blurb || blurb.trim().length < 80
+
+  if (featured) {
+    return (
+      <Link href={href} prefetch={false} className="block h-full">
+        <article className="group relative grid h-full overflow-hidden rounded-3xl border border-slate-200/80 bg-white transition-all duration-300 ease-out hover:-translate-y-1 hover:border-indigo-200 hover:shadow-[0_24px_50px_-28px_rgba(79,70,229,0.4)] lg:grid-cols-[1.15fr_0.85fr]">
+          <div className="relative min-h-52 overflow-hidden bg-linear-to-br from-slate-100 via-indigo-50 to-sky-50 sm:min-h-64 lg:min-h-[22rem]">
+            {img ? (
+              <>
+                <Image
+                  src={img}
+                  alt={title}
+                  fill
+                  className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                  quality={80}
+                  sizes="(max-width: 1024px) 100vw, 55vw"
+                  loading="eager"
+                />
+                <div className="absolute inset-0 bg-linear-to-t from-slate-950/40 via-transparent to-transparent lg:bg-linear-to-r lg:from-transparent lg:to-slate-950/10" />
+              </>
+            ) : null}
+            <Badge
+              variant="outline"
+              className={cn(
+                'absolute top-3 left-3 z-10 px-2.5 py-1 text-xs font-semibold shadow-sm backdrop-blur-sm',
+                getLevelColor(level),
+              )}
+            >
+              {level}
+            </Badge>
+          </div>
+
+          <div className="flex flex-col justify-center p-5 sm:p-7 lg:p-8">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-indigo-600">
+              Featured program
+            </p>
+            <h3 className="mt-2 text-2xl font-semibold leading-snug text-gray-900 transition-colors duration-300 group-hover:text-indigo-700 sm:text-3xl">
+              {title}
+            </h3>
+            {blurb ? (
+              <p
+                className={cn(
+                  'mt-3 leading-relaxed text-gray-600',
+                  shortBlurb ? 'text-base' : 'line-clamp-3 text-sm sm:text-base',
+                )}
+              >
+                {blurb}
+              </p>
+            ) : null}
+            <div className="mt-6 flex items-center gap-2 text-sm font-semibold text-indigo-600">
+              <span>Explore this program</span>
+              <ArrowRight className="size-4 transition-transform duration-300 group-hover:translate-x-1" />
+            </div>
+          </div>
+        </article>
+      </Link>
+    )
   }
 
   return (
-    <Link href={href} prefetch={false} className="h-full">
-      <Card className="group relative border-2 hover:border-indigo-300 overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 h-full flex flex-col transform hover:-translate-y-1 sm:hover:-translate-y-2 p-0">
-        {/* Image Section - shorter on mobile */}
-        <div className="relative h-36 sm:h-52 bg-linear-to-br from-indigo-400 via-blue-400 to-purple-400 overflow-hidden">
+    <Link href={href} prefetch={false} className="block h-full">
+      <article
+        className={cn(
+          'group relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-white transition-all duration-300 ease-out',
+          'hover:-translate-y-1 hover:border-indigo-200 hover:shadow-[0_24px_50px_-28px_rgba(79,70,229,0.4)]',
+        )}
+      >
+        <div className="relative h-36 overflow-hidden bg-linear-to-br from-slate-100 via-indigo-50 to-sky-50 sm:h-40">
           {img ? (
             <>
               <Image
                 src={img}
                 alt={title}
                 fill
-                className="object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+                className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                 quality={80}
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 loading="lazy"
               />
-              <div className="absolute inset-0 bg-linear-to-t from-black/20 via-transparent to-transparent group-hover:from-black/30 transition-all duration-300" />
+              <div className="absolute inset-0 bg-linear-to-t from-slate-950/35 via-transparent to-transparent" />
             </>
-          ) : (
-            <div className="absolute inset-0 bg-linear-to-t from-black/20 via-transparent to-transparent group-hover:from-black/30 transition-all duration-300" />
-          )}
-          {/* Level Badge */}
+          ) : null}
           <Badge
             variant="outline"
-            className={`absolute top-2 right-2 sm:top-4 sm:right-4 z-10 transform group-hover:scale-110 transition-transform duration-300 px-2.5 py-1 sm:px-4 sm:py-2 text-xs font-bold shadow-lg backdrop-blur-sm ${getLevelColor(level)}`}
+            className={cn(
+              'absolute top-3 right-3 z-10 px-2.5 py-1 text-xs font-semibold shadow-sm backdrop-blur-sm',
+              getLevelColor(level),
+            )}
           >
             {level}
           </Badge>
         </div>
 
-        {/* Content Section - compact on mobile */}
-        <CardContent className="p-4 sm:p-7 flex flex-col flex-1 bg-white">
-          <h3 className="text-base sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3 group-hover:text-indigo-600 transition-colors duration-300 line-clamp-2 leading-tight">
+        <div className="flex flex-1 flex-col p-4 sm:p-5">
+          <h3 className="line-clamp-2 text-base font-semibold leading-snug text-gray-900 transition-colors duration-300 group-hover:text-indigo-700 sm:text-lg">
             {title}
           </h3>
-          <p className="hidden sm:block text-gray-600 mb-5 flex-1 line-clamp-3 leading-relaxed text-sm">{blurb}</p>
+          {blurb ? (
+            <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-gray-600">{blurb}</p>
+          ) : null}
 
-          {/* CTA Button */}
-          <div className="mt-auto pt-3 sm:pt-5 border-t border-gray-100 group-hover:border-indigo-100 transition-colors">
-            <div className="flex items-center gap-2 text-indigo-500 font-semibold group-hover:text-indigo-600 transition-colors text-sm sm:text-base">
-              <span>Learn More</span>
-              <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-2 transition-transform duration-300" />
-            </div>
+          <div className="mt-auto flex items-center gap-2 pt-3 text-sm font-semibold text-indigo-600">
+            <span>Learn more</span>
+            <ArrowRight className="size-4 transition-transform duration-300 group-hover:translate-x-1" />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </article>
     </Link>
   )
 }
-

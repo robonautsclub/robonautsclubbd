@@ -5,7 +5,7 @@ import { SITE_CONFIG } from '@/lib/site-config'
 import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowRight, Volume2, VolumeX } from 'lucide-react'
-import FeaturedUpcomingCarousel from '@/components/FeaturedUpcomingCarousel'
+import UpcomingEventsRail from '@/components/UpcomingEventsRail'
 import type { Event } from '@/types/event'
 import { Button } from '@/components/ui/button'
 
@@ -14,6 +14,8 @@ const HERO_VIDEO =
 /** First-frame still from Cloudinary — lighter initial paint than decoding video immediately. */
 const HERO_VIDEO_POSTER =
   'https://res.cloudinary.com/digkc0xsk/video/upload/f_jpg,q_80,so_0/v1771270419/ROBOFESTnew_lj6ak1.jpg'
+
+const TRACK_TAGS = ['STEM', 'Robotics', 'Olympiad', 'Innovation'] as const
 
 export default function Hero({ upcomingEvents = [] }: { upcomingEvents?: Event[] }) {
   const [muted, setMuted] = useState(true)
@@ -33,11 +35,13 @@ export default function Hero({ upcomingEvents = [] }: { upcomingEvents?: Event[]
     }
   }, [])
 
+  const hasEvents = upcomingEvents.length > 0
+
   return (
-    <section className="relative overflow-hidden w-full min-w-full min-h-screen">
+    <section className="relative flex min-h-svh w-full min-w-full flex-col overflow-hidden">
       {useVideoBg ? (
         <video
-          className="absolute inset-0 w-full h-full object-cover object-center z-0"
+          className="absolute inset-0 z-0 h-full w-full object-cover object-[70%_center] sm:object-center"
           src={HERO_VIDEO}
           poster={HERO_VIDEO_POSTER}
           preload="metadata"
@@ -54,95 +58,91 @@ export default function Hero({ upcomingEvents = [] }: { upcomingEvents?: Event[]
             alt=""
             fill
             priority
-            className="object-cover object-center"
+            className="object-cover object-[70%_center] sm:object-center"
             sizes="100vw"
             quality={80}
           />
         </div>
       )}
-      {/* Dark overlay for text readability */}
-      <div className="absolute inset-0 z-1 bg-black/55" aria-hidden="true" />
-      {/* Background decoration */}
-      <div className="absolute inset-0 opacity-30 w-full z-1 pointer-events-none">
-        <div className="absolute top-0 right-0  h-96 bg-blue-200 w-full rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
-        <div className="absolute bottom-0 left-0  h-96 bg-indigo-200 w-full rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2" />
-      </div>
 
-      <div className="relative mt-50 z-10 w-full min-w-full px-4 sm:px-6 lg:px-8 py-16 sm:py-20 md:py-24 lg:py-28 xl:py-36">
-        <div className="grid lg:grid-cols-2 gap-8 md:gap-12 lg:gap-16 items-center">
-          {/* Left Column - Content */}
-          <div className="text-center lg:ml-12 lg:text-left space-y-6 md:space-y-8 lg:space-y-10">
-            {/* Main Tagline */}
-            <div className="space-y-4 md:space-y-6">
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
-                <span className="block">Build Skills.</span>
-                <span className="block">Break Barriers.</span>
-                <span className="block text-transparent bg-clip-text bg-linear-to-r from-indigo-300 to-blue-300 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
-                  Go Global.
-                </span>
-              </h1>
-              <p className="text-base sm:text-lg md:text-xl text-gray-100 max-w-xl mx-auto lg:mx-0 leading-relaxed px-4 sm:px-0 drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
-                Empowering the next generation of robotics innovators through hands-on learning and global competition.
-              </p>
-            </div>
+      {/* Left-weighted scrim — right side stays open for video */}
+      <div
+        className="absolute inset-0 z-1 bg-linear-to-r from-slate-950/90 via-slate-950/55 to-transparent lg:via-slate-950/40"
+        aria-hidden="true"
+      />
+      <div
+        className="absolute inset-0 z-1 bg-linear-to-t from-slate-950/60 via-transparent to-slate-950/25"
+        aria-hidden="true"
+      />
+      <div
+        className="bg-tech-grid pointer-events-none absolute inset-0 z-1 opacity-35 mask-[radial-gradient(ellipse_50%_65%_at_12%_40%,black,transparent)]"
+        aria-hidden="true"
+      />
 
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start pt-2 sm:pt-4">
+      {/* Full-bleed left content — not centered in max-w box */}
+      <div className="relative z-10 flex w-full flex-1 flex-col pt-28 sm:pt-32 lg:pt-28">
+        <div className="flex flex-1 items-center px-4 py-8 sm:px-6 sm:py-10 lg:px-10 xl:px-14">
+          <div className="w-full max-w-[28rem] space-y-6 text-left sm:max-w-md md:max-w-lg lg:max-w-xl lg:space-y-7">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-sky-200/90 sm:text-xs">
+              {SITE_CONFIG.name} · STEM · Robotics · Olympiads
+            </p>
+
+            <h1 className="text-4xl font-bold tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.55)] sm:text-5xl md:text-6xl lg:text-[4.25rem] lg:leading-[0.95]">
+              <span className="block">Build Skills.</span>
+              <span className="block">Break Barriers.</span>
+              <span className="mt-1 block bg-linear-to-r from-sky-200 via-indigo-200 to-sky-100 bg-clip-text text-transparent">
+                Go Global.
+              </span>
+            </h1>
+
+            <p className="max-w-md text-base leading-relaxed text-slate-100/90 sm:text-lg">
+              Hands-on robotics, competition pathways, and international stages for students
+              ready to build what comes next.
+            </p>
+
+            <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center">
               <Button
                 asChild
                 size="lg"
-                className="bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg hover:shadow-xl text-sm sm:text-base"
+                className="h-12 rounded-xl bg-indigo-500 px-7 text-base font-semibold text-white shadow-[0_16px_40px_-16px_rgba(99,102,241,0.9)] hover:bg-indigo-600"
               >
                 <Link href="/events" prefetch={false}>
                   Explore Events
-                  <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <ArrowRight className="size-5" />
                 </Link>
               </Button>
               <Button
                 asChild
                 size="lg"
                 variant="outline"
-                className="bg-white text-indigo-500 border-2 border-indigo-100 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 text-sm sm:text-base"
+                className="h-12 rounded-xl border-white/30 bg-transparent px-7 text-base font-medium text-white/90 hover:border-white/50 hover:bg-white/10 hover:text-white"
               >
                 <Link href="/about" prefetch={false}>
                   Learn More
                 </Link>
               </Button>
             </div>
-          </div>
 
-          {/* Right Column - Visual */}
-          <div className="relative mt-8 lg:mt-0 hidden">
-            <div className="relative aspect-square max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg mx-auto">
-              {/* Main image container with linear border */}
-              <div className="absolute inset-0 bg-linear-to-br from-indigo-400 to-blue-500 rounded-3xl transform rotate-6 opacity-20 blur-xl" />
-              <div className="relative bg-white rounded-3xl shadow-2xl border border-gray-100">
-                <div className="aspect-square relative rounded-3xl overflow-hidden bg-linear-to-br from-sky-100 to-indigo-100">
-                  <Image
-                    src="/robot.gif"
-                    alt={`${SITE_CONFIG.name} Logo`}
-                    fill
-                    className="object-contain rounded-3xl"
-                    priority
-                    quality={85}
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  />
-                </div>
-              </div>
-            </div>
+            <ul className="flex flex-wrap gap-2 pt-1">
+              {TRACK_TAGS.map((tag) => (
+                <li
+                  key={tag}
+                  className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/80"
+                >
+                  {tag}
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
 
-        {upcomingEvents.length > 0 && (
-          <div className="mt-8 sm:mt-10 w-full">
-            <FeaturedUpcomingCarousel
-              events={upcomingEvents}
-              variant="compact"
-              showIntroText={false}
-              autoAdvanceMs={8000}
-              wrapperClassName="mb-0 w-full"
-            />
+        {/* Upcoming events stay in the hero — always above the wave */}
+        {hasEvents ? (
+          <div className="relative z-20 mt-auto w-full px-4 pb-20 sm:px-6 sm:pb-24 lg:px-10 lg:pb-20 xl:px-14">
+            <UpcomingEventsRail events={upcomingEvents} />
           </div>
+        ) : (
+          <div className="pb-20 sm:pb-24 lg:pb-20" />
         )}
       </div>
 
@@ -152,15 +152,25 @@ export default function Hero({ upcomingEvents = [] }: { upcomingEvents?: Event[]
           variant="ghost"
           size="icon"
           onClick={() => setMuted((m) => !m)}
-          className="absolute bottom-6 right-6 z-20 rounded-full bg-black/50 text-white hover:bg-black/70 hover:text-white border border-white/20"
+          className="absolute right-5 bottom-8 z-30 rounded-full border border-white/20 bg-black/50 text-white hover:bg-black/70 hover:text-white"
           aria-label={muted ? 'Unmute video' : 'Mute video'}
         >
-          {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+          {muted ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}
         </Button>
       ) : null}
 
-      {/* Bottom wave decoration */}
-      <div className="absolute bottom-0 left-0 right-0 h-24 bg-linear-to-t from-white to-transparent z-1" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-2 h-24 bg-linear-to-t from-slate-50 to-transparent" />
+      <svg
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-3 h-10 w-full text-slate-50 sm:h-14"
+        viewBox="0 0 1440 80"
+        preserveAspectRatio="none"
+        aria-hidden
+      >
+        <path
+          fill="currentColor"
+          d="M0,48 C240,80 480,8 720,32 C960,56 1200,80 1440,40 L1440,80 L0,80 Z"
+        />
+      </svg>
     </section>
   )
 }

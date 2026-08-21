@@ -1,7 +1,11 @@
 import { Metadata } from "next";
 import Feed from "@/components/Feed";
 import { SITE_CONFIG } from "@/lib/site-config";
-import { getPublicCourses, getPublicEvents } from "./events/actions";
+import {
+  getPublicCourses,
+  getPublicEvents,
+  getPublicHomepageOrgs,
+} from "./events/actions";
 import { isEventUpcoming } from "@/lib/dateUtils";
 
 export const metadata: Metadata = {
@@ -30,17 +34,20 @@ export const metadata: Metadata = {
 export const revalidate = 1800;
 
 export default async function Home() {
-  const [courses, events] = await Promise.all([
+  const [courses, events, homepageOrgs] = await Promise.all([
     getPublicCourses(),
     getPublicEvents(),
+    getPublicHomepageOrgs(),
   ])
   const initialUpcomingEvents = events.filter((e) => isEventUpcoming(e.date))
 
   return (
-    <main className="flex flex-col w-full min-w-full">
+    <main id="main" className="flex flex-col w-full min-w-full">
       <Feed
         initialCourses={courses}
         initialUpcomingEvents={initialUpcomingEvents}
+        initialPartners={homepageOrgs.partners}
+        initialWorkshopSchools={homepageOrgs.schools}
       />
     </main>
   );

@@ -7,6 +7,7 @@ import {
   Newspaper,
   Images,
   School,
+  Handshake,
   Trophy,
   Award,
   type LucideIcon,
@@ -39,6 +40,12 @@ const AREA_ITEMS: Array<{
   { href: '/dashboard/news', icon: Newspaper, label: 'News', area: 'news' },
   { href: '/dashboard/gallery', icon: Images, label: 'Gallery', area: 'gallery' },
   { href: '/dashboard/schools', icon: School, label: 'Schools', area: 'schools' },
+  {
+    href: '/dashboard/partners',
+    icon: Handshake,
+    label: 'Partners & Schools',
+    area: 'partners',
+  },
   { href: '/dashboard/robofest', icon: Trophy, label: 'Robofest', area: 'robofest' },
   {
     href: '/dashboard/certificates',
