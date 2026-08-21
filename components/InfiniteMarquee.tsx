@@ -35,7 +35,7 @@ export default function InfiniteMarquee({
   }
 
   return (
-    <div className={cn('group/marquee relative overflow-hidden', className)}>
+    <div className={cn('marquee-root group/marquee relative overflow-hidden', className)}>
       <div
         className={cn(
           'pointer-events-none absolute inset-y-0 left-0 z-10 w-10 sm:w-16 bg-linear-to-r to-transparent',
@@ -54,8 +54,8 @@ export default function InfiniteMarquee({
         className={reverse ? 'animate-scroll-right' : 'animate-scroll-left'}
         style={{ '--marquee-duration': `${duration}s` } as CSSProperties}
       >
-        <div className="flex items-center gap-3 pr-3">{children}</div>
-        <div className="flex items-center gap-3 pr-3" aria-hidden>
+        <div className="flex shrink-0 items-center gap-3 pr-3">{children}</div>
+        <div className="flex shrink-0 items-center gap-3 pr-3" aria-hidden>
           {children}
         </div>
       </div>

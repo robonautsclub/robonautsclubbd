@@ -174,29 +174,22 @@
   }
 }
 
-.animate-scroll-left {
-  animation: scroll-left var(--marquee-duration, 30s) linear infinite;
+.animate-scroll-left,
+.animate-scroll-right {
   display: flex;
-  width: fit-content;
-}
-
-@keyframes scroll-right {
-  0% {
-    transform: translateX(-50%);
-  }
-  100% {
-    transform: translateX(0);
-  }
+  width: max-content;
+  animation-name: scroll-left;
+  animation-duration: var(--marquee-duration, 30s);
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
 }
 
 .animate-scroll-right {
-  animation: scroll-right var(--marquee-duration, 40s) linear infinite;
-  display: flex;
-  width: fit-content;
+  animation-direction: reverse;
 }
 
-.group\/marquee:hover .animate-scroll-left,
-.group\/marquee:hover .animate-scroll-right {
+.marquee-root:hover .animate-scroll-left,
+.marquee-root:hover .animate-scroll-right {
   animation-play-state: paused;
 }
 
