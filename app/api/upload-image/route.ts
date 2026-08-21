@@ -21,6 +21,7 @@ const ALLOWED_CLOUDINARY_FOLDERS = [
   'gallery',
   'robofest',
   'certificates',
+  'partners',
 ] as const
 type CloudinaryFolder = (typeof ALLOWED_CLOUDINARY_FOLDERS)[number]
 

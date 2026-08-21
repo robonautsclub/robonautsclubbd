@@ -175,13 +175,74 @@
 }
 
 .animate-scroll-left {
-  animation: scroll-left 30s linear infinite;
+  animation: scroll-left var(--marquee-duration, 30s) linear infinite;
   display: flex;
   width: fit-content;
 }
 
-.animate-scroll-left:hover {
+@keyframes scroll-right {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.animate-scroll-right {
+  animation: scroll-right var(--marquee-duration, 40s) linear infinite;
+  display: flex;
+  width: fit-content;
+}
+
+.group\/marquee:hover .animate-scroll-left,
+.group\/marquee:hover .animate-scroll-right {
   animation-play-state: paused;
+}
+
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 8s ease-in-out infinite;
+}
+
+.bg-tech-grid {
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.06) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.bg-tech-grid-ink {
+  background-image:
+    linear-gradient(to right, rgb(99 102 241 / 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(99 102 241 / 0.08) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.bg-circuit-dots {
+  background-image: radial-gradient(circle, rgb(99 102 241 / 0.14) 1px, transparent 1.5px);
+  background-size: 22px 22px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .animate-scroll-left,
+  .animate-scroll-right,
+  .animate-gradient,
+  .animate-float-slow {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
 
 /* Material Symbols (Robofest page icons) — font loaded from root layout */

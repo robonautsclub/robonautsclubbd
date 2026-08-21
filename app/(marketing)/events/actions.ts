@@ -18,6 +18,13 @@ import {
 import { normalizeCustomFormAnswers, validateCustomFormAnswers } from '@/lib/eventCustomForm'
 import { getEventRegistrationFields } from '@/lib/registrationFields'
 import { SCHOOL_DIRECTORY_COLLECTION } from '@/lib/schoolDirectory'
+import { PUBLIC_HOMEPAGE_ORGS_TAG } from '@/lib/public-cache-tags'
+import {
+  HOMEPAGE_ORGS_COLLECTION,
+  mapHomepageOrgDoc,
+  splitHomepageOrgs,
+} from '@/lib/homepage-orgs'
+import type { PublicHomepageOrgs } from '@/types/homepage-org'
 
 const PUBLIC_EVENTS_TAG = 'public-events'
 const PUBLIC_EVENT_TAG_PREFIX = 'public-event'
@@ -25,6 +32,7 @@ const PUBLIC_COURSES_TAG = 'public-courses'
 const PUBLIC_SCHOOLS_TAG = 'public-schools'
 const PUBLIC_EVENTS_MAX = 200
 const PUBLIC_COURSES_MAX = 100
+const PUBLIC_HOMEPAGE_ORGS_MAX = 100
 
 function getPublicEventTag(id: string): string {
   return `${PUBLIC_EVENT_TAG_PREFIX}-${id}`
@@ -886,4 +894,41 @@ export const getPublicCourses = cache(async (): Promise<Course[]> => {
     return []
   }
   return getCachedPublicCourses()
+})
+
+async function fetchPublicHomepageOrgsFromFirestore(): Promise<PublicHomepageOrgs> {
+  const db = adminDb!
+  try {
+    const snapshot = await db
+      .collection(HOMEPAGE_ORGS_COLLECTION)
+      .where('isActive', '==', true)
+      .limit(PUBLIC_HOMEPAGE_ORGS_MAX)
+      .get()
+
+    const orgs = snapshot.docs
+      .map((doc) => mapHomepageOrgDoc(doc.id, doc.data() as Record<string, unknown>))
+      .filter((org): org is NonNullable<typeof org> => Boolean(org))
+
+    return splitHomepageOrgs(orgs)
+  } catch (error) {
+    console.error('Error fetching public homepage orgs:', error)
+    return { partners: [], schools: [] }
+  }
+}
+
+const getCachedPublicHomepageOrgs = unstable_cache(
+  fetchPublicHomepageOrgsFromFirestore,
+  [PUBLIC_HOMEPAGE_ORGS_TAG],
+  {
+    tags: [PUBLIC_HOMEPAGE_ORGS_TAG],
+    revalidate: 3600,
+  },
+)
+
+export const getPublicHomepageOrgs = cache(async (): Promise<PublicHomepageOrgs> => {
+  if (!adminDb) {
+    console.warn('Firebase Admin SDK not available. Cannot fetch homepage orgs.')
+    return { partners: [], schools: [] }
+  }
+  return getCachedPublicHomepageOrgs()
 })
