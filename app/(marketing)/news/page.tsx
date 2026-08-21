@@ -1,12 +1,10 @@
-import Link from 'next/link'
-import Image from 'next/image'
 import { Metadata } from 'next'
-import { Newspaper, ArrowRight, Calendar } from 'lucide-react'
 import { SITE_CONFIG } from '@/lib/site-config'
-import { effectiveNewsDisplayRaw } from '@/lib/publicContentDates'
-import ListingHeroSection from '@/components/ListingHeroSection'
 import { getPublishedNews } from './actions'
-import { Card, CardContent } from '@/components/ui/card'
+import NewsHero from '@/components/news/NewsHero'
+import FeaturedNewsCard from '@/components/news/FeaturedNewsCard'
+import NewsCard from '@/components/news/NewsCard'
+import NewsEmptyState from '@/components/news/NewsEmptyState'
 
 export const metadata: Metadata = {
   title: 'News',
@@ -23,97 +21,54 @@ export const metadata: Metadata = {
 
 export const revalidate = 1800
 
-function formatDate(iso: string | Date | null) {
-  if (iso == null) return ''
-  try {
-    const d = iso instanceof Date ? iso : new Date(iso)
-    return new Intl.DateTimeFormat('en-GB', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    }).format(d)
-  } catch {
-    return ''
-  }
-}
-
 export default async function NewsPage() {
   const articles = await getPublishedNews()
+  const [featured, ...rest] = articles
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <ListingHeroSection overlay="dark">
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-sm mb-4">
-            <Newspaper className="w-4 h-4" />
-            <span className="text-xs sm:text-sm font-medium">Club news</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
-            News & stories
-          </h1>
-          <p className="text-base sm:text-lg text-blue-100 max-w-2xl mx-auto">
-            Highlights from workshops, competitions, and the community.
-          </p>
-        </div>
-      </ListingHeroSection>
+    <div className="min-h-screen bg-linear-to-b from-slate-50 via-white to-slate-50/80 flex flex-col">
+      <NewsHero />
 
-      <main className="flex-1 py-12 sm:py-16 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto">
+      <main className="relative flex-1 px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-linear-to-b from-indigo-50/50 to-transparent"
+          aria-hidden
+        />
+        <div className="relative z-10 mx-auto max-w-7xl">
           {articles.length === 0 ? (
-            <Card>
-              <CardContent className="p-12 text-center text-gray-600">
-                <Newspaper className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                <p>No published articles yet. Check back soon.</p>
-              </CardContent>
-            </Card>
+            <NewsEmptyState />
           ) : (
-            <ul className="grid gap-6 sm:gap-8 sm:grid-cols-2 lg:grid-cols-3">
-              {articles.map((article) => {
-                const dateLabel = formatDate(effectiveNewsDisplayRaw(article))
-                return (
-                <li key={article.id}>
-                  <Card className="group h-full overflow-hidden shadow-sm hover:shadow-md hover:border-indigo-200 transition-all p-0">
-                    <Link
-                      href={`/news/${article.slug}`}
-                      prefetch={false}
-                      className="block h-full"
+            <div className="space-y-12 sm:space-y-14 md:space-y-16">
+              <section aria-labelledby="featured-story-heading">
+                <h2 id="featured-story-heading" className="sr-only">
+                  Featured story
+                </h2>
+                <FeaturedNewsCard article={featured} />
+              </section>
+
+              {rest.length > 0 ? (
+                <section aria-labelledby="latest-stories-heading">
+                  <div className="mb-6 sm:mb-8">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-indigo-600 sm:text-xs">
+                      From the community
+                    </p>
+                    <h2
+                      id="latest-stories-heading"
+                      className="mt-2 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl"
                     >
-                      <div className="aspect-video relative bg-gray-100">
-                        {article.coverImageUrl ? (
-                          <Image
-                            src={article.coverImageUrl}
-                            alt=""
-                            fill
-                            className="object-cover group-hover:scale-[1.02] transition-transform duration-300"
-                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                          />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                            <Newspaper className="w-14 h-14 opacity-40" />
-                          </div>
-                        )}
-                      </div>
-                      <CardContent className="p-5 sm:p-6">
-                        {dateLabel ? (
-                            <p className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
-                              <Calendar className="w-3.5 h-3.5 shrink-0" />
-                              {dateLabel}
-                            </p>
-                          ) : null}
-                        <h2 className="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors line-clamp-2">
-                          {article.title}
-                        </h2>
-                        <span className="inline-flex items-center gap-1 mt-3 text-sm font-medium text-indigo-600">
-                          Read more
-                          <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                        </span>
-                      </CardContent>
-                    </Link>
-                  </Card>
-                </li>
-                )
-              })}
-            </ul>
+                      Latest Stories
+                    </h2>
+                  </div>
+                  <ul className="m-0 grid list-none grid-cols-1 gap-6 p-0 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3 lg:gap-8">
+                    {rest.map((article) => (
+                      <li key={article.id} className="min-w-0">
+                        <NewsCard article={article} />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+            </div>
           )}
         </div>
       </main>
