@@ -1,5 +1,3 @@
-'use server'
-
 export type { DashboardEventSummary } from './events/cache'
 
 export {
