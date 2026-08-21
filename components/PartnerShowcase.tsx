@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Reveal from '@/components/Reveal'
-import { cn } from '@/lib/utils'
 
 export type NamedLogo = { name: string; logo?: string }
 
@@ -21,20 +20,20 @@ function PartnerLogo({ name, logo }: NamedLogo) {
   const showImage = Boolean(logo) && !failed
 
   return (
-    <div className="relative mx-auto h-14 w-full max-w-36 sm:h-16">
+    <div className="relative mx-auto h-20 w-full max-w-44 sm:h-24 sm:max-w-52">
       {showImage ? (
         <Image
           src={logo!}
           alt={`${name} logo`}
           fill
-          className="object-contain opacity-70 grayscale transition-all duration-300 group-hover:opacity-100 group-hover:grayscale-0"
+          className="object-contain transition-transform duration-300 group-hover:scale-105"
           quality={90}
-          sizes="144px"
+          sizes="208px"
           onError={() => setFailed(true)}
         />
       ) : (
         <div className="flex h-full items-center justify-center">
-          <span className="text-sm font-semibold tracking-wide text-indigo-600/80">
+          <span className="text-base font-semibold tracking-wide text-indigo-600/80 sm:text-lg">
             {getInitials(name)}
           </span>
         </div>
@@ -61,14 +60,10 @@ export default function PartnerShowcase({ items }: { items: NamedLogo[] }) {
       </Reveal>
 
       <ul
-        className={cn(
-          'grid w-full list-none justify-items-center gap-x-6 gap-y-8 p-0 sm:gap-x-10 sm:gap-y-10',
-          items.length <= 3
-            ? 'grid-cols-2 sm:grid-cols-3'
-            : items.length <= 6
-              ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6'
-              : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6',
-        )}
+        className="grid w-full list-none justify-items-center gap-x-8 gap-y-10 p-0 sm:gap-x-12 sm:gap-y-12"
+        style={{
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 11rem), 1fr))',
+        }}
       >
         {items.map((item, index) => (
           <Reveal key={`${item.name}-${index}`} as="li" delayMs={index * 50} className="w-full">
