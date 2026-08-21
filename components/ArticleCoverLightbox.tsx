@@ -4,15 +4,16 @@ import { useMemo, useState, useCallback } from 'react'
 import Image from 'next/image'
 import { LightboxPortal } from '@/components/ImageLightboxGallery'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 
 type Props = {
   coverUrl: string
   /** Extra gallery image URLs (cover is index 0 in the lightbox when extras exist) */
   extraUrls: string[]
+  /** Optional label when more photos exist beyond the cover */
+  photoCountLabel?: string
 }
 
-export default function ArticleCoverLightbox({ coverUrl, extraUrls }: Props) {
+export default function ArticleCoverLightbox({ coverUrl, extraUrls, photoCountLabel }: Props) {
   const [openIndex, setOpenIndex] = useState<number | null>(null)
   const close = useCallback(() => setOpenIndex(null), [])
 
@@ -32,26 +33,42 @@ export default function ArticleCoverLightbox({ coverUrl, extraUrls }: Props) {
     return out
   }, [coverUrl, extraUrls])
 
+  const hasExtras = slideshowUrls.length > 1
+
   return (
     <>
       <Button
         type="button"
         variant="ghost"
         onClick={() => setOpenIndex(0)}
-        className="relative block w-full h-auto p-0 aspect-video rounded-2xl overflow-hidden bg-gray-200 mb-10 shadow-md text-left group hover:bg-gray-200"
-        aria-label={slideshowUrls.length > 1 ? 'Open image viewer (cover and gallery)' : 'Open full image'}
+        className="group relative mb-8 block aspect-16/10 h-auto w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-100 p-0 text-left shadow-sm hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-indigo-500 sm:aspect-2/1 sm:rounded-3xl md:mb-10"
+        aria-label={hasExtras ? 'Open image viewer (cover and gallery)' : 'Open full image'}
       >
         <Image
           src={coverUrl}
           alt=""
           fill
-          className="object-cover group-hover:opacity-95 transition-opacity"
+          className="object-cover transition-transform duration-500 ease-out motion-reduce:transition-none group-hover:scale-[1.02]"
           priority
-          sizes="(max-width: 768px) 100vw, 48rem"
+          sizes="(max-width: 768px) 100vw, 1100px"
         />
-        <Badge className="absolute bottom-3 right-3 bg-black/50 hover:bg-black/50 text-white border-0 text-xs font-medium pointer-events-none">
-          Click to enlarge
-        </Badge>
+        <span
+          className="pointer-events-none absolute inset-0 bg-linear-to-t from-slate-950/35 via-transparent to-transparent opacity-80"
+          aria-hidden
+        />
+        {photoCountLabel ? (
+          <span className="absolute bottom-3 right-3 rounded-full bg-slate-950/60 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm ring-1 ring-white/15 sm:bottom-4 sm:right-4 sm:text-sm">
+            {photoCountLabel}
+          </span>
+        ) : hasExtras ? (
+          <span className="absolute bottom-3 right-3 rounded-full bg-slate-950/60 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm ring-1 ring-white/15 sm:bottom-4 sm:right-4">
+            Click to enlarge
+          </span>
+        ) : (
+          <span className="absolute bottom-3 right-3 rounded-full bg-slate-950/60 px-3 py-1.5 text-xs font-medium text-white/95 backdrop-blur-sm ring-1 ring-white/15 sm:bottom-4 sm:right-4">
+            Click to enlarge
+          </span>
+        )}
       </Button>
 
       <LightboxPortal
