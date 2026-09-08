@@ -117,9 +117,17 @@ const ROBOFEST_LEGACY_HOW_IT_WORKS_TITLES = new Set([
 /** Fallback rules PDF paths when CMS content is missing rulesPdf. */
 export const ROBOFEST_CATEGORY_RULES_PDF_FALLBACKS: Record<string, string> = {
   bottlesumo: "/robofest/BottleSumo%20Competition.pdf",
-  buildathon: "/robofest/BuildAthon%20Competition.pdf",
+  buildathon: "/robofest/BuildAthon%20Competition%20Rules%20and%20Regulations.pdf",
   "line-following-bot": "/robofest/Line-Following%20Bot%20Competition.pdf",
   "robo-exhibition": "/robofest/Robo-Exhibition%20Competition.pdf",
+};
+
+/** Stale CMS paths remapped to the current official PDF. */
+const ROBOFEST_LEGACY_RULES_PDF: Record<string, string> = {
+  "/robofest/BuildAthon%20Competition.pdf":
+    "/robofest/BuildAthon%20Competition%20Rules%20and%20Regulations.pdf",
+  "/robofest/BuildAthon Competition.pdf":
+    "/robofest/BuildAthon%20Competition%20Rules%20and%20Regulations.pdf",
 };
 
 export function getRobofestCategoryImage(
@@ -136,7 +144,10 @@ export function getRobofestCategoryImage(
 export function getRobofestCategoryRulesPdf(
   category: Pick<RobofestCategoryContent, "slug" | "rulesPdf">,
 ): string | undefined {
-  if (category.rulesPdf?.trim()) return category.rulesPdf.trim();
+  const stored = category.rulesPdf?.trim();
+  if (stored) {
+    return ROBOFEST_LEGACY_RULES_PDF[stored] ?? stored;
+  }
   return ROBOFEST_CATEGORY_RULES_PDF_FALLBACKS[category.slug];
 }
 
