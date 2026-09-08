@@ -1,6 +1,6 @@
 /**
  * BuildAthon local-round rules (RF26.CMP.03) for on-page display.
- * Full document: public/robofest/BuildAthon Competition.pdf
+ * Full document: public/robofest/BuildAthon Competition Rules and Regulations.pdf
  */
 
 import {
@@ -15,7 +15,7 @@ export const BUILDATHON_RULES: RobofestCategoryRulesPackage = {
   title: "BuildAthon Competition — Rules & Guidelines",
   summary:
     "Two-round hackathon: online prelims, then a 2-hour on-site build and pitch for the top 10.",
-  downloadFilename: "BuildAthon-Competition-Rules.pdf",
+  downloadFilename: "BuildAthon-Competition-Rules-and-Regulations.pdf",
   contact: ROBOFEST_RULES_CONTACT,
   sections: [
     {

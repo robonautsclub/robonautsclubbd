@@ -102,7 +102,7 @@ export const ROBOFEST_CATEGORIES = [
     ],
     whoShouldJoin:
       "Teams who want to invent and present an original robotics build.",
-    rulesPdf: "/robofest/BuildAthon%20Competition.pdf",
+    rulesPdf: "/robofest/BuildAthon%20Competition%20Rules%20and%20Regulations.pdf",
   },
   {
     slug: "line-following-bot",
