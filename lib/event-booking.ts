@@ -1,6 +1,7 @@
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { adminDb } from '@/lib/firebase-admin'
 import type { Event } from '@/types/event'
+import type { Booking } from '@/types/booking'
 import { sendBookingConfirmationEmail } from '@/lib/email'
 import { generateBookingConfirmationPDF } from '@/lib/pdfGenerator'
 import { generateRegistrationId } from '@/lib/registrationId'
@@ -209,6 +210,7 @@ export async function createBookingRecordAndSendEmail(
       await bookingRef.update({
         emailSent: true,
         emailSentAt: new Date(),
+        emailSendCount: 1,
         ...pdfUpdate,
       })
     } else {
@@ -249,4 +251,85 @@ export async function createBookingRecordAndSendEmail(
   }
 
   return { success: true, bookingId, registrationId }
+}
+
+/**
+ * Resend confirmation email for an existing booking (dashboard / admin).
+ * Not a Server Action — call from a gated action with mail.send.
+ */
+export async function resendBookingConfirmationEmail(
+  booking: Booking,
+  event: Event,
+): Promise<{
+  success: boolean
+  error?: string
+  warning?: string
+  emailSendCount?: number
+}> {
+  if (!adminDb) {
+    return { success: false, error: 'Database unavailable.' }
+  }
+  if (!booking.id || !booking.registrationId || !booking.email?.trim()) {
+    return { success: false, error: 'Booking is missing email or registration ID.' }
+  }
+
+  const bookingRef = adminDb.collection('bookings').doc(booking.id)
+  const emailResult = await sendBookingConfirmationEmail({
+    to: booking.email,
+    name: booking.name,
+    event,
+    registrationId: booking.registrationId,
+    bookingId: booking.id,
+    bookingDetails: {
+      school: booking.school || '',
+      phone: booking.phone || '',
+      bkashNumber: booking.bkashNumber || '',
+      information: booking.information || '',
+    },
+  })
+
+  const pdfUpdate: Record<string, unknown> = {}
+  if (emailResult.pdfBuffer && emailResult.pdfBuffer.length > 0) {
+    pdfUpdate.pdfGenerated = true
+    pdfUpdate.pdfGeneratedAt = new Date()
+  } else {
+    pdfUpdate.pdfGenerated = false
+    if (emailResult.pdfError) {
+      pdfUpdate.pdfError = emailResult.pdfError
+    }
+  }
+
+  if (emailResult.success) {
+    const nextCount = (booking.emailSendCount ?? 0) + 1
+    await bookingRef.update({
+      emailSent: true,
+      emailSentAt: new Date(),
+      emailSendCount: nextCount,
+      emailError: null,
+      emailFailedAt: null,
+      ...pdfUpdate,
+    })
+    revalidatePath(`/dashboard/events/${booking.eventId}`)
+    revalidateTag(`dashboard-event-bookings-${booking.eventId}`, 'max')
+    return {
+      success: true,
+      emailSendCount: nextCount,
+      warning: emailResult.pdfAttached
+        ? undefined
+        : 'Email sent, but the confirmation PDF could not be attached.',
+    }
+  }
+
+  await bookingRef.update({
+    emailSent: false,
+    emailError: emailResult.error || 'Unknown email service error',
+    emailFailedAt: new Date(),
+    ...pdfUpdate,
+  })
+  revalidatePath(`/dashboard/events/${booking.eventId}`)
+  revalidateTag(`dashboard-event-bookings-${booking.eventId}`, 'max')
+  return {
+    success: false,
+    error: emailResult.error || 'Failed to send confirmation email.',
+  }
 }

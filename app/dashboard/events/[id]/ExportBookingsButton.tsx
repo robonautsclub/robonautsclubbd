@@ -4,10 +4,13 @@ import { Download } from 'lucide-react'
 import { useTransition } from 'react'
 import { Booking } from '@/types/booking'
 import { Button } from '@/components/ui/button'
+import { getBookings } from '../../actions'
 
 interface ExportBookingsButtonProps {
-  bookings: Booking[]
+  eventId: string
   eventTitle: string
+  /** When known (stats), used to hide the button if empty. Export always fetches full list. */
+  totalCount?: number
   canExportExcel?: boolean
   canExportPdf?: boolean
   canViewPayments?: boolean
@@ -20,8 +23,9 @@ function formatPaymentStatus(booking: Booking): string {
 }
 
 export default function ExportBookingsButton({
-  bookings,
+  eventId,
   eventTitle,
+  totalCount,
   canExportExcel = false,
   canExportPdf = false,
   canViewPayments = false,
@@ -32,7 +36,10 @@ export default function ExportBookingsButton({
     let formattedDate = 'N/A'
     if (booking.createdAt) {
       try {
-        const bookedDate = booking.createdAt instanceof Date ? booking.createdAt : new Date(booking.createdAt)
+        const bookedDate =
+          booking.createdAt instanceof Date
+            ? booking.createdAt
+            : new Date(booking.createdAt)
         if (!isNaN(bookedDate.getTime())) {
           formattedDate = bookedDate.toLocaleString('en-US', {
             year: 'numeric',
@@ -55,83 +62,86 @@ export default function ExportBookingsButton({
       .replace(/\s+/g, '_')
       .substring(0, 50)
 
+  const loadAllBookings = async () => {
+    const bookings = await getBookings(eventId)
+    if (bookings.length === 0) {
+      throw new Error('No registrations to export.')
+    }
+    return bookings
+  }
+
   const exportToExcel = () => {
     startTransition(() => {
-      // Use IIFE to handle async code splitting
       ;(async () => {
         try {
-          // Dynamically import XLSX only when needed (code splitting)
-          const XLSX = await import('xlsx')
+          const [XLSX, bookings] = await Promise.all([
+            import('xlsx'),
+            loadAllBookings(),
+          ])
 
-        // Prepare data for Excel export
-        const exportData = bookings.map((booking, index) => {
-          const row: Record<string, string | number> = {
-            'No.': index + 1,
-            'Registration ID': booking.registrationId || 'N/A',
-            'Name': booking.name,
-            'Category': booking.category || 'Unspecified',
-            'School': booking.school,
-            'Email': booking.email,
-            'Phone': booking.phone || 'N/A',
-          }
-          if (canViewPayments) {
-            row['Amount Paid (BDT)'] = booking.amountPaid ?? ''
-            row['Payment Status'] = formatPaymentStatus(booking)
-            row['Trx ID'] = booking.trxId || ''
-          }
-          row['Additional Information'] = booking.information || ''
-          row['Booked At'] = formatBookedAt(booking)
-          return row
-        })
+          const exportData = bookings.map((booking, index) => {
+            const row: Record<string, string | number> = {
+              'No.': index + 1,
+              'Registration ID': booking.registrationId || 'N/A',
+              Name: booking.name,
+              Category: booking.category || 'Unspecified',
+              School: booking.school,
+              Email: booking.email,
+              Phone: booking.phone || 'N/A',
+            }
+            if (canViewPayments) {
+              row['Amount Paid (BDT)'] = booking.amountPaid ?? ''
+              row['Payment Status'] = formatPaymentStatus(booking)
+              row['Trx ID'] = booking.trxId || ''
+            }
+            row['Additional Information'] = booking.information || ''
+            row['Booked At'] = formatBookedAt(booking)
+            return row
+          })
 
-        // Create a new workbook
-        const wb = XLSX.utils.book_new()
+          const wb = XLSX.utils.book_new()
+          const ws = XLSX.utils.json_to_sheet(exportData)
 
-        // Create a worksheet from the data
-        const ws = XLSX.utils.json_to_sheet(exportData)
+          const columnWidths = canViewPayments
+            ? [
+                { wch: 8 },
+                { wch: 20 },
+                { wch: 25 },
+                { wch: 18 },
+                { wch: 30 },
+                { wch: 35 },
+                { wch: 18 },
+                { wch: 18 },
+                { wch: 18 },
+                { wch: 22 },
+                { wch: 50 },
+                { wch: 20 },
+              ]
+            : [
+                { wch: 8 },
+                { wch: 20 },
+                { wch: 25 },
+                { wch: 18 },
+                { wch: 30 },
+                { wch: 35 },
+                { wch: 18 },
+                { wch: 50 },
+                { wch: 20 },
+              ]
+          ws['!cols'] = columnWidths
+          XLSX.utils.book_append_sheet(wb, ws, 'Registrations')
 
-        // Set column widths for better readability
-        const columnWidths = canViewPayments
-          ? [
-              { wch: 8 },
-              { wch: 20 },
-              { wch: 25 },
-              { wch: 18 },
-              { wch: 30 },
-              { wch: 35 },
-              { wch: 18 },
-              { wch: 18 },
-              { wch: 18 },
-              { wch: 22 },
-              { wch: 50 },
-              { wch: 20 },
-            ]
-          : [
-              { wch: 8 },
-              { wch: 20 },
-              { wch: 25 },
-              { wch: 18 },
-              { wch: 30 },
-              { wch: 35 },
-              { wch: 18 },
-              { wch: 50 },
-              { wch: 20 },
-            ]
-        ws['!cols'] = columnWidths
-
-        // Add the worksheet to the workbook
-        XLSX.utils.book_append_sheet(wb, ws, 'Registrations')
-
-        // Generate filename with event title and current date
-        const sanitizedEventTitle = getSanitizedTitle()
-        const currentDate = new Date().toISOString().split('T')[0] // YYYY-MM-DD format
-        const filename = `Registrations_${sanitizedEventTitle}_${currentDate}.xlsx`
-
-          // Write the file and trigger download
+          const sanitizedEventTitle = getSanitizedTitle()
+          const currentDate = new Date().toISOString().split('T')[0]
+          const filename = `Registrations_${sanitizedEventTitle}_${currentDate}.xlsx`
           XLSX.writeFile(wb, filename)
         } catch (error) {
           console.error('Error exporting to Excel:', error)
-          alert('Failed to export registrations. Please try again.')
+          alert(
+            error instanceof Error
+              ? error.message
+              : 'Failed to export registrations. Please try again.',
+          )
         }
       })()
     })
@@ -141,7 +151,11 @@ export default function ExportBookingsButton({
     startTransition(() => {
       ;(async () => {
         try {
-          const [{ jsPDF }, autoTableModule] = await Promise.all([import('jspdf'), import('jspdf-autotable')])
+          const [{ jsPDF }, autoTableModule, bookings] = await Promise.all([
+            import('jspdf'),
+            import('jspdf-autotable'),
+            loadAllBookings(),
+          ])
           const autoTable = autoTableModule.default
 
           const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
@@ -233,13 +247,20 @@ export default function ExportBookingsButton({
           doc.save(filename)
         } catch (error) {
           console.error('Error exporting to PDF:', error)
-          alert('Failed to export PDF. Please try again.')
+          alert(
+            error instanceof Error
+              ? error.message
+              : 'Failed to export PDF. Please try again.',
+          )
         }
       })()
     })
   }
 
-  if (bookings.length === 0 || (!canExportExcel && !canExportPdf)) {
+  if (
+    (typeof totalCount === 'number' && totalCount === 0) ||
+    (!canExportExcel && !canExportPdf)
+  ) {
     return null
   }
 

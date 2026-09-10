@@ -21,6 +21,11 @@ export type Booking = {
   paidAt?: Date | string
   information: string
   customAnswers?: Record<string, string | string[] | number>
+  emailSent?: boolean
+  emailSentAt?: Date | string
+  emailError?: string
+  emailFailedAt?: Date | string
+  emailSendCount?: number
   createdAt: Date | string
 }
 

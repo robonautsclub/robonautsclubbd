@@ -1,5 +1,10 @@
 import { requireTabAccess, canEditArea, canDeleteArea, hasPermission } from '@/lib/auth'
-import { getEvent, getBookings } from '../../actions'
+import {
+  getEvent,
+  getBookingsPage,
+  getEventBookingStats,
+} from '../../actions'
+import { BOOKING_DEFAULT_PAGE_SIZE } from '../bookings-types'
 import { getPublicEnglishMediumSchools } from '@/app/(marketing)/events/actions'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -16,9 +21,10 @@ export default async function EventDetailsPage({
 }) {
   const session = await requireTabAccess('events')
   const { id } = await params
-  const [event, bookings, schools] = await Promise.all([
+  const [event, initialPage, initialStats, schools] = await Promise.all([
     getEvent(id),
-    getBookings(id),
+    getBookingsPage(id, { pageSize: BOOKING_DEFAULT_PAGE_SIZE }),
+    getEventBookingStats(id),
     getPublicEnglishMediumSchools(),
   ])
 
@@ -53,7 +59,8 @@ export default async function EventDetailsPage({
 
       <EventDetailsClient
         event={event}
-        bookings={bookings}
+        initialPage={initialPage}
+        initialStats={initialStats}
         schools={schools}
         canEdit={canEditArea(session, 'events')}
         canDelete={canDeleteArea(session, 'events')}
@@ -65,4 +72,3 @@ export default async function EventDetailsPage({
     </div>
   )
 }
-

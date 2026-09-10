@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidateTag, unstable_cache } from 'next/cache'
+import { FieldPath } from 'firebase-admin/firestore'
 import {
   requireAuth,
   canEditArea,
@@ -14,6 +15,7 @@ import { getEventRegistrationFields } from '@/lib/registrationFields'
 import { validateCustomFormAnswers } from '@/lib/eventCustomForm'
 import {
   createBookingRecordAndSendEmail,
+  resendBookingConfirmationEmail,
   type BookingInput,
   type BookingPaymentMeta,
 } from '@/lib/event-booking'
@@ -22,6 +24,44 @@ import {
   DASHBOARD_EVENT_BOOKINGS_TAG_PREFIX,
   getEventBookingsTag,
 } from './cache'
+import {
+  BOOKING_DEFAULT_PAGE_SIZE,
+  EMPTY_EVENT_BOOKING_STATS,
+  type BookingCursor,
+  type BookingsPage,
+  type EventBookingStats,
+} from './bookings-types'
+
+/** Convert Firestore Timestamp / Date to an ISO string for RSC client props. */
+function toIsoString(value: unknown): string | undefined {
+  if (value == null || value === '') return undefined
+  if (typeof value === 'string') return value
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? undefined : value.toISOString()
+  }
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'toDate' in value &&
+    typeof (value as { toDate: () => Date }).toDate === 'function'
+  ) {
+    const date = (value as { toDate: () => Date }).toDate()
+    return Number.isNaN(date.getTime()) ? undefined : date.toISOString()
+  }
+  // Firestore Timestamp-like plain shape from some serializers
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    '_seconds' in value &&
+    typeof (value as { _seconds: unknown })._seconds === 'number'
+  ) {
+    const seconds = (value as { _seconds: number; _nanoseconds?: number })._seconds
+    const nanos = (value as { _nanoseconds?: number })._nanoseconds ?? 0
+    const date = new Date(seconds * 1000 + Math.floor(nanos / 1e6))
+    return Number.isNaN(date.getTime()) ? undefined : date.toISOString()
+  }
+  return undefined
+}
 
 /**
  * Get bookings for a specific event
@@ -36,22 +76,15 @@ async function fetchBookingsForEventFromDb(eventId: string): Promise<Booking[]> 
   const bookings: Booking[] = []
   bookingsSnapshot.forEach((doc) => {
     const data = doc.data()
-    const createdAt = data.createdAt?.toDate
-      ? data.createdAt.toDate().toISOString()
-      : data.createdAt instanceof Date
-        ? data.createdAt.toISOString()
-        : data.createdAt
-    const paidAt = data.paidAt?.toDate
-      ? data.paidAt.toDate().toISOString()
-      : data.paidAt instanceof Date
-        ? data.paidAt.toISOString()
-        : data.paidAt
 
     bookings.push({
       id: doc.id,
       ...data,
-      createdAt,
-      paidAt,
+      createdAt: toIsoString(data.createdAt) ?? '',
+      paidAt: toIsoString(data.paidAt),
+      pdfGeneratedAt: toIsoString(data.pdfGeneratedAt),
+      emailSentAt: toIsoString(data.emailSentAt),
+      emailFailedAt: toIsoString(data.emailFailedAt),
     } as Booking)
   })
 
@@ -87,6 +120,245 @@ export async function getBookings(eventId: string): Promise<Booking[]> {
   } catch (error) {
     console.error('Error fetching bookings:', error)
     throw new Error('Failed to fetch bookings')
+  }
+}
+
+function mapBookingDoc(
+  id: string,
+  data: Record<string, unknown>,
+): Booking {
+  return {
+    id,
+    ...data,
+    createdAt: toIsoString(data.createdAt) ?? '',
+    paidAt: toIsoString(data.paidAt),
+    pdfGeneratedAt: toIsoString(data.pdfGeneratedAt),
+    emailSentAt: toIsoString(data.emailSentAt),
+    emailFailedAt: toIsoString(data.emailFailedAt),
+  } as Booking
+}
+
+function createdAtToDate(value: unknown): Date | null {
+  if (!value) return null
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'toDate' in value &&
+    typeof (value as { toDate: () => Date }).toDate === 'function'
+  ) {
+    const date = (value as { toDate: () => Date }).toDate()
+    return Number.isNaN(date.getTime()) ? null : date
+  }
+  if (typeof value === 'string' || typeof value === 'number') {
+    const d = new Date(value)
+    return Number.isNaN(d.getTime()) ? null : d
+  }
+  return null
+}
+
+function isMissingIndexError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const err = error as { code?: number | string; message?: string }
+  return (
+    err.code === 9 ||
+    err.code === 'failed-precondition' ||
+    /FAILED_PRECONDITION|requires an index/i.test(String(err.message || ''))
+  )
+}
+
+function isBookingAfterCursor(item: Booking, cursor: BookingCursor): boolean {
+  const itemTime = item.createdAt ? new Date(item.createdAt).getTime() : 0
+  const cursorTime = new Date(cursor.createdAt).getTime()
+  if (itemTime < cursorTime) return true
+  if (itemTime > cursorTime) return false
+  return item.id < cursor.id
+}
+
+function pageBookingsFromItems(
+  items: Booking[],
+  cursor: BookingCursor | null | undefined,
+  pageSize: number,
+): BookingsPage {
+  let list = items
+  if (cursor?.id && cursor.createdAt) {
+    list = list.filter((item) => isBookingAfterCursor(item, cursor))
+  }
+  const pageItems = list.slice(0, pageSize)
+  const hasMore = list.length > pageSize
+  const last = pageItems[pageItems.length - 1]
+  return {
+    items: pageItems,
+    nextCursor:
+      hasMore && last?.createdAt
+        ? { createdAt: String(last.createdAt), id: last.id }
+        : null,
+    hasMore,
+    matchedTotal: items.length,
+  }
+}
+
+function computeStatsFromBookings(bookings: Booking[]): EventBookingStats {
+  let paidCount = 0
+  let totalCollected = 0
+  const categoryMap = new Map<string, number>()
+
+  for (const booking of bookings) {
+    const amount =
+      typeof booking.amountPaid === 'number'
+        ? booking.amountPaid
+        : Number(booking.amountPaid || 0)
+    if (Number.isFinite(amount) && amount > 0) {
+      totalCollected += amount
+    }
+    if (booking.paymentStatus === 'n/a') {
+      // waived — not paid
+    } else if (
+      booking.paymentStatus === 'paid' ||
+      (Number.isFinite(amount) && amount > 0)
+    ) {
+      paidCount += 1
+    }
+    const key = booking.category?.trim() || 'Unspecified'
+    categoryMap.set(key, (categoryMap.get(key) || 0) + 1)
+  }
+
+  return {
+    total: bookings.length,
+    paidCount,
+    totalCollected,
+    byCategory: Array.from(categoryMap.entries()),
+  }
+}
+
+/**
+ * Aggregate stats for an event's bookings (full scan; not returned as list props).
+ */
+export async function getEventBookingStats(
+  eventId: string,
+): Promise<EventBookingStats> {
+  await requireAuth()
+  if (!adminDb) {
+    return { ...EMPTY_EVENT_BOOKING_STATS }
+  }
+  try {
+    const bookings = await fetchBookingsForEventFromDb(eventId)
+    return computeStatsFromBookings(bookings)
+  } catch (error) {
+    console.error('Error fetching booking stats:', error)
+    return { ...EMPTY_EVENT_BOOKING_STATS }
+  }
+}
+
+/**
+ * Cursor-paginated bookings for the event detail dashboard.
+ */
+export async function getBookingsPage(
+  eventId: string,
+  options: {
+    pageSize?: number
+    cursor?: BookingCursor | null
+    nameFilter?: string
+    categoryFilter?: string
+  } = {},
+): Promise<BookingsPage> {
+  await requireAuth()
+
+  if (!adminDb) {
+    return { items: [], nextCursor: null, hasMore: false, matchedTotal: 0 }
+  }
+
+  const pageSize = Math.min(
+    Math.max(options.pageSize ?? BOOKING_DEFAULT_PAGE_SIZE, 1),
+    100,
+  )
+  const nameFilter = options.nameFilter?.trim().toLowerCase() || ''
+  const categoryFilter = options.categoryFilter?.trim() || ''
+
+  // Name substring search is not indexable — filter + paginate in memory.
+  if (nameFilter) {
+    const all = await fetchBookingsForEventFromDb(eventId)
+    const filtered = all.filter((booking) => {
+      const matchName = booking.name.toLowerCase().includes(nameFilter)
+      const matchCategory =
+        !categoryFilter || (booking.category || '') === categoryFilter
+      return matchName && matchCategory
+    })
+    return pageBookingsFromItems(filtered, options.cursor, pageSize)
+  }
+
+  try {
+    let q = adminDb
+      .collection('bookings')
+      .where('eventId', '==', eventId)
+
+    if (categoryFilter) {
+      q = q.where('category', '==', categoryFilter)
+    }
+
+    q = q
+      .orderBy('createdAt', 'desc')
+      .orderBy(FieldPath.documentId(), 'desc')
+
+    const cursor = options.cursor
+    if (cursor?.id && cursor.createdAt) {
+      const cursorDate = createdAtToDate(cursor.createdAt)
+      if (cursorDate) {
+        q = q.startAfter(cursorDate, cursor.id)
+      }
+    }
+
+    const countPromise = categoryFilter
+      ? adminDb
+          .collection('bookings')
+          .where('eventId', '==', eventId)
+          .where('category', '==', categoryFilter)
+          .count()
+          .get()
+          .then((snap) => snap.data().count)
+          .catch(() => null)
+      : Promise.resolve(null)
+
+    const [snap, matchedTotal] = await Promise.all([
+      q.limit(pageSize + 1).get(),
+      countPromise,
+    ])
+
+    const docs = snap.docs.slice(0, pageSize)
+    const items = docs.map((doc) => mapBookingDoc(doc.id, doc.data() as Record<string, unknown>))
+    const hasMore = snap.docs.length > pageSize
+    const last = docs[docs.length - 1]
+
+    let nextCursor: BookingCursor | null = null
+    if (hasMore && last) {
+      const createdAt =
+        createdAtToDate(last.data().createdAt)?.toISOString() ||
+        String(items[items.length - 1]?.createdAt || '')
+      if (createdAt) {
+        nextCursor = { createdAt, id: last.id }
+      }
+    }
+
+    return {
+      items,
+      nextCursor,
+      hasMore,
+      matchedTotal: typeof matchedTotal === 'number' ? matchedTotal : null,
+    }
+  } catch (error) {
+    if (!isMissingIndexError(error)) {
+      console.error('Error fetching bookings page:', error)
+      throw new Error('Failed to fetch bookings page')
+    }
+    console.warn(
+      '[events] Composite index missing for bookings pagination; using in-memory fallback.',
+      error instanceof Error ? error.message : error,
+    )
+    const all = await fetchBookingsForEventFromDb(eventId)
+    const filtered = categoryFilter
+      ? all.filter((b) => (b.category || '') === categoryFilter)
+      : all
+    return pageBookingsFromItems(filtered, options.cursor, pageSize)
   }
 }
 
@@ -244,6 +516,64 @@ export async function createBookingManual(
       success: false,
       error: 'Failed to create registration. Please try again.',
     }
+  }
+}
+
+/**
+ * Resend confirmation email for an existing booking (admin dashboard).
+ */
+export async function resendBookingEmail(bookingId: string): Promise<{
+  success: boolean
+  error?: string
+  warning?: string
+  emailSendCount?: number
+}> {
+  const session = await requireAuth()
+  if (!hasPermission(session, 'mail.send')) {
+    return {
+      success: false,
+      error: 'You do not have permission to send emails from the dashboard.',
+    }
+  }
+
+  if (!adminDb) {
+    return { success: false, error: 'Database unavailable.' }
+  }
+
+  try {
+    const bookingDoc = await adminDb.collection('bookings').doc(bookingId).get()
+    if (!bookingDoc.exists) {
+      return { success: false, error: 'Booking not found.' }
+    }
+
+    const bookingData = bookingDoc.data()!
+    const booking = {
+      id: bookingDoc.id,
+      ...bookingData,
+      createdAt: toIsoString(bookingData.createdAt) ?? '',
+      paidAt: toIsoString(bookingData.paidAt),
+      pdfGeneratedAt: toIsoString(bookingData.pdfGeneratedAt),
+      emailSentAt: toIsoString(bookingData.emailSentAt),
+      emailFailedAt: toIsoString(bookingData.emailFailedAt),
+    } as Booking
+
+    const eventDoc = await adminDb.collection('events').doc(booking.eventId).get()
+    if (!eventDoc.exists) {
+      return { success: false, error: 'Event not found.' }
+    }
+
+    const eventData = eventDoc.data()!
+    const event = {
+      id: eventDoc.id,
+      ...eventData,
+      createdAt: eventData.createdAt?.toDate?.() || eventData.createdAt,
+      updatedAt: eventData.updatedAt?.toDate?.() || eventData.updatedAt,
+    } as Event
+
+    return await resendBookingConfirmationEmail(booking, event)
+  } catch (error) {
+    console.error('Resend booking email failed:', error)
+    return { success: false, error: 'Failed to send confirmation email. Please try again.' }
   }
 }
 

@@ -11,9 +11,23 @@ export {
 
 export {
   getBookings,
+  getBookingsPage,
+  getEventBookingStats,
   cancelBooking,
   createBookingManual,
+  resendBookingEmail,
 } from './events/bookings-actions'
+
+export {
+  BOOKING_PAGE_SIZE_OPTIONS,
+  BOOKING_DEFAULT_PAGE_SIZE,
+} from './events/bookings-types'
+
+export type {
+  BookingCursor,
+  BookingsPage,
+  EventBookingStats,
+} from './events/bookings-types'
 
 export {
   getCourses,

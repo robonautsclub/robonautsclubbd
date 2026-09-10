@@ -44,6 +44,7 @@ type Props = {
   schools: string[]
   canViewPayments?: boolean
   canSendMail?: boolean
+  onCreated?: () => void
 }
 
 export default function CreateEventRegistrationForm({
@@ -51,6 +52,7 @@ export default function CreateEventRegistrationForm({
   schools,
   canViewPayments = false,
   canSendMail = false,
+  onCreated,
 }: Props) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
@@ -195,6 +197,7 @@ export default function CreateEventRegistrationForm({
             result.registrationId ? ` (${result.registrationId})` : ''
           }.`
       )
+      onCreated?.()
       router.refresh()
       setTimeout(() => handleOpenChange(false), 800)
     } catch {
