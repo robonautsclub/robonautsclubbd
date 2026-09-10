@@ -10,6 +10,13 @@ interface ExportBookingsButtonProps {
   eventTitle: string
   canExportExcel?: boolean
   canExportPdf?: boolean
+  canViewPayments?: boolean
+}
+
+function formatPaymentStatus(booking: Booking): string {
+  if (booking.paymentStatus === 'n/a') return 'n/a'
+  if (booking.paymentStatus === 'paid') return 'paid'
+  return booking.paymentStatus || 'unpaid'
 }
 
 export default function ExportBookingsButton({
@@ -17,6 +24,7 @@ export default function ExportBookingsButton({
   eventTitle,
   canExportExcel = false,
   canExportPdf = false,
+  canViewPayments = false,
 }: ExportBookingsButtonProps) {
   const [isPending, startTransition] = useTransition()
 
@@ -54,10 +62,10 @@ export default function ExportBookingsButton({
         try {
           // Dynamically import XLSX only when needed (code splitting)
           const XLSX = await import('xlsx')
-        
+
         // Prepare data for Excel export
         const exportData = bookings.map((booking, index) => {
-          return {
+          const row: Record<string, string | number> = {
             'No.': index + 1,
             'Registration ID': booking.registrationId || 'N/A',
             'Name': booking.name,
@@ -65,11 +73,15 @@ export default function ExportBookingsButton({
             'School': booking.school,
             'Email': booking.email,
             'Phone': booking.phone || 'N/A',
-            'Amount Paid (BDT)': booking.amountPaid || '',
-            'Payment Status': booking.paymentStatus || 'unpaid',
-            'Additional Information': booking.information || '',
-            'Booked At': formatBookedAt(booking),
           }
+          if (canViewPayments) {
+            row['Amount Paid (BDT)'] = booking.amountPaid ?? ''
+            row['Payment Status'] = formatPaymentStatus(booking)
+            row['Trx ID'] = booking.trxId || ''
+          }
+          row['Additional Information'] = booking.information || ''
+          row['Booked At'] = formatBookedAt(booking)
+          return row
         })
 
         // Create a new workbook
@@ -79,19 +91,32 @@ export default function ExportBookingsButton({
         const ws = XLSX.utils.json_to_sheet(exportData)
 
         // Set column widths for better readability
-        const columnWidths = [
-          { wch: 8 },  // No.
-          { wch: 20 }, // Registration ID
-          { wch: 25 }, // Name
-          { wch: 18 }, // Category
-          { wch: 30 }, // School
-          { wch: 35 }, // Email
-          { wch: 18 }, // Phone
-          { wch: 18 }, // Amount Paid (BDT)
-          { wch: 18 }, // Payment Status
-          { wch: 50 }, // Additional Information
-          { wch: 20 }, // Booked At
-        ]
+        const columnWidths = canViewPayments
+          ? [
+              { wch: 8 },
+              { wch: 20 },
+              { wch: 25 },
+              { wch: 18 },
+              { wch: 30 },
+              { wch: 35 },
+              { wch: 18 },
+              { wch: 18 },
+              { wch: 18 },
+              { wch: 22 },
+              { wch: 50 },
+              { wch: 20 },
+            ]
+          : [
+              { wch: 8 },
+              { wch: 20 },
+              { wch: 25 },
+              { wch: 18 },
+              { wch: 30 },
+              { wch: 35 },
+              { wch: 18 },
+              { wch: 50 },
+              { wch: 20 },
+            ]
         ws['!cols'] = columnWidths
 
         // Add the worksheet to the workbook
@@ -134,35 +159,57 @@ export default function ExportBookingsButton({
           doc.text(`Total registrations: ${bookings.length}`, 40, 60)
           doc.text(`Exported at: ${exportedAt}`, 40, 76)
 
-          const rows = bookings.map((booking, index) => [
-            String(index + 1),
-            booking.registrationId || 'N/A',
-            booking.name || '',
-            booking.category || 'Unspecified',
-            booking.school || '',
-            booking.email || '',
-            booking.phone || 'N/A',
-            booking.amountPaid ? `BDT ${booking.amountPaid}` : '—',
-            booking.paymentStatus || 'unpaid',
-            booking.information || '',
-            formatBookedAt(booking),
-          ])
+          const rows = bookings.map((booking, index) => {
+            const base = [
+              String(index + 1),
+              booking.registrationId || 'N/A',
+              booking.name || '',
+              booking.category || 'Unspecified',
+              booking.school || '',
+              booking.email || '',
+              booking.phone || 'N/A',
+            ]
+            if (canViewPayments) {
+              base.push(
+                booking.amountPaid != null ? `BDT ${booking.amountPaid}` : '—',
+                formatPaymentStatus(booking),
+                booking.trxId || '—',
+              )
+            }
+            base.push(booking.information || '', formatBookedAt(booking))
+            return base
+          })
+
+          const head = canViewPayments
+            ? [
+                'No.',
+                'Registration ID',
+                'Name',
+                'Category',
+                'School',
+                'Email',
+                'Phone',
+                'Amount',
+                'Status',
+                'Trx ID',
+                'Info',
+                'Booked At',
+              ]
+            : [
+                'No.',
+                'Registration ID',
+                'Name',
+                'Category',
+                'School',
+                'Email',
+                'Phone',
+                'Info',
+                'Booked At',
+              ]
 
           autoTable(doc, {
             startY: 92,
-            head: [[
-              'No.',
-              'Registration ID',
-              'Name',
-              'Category',
-              'School',
-              'Email',
-              'Phone',
-              'Amount',
-              'Status',
-              'Info',
-              'Booked At',
-            ]],
+            head: [head],
             body: rows,
             styles: {
               fontSize: 8,

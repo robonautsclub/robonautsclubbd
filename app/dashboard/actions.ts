@@ -12,6 +12,7 @@ export {
 export {
   getBookings,
   cancelBooking,
+  createBookingManual,
 } from './events/bookings-actions'
 
 export {

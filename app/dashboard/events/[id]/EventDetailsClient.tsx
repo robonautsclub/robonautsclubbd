@@ -7,6 +7,7 @@ import type { Booking } from '@/types/booking'
 import type { Event } from '@/types/event'
 import BookingActions from './BookingActions'
 import ExportBookingsButton from './ExportBookingsButton'
+import CreateEventRegistrationForm from './CreateEventRegistrationForm'
 import { formatEventDates, parseEventDates, isEventUpcoming } from '@/lib/dateUtils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -18,9 +19,11 @@ import { downloadPdfFromResponse } from '@/lib/downloadPdfBlob'
 type Props = {
   event: Event
   bookings: Booking[]
+  schools?: string[]
   canEdit?: boolean
   canDelete?: boolean
   canViewPayments?: boolean
+  canSendMail?: boolean
   canExportExcel?: boolean
   canExportPdf?: boolean
 }
@@ -28,9 +31,11 @@ type Props = {
 export default function EventDetailsClient({
   event,
   bookings,
+  schools = [],
   canEdit = false,
   canDelete = false,
   canViewPayments = false,
+  canSendMail = false,
   canExportExcel = false,
   canExportPdf = false,
 }: Props) {
@@ -67,6 +72,7 @@ export default function EventDetailsClient({
 
   const paidCount = useMemo(() => {
     return bookings.filter((booking) => {
+      if (booking.paymentStatus === 'n/a') return false
       const amount = typeof booking.amountPaid === 'number' ? booking.amountPaid : Number(booking.amountPaid || 0)
       return booking.paymentStatus === 'paid' || (Number.isFinite(amount) && amount > 0)
     }).length
@@ -262,6 +268,14 @@ export default function EventDetailsClient({
               <span className="text-xs sm:text-sm font-normal text-slate-500">({filteredBookings.length})</span>
             </h3>
             <div className="flex flex-wrap items-center gap-2">
+              {canEdit && (
+                <CreateEventRegistrationForm
+                  event={event}
+                  schools={schools}
+                  canViewPayments={canViewPayments}
+                  canSendMail={canSendMail}
+                />
+              )}
               {canExportPdf && (
                 <Button
                   type="button"
@@ -284,6 +298,7 @@ export default function EventDetailsClient({
                 eventTitle={event.title}
                 canExportExcel={canExportExcel}
                 canExportPdf={canExportPdf}
+                canViewPayments={canViewPayments}
               />
             </div>
           </div>
@@ -374,12 +389,25 @@ export default function EventDetailsClient({
                       <div className="text-xs sm:text-sm text-slate-900">{booking.phone || 'N/A'}</div>
                     </TableCell>
                     <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
-                      <div className="text-xs sm:text-sm text-slate-900 flex items-center gap-1">
+                      <div className="text-xs sm:text-sm text-slate-900">
                         {canViewPayments ? (
-                          <>
-                            <Banknote className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
-                            {booking.amountPaid ? `BDT ${booking.amountPaid}` : '—'}
-                          </>
+                          booking.paymentStatus === 'n/a' ? (
+                            <span className="text-slate-600">Waived</span>
+                          ) : booking.paymentStatus === 'paid' || booking.amountPaid ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="flex items-center gap-1">
+                                <Banknote className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
+                                {booking.amountPaid != null ? `BDT ${booking.amountPaid}` : 'Paid'}
+                              </span>
+                              {booking.trxId ? (
+                                <span className="text-[11px] text-slate-500 font-mono">
+                                  {booking.trxId}
+                                </span>
+                              ) : null}
+                            </div>
+                          ) : (
+                            '—'
+                          )
                         ) : (
                           '—'
                         )}

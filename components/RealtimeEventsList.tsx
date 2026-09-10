@@ -137,7 +137,7 @@ const FALLBACK_IMAGE = '/robot.gif'
 
 // Event Card Component (same as in events/page.tsx but for client component)
 // Memoized to prevent unnecessary re-renders
-const EventCard = memo(({ event }: { event: Event }) => {
+const EventCard = memo(({ event, priority = false }: { event: Event; priority?: boolean }) => {
   const [imageError, setImageError] = useState(false)
   const eventDates = parseEventDates(event.date)
   const firstDate = getFirstEventDate(event.date)
@@ -211,6 +211,8 @@ const EventCard = memo(({ event }: { event: Event }) => {
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            priority={priority}
+            loading={priority ? undefined : 'lazy'}
             onError={() => setImageError(true)}
           />
           <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors" />
@@ -372,8 +374,8 @@ export default function RealtimeEventsList({ initialEvents = [] }: RealtimeEvent
             count={upcomingEvents.length}
           />
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {upcomingEvents.map((event) => (
-              <EventCard key={event.id} event={event} />
+            {upcomingEvents.map((event, index) => (
+              <EventCard key={event.id} event={event} priority={index === 0} />
             ))}
           </div>
         </section>

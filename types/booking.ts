@@ -13,8 +13,8 @@ export type Booking = {
   phone: string
   category?: string
   bkashNumber?: string
-  paymentGateway?: 'bkash'
-  paymentStatus?: 'paid'
+  paymentGateway?: 'bkash' | 'manual'
+  paymentStatus?: 'paid' | 'n/a'
   paymentId?: string
   trxId?: string
   amountPaid?: number

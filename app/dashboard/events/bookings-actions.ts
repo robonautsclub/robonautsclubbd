@@ -10,6 +10,14 @@ import {
 import { adminDb } from '@/lib/firebase-admin'
 import { Event } from '@/types/event'
 import { Booking } from '@/types/booking'
+import { getEventRegistrationFields } from '@/lib/registrationFields'
+import { validateCustomFormAnswers } from '@/lib/eventCustomForm'
+import {
+  createBookingRecordAndSendEmail,
+  type BookingInput,
+  type BookingPaymentMeta,
+} from '@/lib/event-booking'
+import { resolveEventSuggestedFee } from '@/lib/event-fee'
 import {
   DASHBOARD_EVENT_BOOKINGS_TAG_PREFIX,
   getEventBookingsTag,
@@ -79,6 +87,163 @@ export async function getBookings(eventId: string): Promise<Booking[]> {
   } catch (error) {
     console.error('Error fetching bookings:', error)
     throw new Error('Failed to fetch bookings')
+  }
+}
+
+export type CreateBookingManualInput = BookingInput & {
+  paymentMode?: 'paid_offline' | 'waived'
+  amountPaid?: number
+  trxId?: string
+  sendEmail?: boolean
+}
+
+/**
+ * Admin-only: create a booking without bKash checkout.
+ * Bypasses public registration-open checks. Supports paid offline / waived for paid events.
+ */
+export async function createBookingManual(
+  input: CreateBookingManualInput
+): Promise<{
+  success: boolean
+  error?: string
+  warning?: string
+  bookingId?: string
+  registrationId?: string
+}> {
+  const session = await requireAuth()
+  if (!canEditArea(session, 'events')) {
+    return { success: false, error: 'You do not have permission to add registrations.' }
+  }
+
+  if (!adminDb) {
+    return {
+      success: false,
+      error: 'Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.',
+    }
+  }
+
+  try {
+    const eventDoc = await adminDb.collection('events').doc(input.eventId).get()
+    if (!eventDoc.exists) {
+      return { success: false, error: 'Event not found' }
+    }
+
+    const eventData = eventDoc.data()!
+    const event: Event = {
+      id: eventDoc.id,
+      ...eventData,
+      createdAt: eventData.createdAt?.toDate?.() || eventData.createdAt,
+      updatedAt: eventData.updatedAt?.toDate?.() || eventData.updatedAt,
+    } as Event
+
+    const defaultRegistrationFields = getEventRegistrationFields(event)
+
+    if (!input.eventId || !input.name?.trim() || !input.email?.trim() || !input.phone?.trim()) {
+      return { success: false, error: 'All required fields must be filled' }
+    }
+
+    const school = (input.school || '').trim()
+    if (
+      defaultRegistrationFields.school.enabled &&
+      defaultRegistrationFields.school.required &&
+      !school
+    ) {
+      return { success: false, error: 'School is required.' }
+    }
+    if (
+      defaultRegistrationFields.information.enabled &&
+      defaultRegistrationFields.information.required &&
+      !input.information?.trim()
+    ) {
+      return { success: false, error: 'Other information is required.' }
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(input.email)) {
+      return { success: false, error: 'Invalid email format' }
+    }
+
+    const normalizedPhone = input.phone.trim().replace(/\s/g, '')
+    if (normalizedPhone.length !== 11 || !normalizedPhone.startsWith('01')) {
+      return { success: false, error: 'Phone number must be 11 digits and start with 01' }
+    }
+
+    const categories = Array.isArray(event.categories) ? event.categories : []
+    if (defaultRegistrationFields.category.enabled && categories.length > 0) {
+      const selectedCategory = input.category?.trim()
+      if (defaultRegistrationFields.category.required && !selectedCategory) {
+        return { success: false, error: 'Please select a category.' }
+      }
+      if (selectedCategory) {
+        const categoryExists = categories.some(
+          (category) => category.name.trim().toLowerCase() === selectedCategory.toLowerCase()
+        )
+        if (!categoryExists) {
+          return { success: false, error: 'Selected category is not valid for this event.' }
+        }
+      }
+    }
+
+    const customAnswerError = validateCustomFormAnswers(event.customFormFields, input.customAnswers)
+    if (customAnswerError) {
+      return { success: false, error: customAnswerError }
+    }
+
+    const formData: BookingInput = {
+      eventId: input.eventId,
+      name: input.name,
+      school: input.school,
+      email: input.email,
+      phone: normalizedPhone,
+      category: input.category,
+      information: input.information,
+      customAnswers: input.customAnswers,
+    }
+
+    let paymentMeta: BookingPaymentMeta | undefined
+    let paymentStatusForUnpaid: 'n/a' | undefined
+
+    if (event.isPaid) {
+      const paymentMode = input.paymentMode || 'waived'
+      if (paymentMode === 'paid_offline') {
+        if (!hasPermission(session, 'payments.view')) {
+          return {
+            success: false,
+            error: 'You do not have permission to set paid amounts.',
+          }
+        }
+        const suggested = resolveEventSuggestedFee(event, input.category)
+        const amountPaid =
+          typeof input.amountPaid === 'number' && Number.isFinite(input.amountPaid)
+            ? input.amountPaid
+            : suggested
+        if (!(amountPaid > 0)) {
+          return {
+            success: false,
+            error: 'Paid offline amount must be greater than 0. Use Waived if no fee applies.',
+          }
+        }
+        paymentMeta = {
+          paymentId: `admin-manual-${Date.now()}`,
+          trxId: input.trxId?.trim() || undefined,
+          amountPaid,
+          paymentGateway: 'manual',
+        }
+      } else {
+        paymentStatusForUnpaid = 'n/a'
+      }
+    }
+
+    return await createBookingRecordAndSendEmail(event, formData, paymentMeta, {
+      sendEmail: input.sendEmail !== false && hasPermission(session, 'mail.send'),
+      paymentStatusForUnpaid,
+    })
+  } catch (error) {
+    console.error('Admin manual event registration failed:', error)
+    return {
+      success: false,
+      error: 'Failed to create registration. Please try again.',
+    }
   }
 }
 
