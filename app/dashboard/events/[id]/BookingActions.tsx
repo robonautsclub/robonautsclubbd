@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { cancelBooking } from '../../actions'
-import { Trash2, FileText, Award } from 'lucide-react'
+import { cancelBooking, resendBookingEmail } from '../../actions'
+import { Trash2, FileText, Award, Mail } from 'lucide-react'
 import DeleteConfirmation from '../DeleteConfirmation'
 import type { Booking } from '@/types/booking'
 import type { Event } from '@/types/event'
@@ -15,6 +15,8 @@ interface BookingActionsProps {
   event: Event
   canCancel?: boolean
   canDownloadPdf?: boolean
+  canSendMail?: boolean
+  onChanged?: () => void
 }
 
 export default function BookingActions({
@@ -22,14 +24,23 @@ export default function BookingActions({
   event,
   canCancel = false,
   canDownloadPdf = false,
+  canSendMail = false,
+  onChanged,
 }: BookingActionsProps) {
   const router = useRouter()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [downloadingCert, setDownloadingCert] = useState(false)
+  const [sendingMail, setSendingMail] = useState(false)
 
   const hasCertificateTemplate = Boolean(event.certificateTemplateId?.trim())
+  const sendCount = booking.emailSendCount ?? 0
+
+  const refresh = () => {
+    onChanged?.()
+    router.refresh()
+  }
 
   const handleCancel = async () => {
     setDeleting(true)
@@ -37,7 +48,7 @@ export default function BookingActions({
       const result = await cancelBooking(booking.id)
       if (result.success) {
         setShowDeleteConfirm(false)
-        router.refresh()
+        refresh()
       } else {
         alert(result.error || 'Failed to cancel booking')
       }
@@ -46,6 +57,28 @@ export default function BookingActions({
       alert('An unexpected error occurred')
     } finally {
       setDeleting(false)
+    }
+  }
+
+  const handleResendEmail = async () => {
+    setSendingMail(true)
+    try {
+      const result = await resendBookingEmail(booking.id)
+      if (!result.success) {
+        alert(result.error || 'Failed to send confirmation email')
+        return
+      }
+      const count = result.emailSendCount ?? sendCount + 1
+      alert(
+        result.warning ||
+          `Confirmation email sent${count > 0 ? ` (send #${count})` : ''}.`,
+      )
+      refresh()
+    } catch (error) {
+      console.error('Error resending confirmation email:', error)
+      alert('An unexpected error occurred')
+    } finally {
+      setSendingMail(false)
     }
   }
 
@@ -104,6 +137,29 @@ export default function BookingActions({
   return (
     <>
       <div className="flex items-center gap-2">
+        {canSendMail && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={sendingMail || !booking.registrationId || !booking.email}
+            onClick={() => void handleResendEmail()}
+            className="relative text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 gap-1"
+            title={
+              sendCount > 0
+                ? `Email sent ${sendCount} time${sendCount === 1 ? '' : 's'} — click to resend`
+                : 'Send confirmation email'
+            }
+          >
+            <Mail className="w-4 h-4" />
+            <span className="hidden sm:inline">{sendingMail ? '…' : 'Email'}</span>
+            {sendCount > 0 ? (
+              <span className="inline-flex min-w-4 h-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold leading-none text-white">
+                {sendCount}
+              </span>
+            ) : null}
+          </Button>
+        )}
         {canDownloadPdf && (
           <Button
             type="button"

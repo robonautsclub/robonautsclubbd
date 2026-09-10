@@ -1,7 +1,12 @@
 import { requireTabAccess, canEditArea, canDeleteArea, hasPermission } from '@/lib/auth'
-import { getEvent, getBookings } from '../../actions'
+import {
+  getEvent,
+  getBookingsPage,
+  getEventBookingStats,
+} from '../../actions'
+import { BOOKING_DEFAULT_PAGE_SIZE } from '../bookings-types'
+import { getPublicEnglishMediumSchools } from '@/app/(marketing)/events/actions'
 import { notFound } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import EventHeaderActions from './EventHeaderActions'
 import EventDetailsClient from './EventDetailsClient'
@@ -16,7 +21,12 @@ export default async function EventDetailsPage({
 }) {
   const session = await requireTabAccess('events')
   const { id } = await params
-  const [event, bookings] = await Promise.all([getEvent(id), getBookings(id)])
+  const [event, initialPage, initialStats, schools] = await Promise.all([
+    getEvent(id),
+    getBookingsPage(id, { pageSize: BOOKING_DEFAULT_PAGE_SIZE }),
+    getEventBookingStats(id),
+    getPublicEnglishMediumSchools(),
+  ])
 
   if (!event) {
     notFound()
@@ -49,14 +59,16 @@ export default async function EventDetailsPage({
 
       <EventDetailsClient
         event={event}
-        bookings={bookings}
+        initialPage={initialPage}
+        initialStats={initialStats}
+        schools={schools}
         canEdit={canEditArea(session, 'events')}
         canDelete={canDeleteArea(session, 'events')}
         canViewPayments={hasPermission(session, 'payments.view')}
+        canSendMail={hasPermission(session, 'mail.send')}
         canExportExcel={hasPermission(session, 'exports.excel')}
         canExportPdf={hasPermission(session, 'exports.pdf')}
       />
     </div>
   )
 }
-

@@ -1,13 +1,11 @@
 'use server'
 
 import { cache } from 'react'
-import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
+import { unstable_cache } from 'next/cache'
 import { adminDb } from '@/lib/firebase-admin'
 import { Event } from '@/types/event'
 import { persistMissingEventSlugs, slugifyEventTitle } from '@/lib/event-slug'
 import { Course } from '@/types/course'
-import { sendBookingConfirmationEmail } from '@/lib/email'
-import { generateRegistrationId } from '@/lib/registrationId'
 import { isRegistrationOpen } from '@/lib/dateUtils'
 import {
   BkashApiError,
@@ -26,6 +24,12 @@ import {
   splitHomepageOrgs,
 } from '@/lib/homepage-orgs'
 import type { PublicHomepageOrgs } from '@/types/homepage-org'
+import {
+  createBookingRecordAndSendEmail,
+  hasExistingRegistration,
+  normalizeSchoolValue,
+  type BookingInput,
+} from '@/lib/event-booking'
 
 const PUBLIC_EVENTS_TAG = 'public-events'
 const PUBLIC_COURSES_TAG = 'public-courses'
@@ -271,17 +275,7 @@ export const getPublicEnglishMediumSchools = cache(async (): Promise<string[]> =
   }
 })
 
-type BookingInput = {
-  eventId: string
-  name: string
-  school?: string
-  email: string
-  phone: string
-  category?: string
-  bkashNumber?: string
-  information?: string
-  customAnswers?: Record<string, string | string[] | number | null | undefined>
-}
+export type { BookingInput } from '@/lib/event-booking'
 
 type PendingPaidRegistration = {
   paymentId: string
@@ -300,26 +294,6 @@ type PendingPaidRegistration = {
   updatedAt: Date
 }
 
-function normalizeSchoolValue(value: string | undefined): string {
-  if (!value) return ''
-  return value.trim().replace(/\s+/g, ' ')
-}
-
-async function hasExistingRegistration(
-  eventId: string,
-  normalizedEmail: string
-): Promise<boolean> {
-  if (!adminDb) return false
-
-  const existingBookings = await adminDb
-    .collection('bookings')
-    .where('eventId', '==', eventId)
-    .where('email', '==', normalizedEmail)
-    .get()
-
-  return !existingBookings.empty
-}
-
 function getBaseUrl(): string {
   let baseUrl = process.env.NEXT_PUBLIC_BASE_URL
   if (!baseUrl) {
@@ -336,138 +310,6 @@ function getBaseUrl(): string {
     }
   }
   return baseUrl.replace(/\/$/, '')
-}
-
-async function createBookingRecordAndSendEmail(
-  event: Event,
-  formData: BookingInput,
-  paymentMeta?: {
-    paymentId: string
-    trxId: string
-    amountPaid: number
-  }
-): Promise<{ success: boolean; error?: string; warning?: string; bookingId?: string }> {
-  if (!adminDb) {
-    return { success: false, error: 'Service temporarily unavailable. Please try again later.' }
-  }
-
-  const normalizedPhone = formData.phone.trim().replace(/\s/g, '')
-  const normalizedBkash = formData.bkashNumber?.trim().replace(/\s/g, '') ?? ''
-  const normalizedEmail = formData.email.trim().toLowerCase()
-  const normalizedSchool = normalizeSchoolValue(formData.school)
-  const defaultRegistrationFields = getEventRegistrationFields(event)
-
-  const alreadyExists = await hasExistingRegistration(formData.eventId, normalizedEmail)
-  if (alreadyExists) {
-    return {
-      success: false,
-      error: 'You have already registered for this event with this email address.',
-    }
-  }
-
-  const registrationId = generateRegistrationId()
-  const bookingRef = adminDb.collection('bookings').doc()
-  const bookingId = bookingRef.id
-  const now = new Date()
-
-  const bookingData: Record<string, unknown> = {
-    eventId: formData.eventId,
-    registrationId,
-    name: formData.name.trim(),
-    school: defaultRegistrationFields.school.enabled ? normalizedSchool : '',
-    email: normalizedEmail,
-    phone: normalizedPhone,
-    category: defaultRegistrationFields.category.enabled ? formData.category?.trim() || '' : '',
-    bkashNumber: normalizedBkash,
-    information: defaultRegistrationFields.information.enabled ? (formData.information ? formData.information.trim() : '') : '',
-    customAnswers: normalizeCustomFormAnswers(event.customFormFields, formData.customAnswers),
-    createdAt: now,
-  }
-
-  if (paymentMeta) {
-    bookingData.paymentGateway = 'bkash'
-    bookingData.paymentStatus = 'paid'
-    bookingData.paymentId = paymentMeta.paymentId
-    bookingData.trxId = paymentMeta.trxId
-    bookingData.amountPaid = paymentMeta.amountPaid
-    bookingData.paidAt = now
-  }
-
-  await bookingRef.set(bookingData)
-
-  const emailResult = await sendBookingConfirmationEmail({
-    to: normalizedEmail,
-    name: formData.name.trim(),
-    event,
-    registrationId,
-    bookingId,
-    bookingDetails: {
-      school: normalizedSchool,
-      phone: normalizedPhone,
-      bkashNumber: normalizedBkash,
-      information: formData.information ? formData.information.trim() : '',
-    },
-  })
-
-  // Persist email delivery state and PDF metadata on the booking.
-  // Admins can later resend the confirmation; users don't lose their spot due to a transient Brevo issue.
-  try {
-    const pdfUpdate: Record<string, unknown> = {}
-
-    if (emailResult.pdfBuffer && emailResult.pdfBuffer.length > 0) {
-      pdfUpdate.pdfGenerated = true
-      pdfUpdate.pdfGeneratedAt = new Date()
-    } else {
-      pdfUpdate.pdfGenerated = false
-      if (emailResult.pdfError) {
-        pdfUpdate.pdfError = emailResult.pdfError
-      }
-    }
-
-    if (emailResult.success) {
-      await bookingRef.update({
-        emailSent: true,
-        emailSentAt: new Date(),
-        ...pdfUpdate,
-      })
-    } else {
-      console.error(
-        `[booking] Booking ${bookingId} (${registrationId}) saved but confirmation email FAILED:`,
-        emailResult.error
-      )
-      await bookingRef.update({
-        emailSent: false,
-        emailError: emailResult.error || 'Unknown email service error',
-        emailFailedAt: new Date(),
-        ...pdfUpdate,
-      })
-    }
-  } catch (updateError) {
-    console.error(`[booking] Failed to update email/PDF status for booking ${bookingId}:`, updateError)
-  }
-
-  revalidatePath(`/dashboard/events/${formData.eventId}`)
-  revalidateTag(`dashboard-event-bookings-${formData.eventId}`, 'max')
-
-  if (!emailResult.success) {
-    // Booking is kept; return a soft warning so the UI can tell the user their spot is reserved
-    // but the email didn't go out. (Frontend shows a notice; admin can resend later.)
-    return {
-      success: true,
-      bookingId,
-      warning: `Your registration was saved (ID: ${registrationId}), but we couldn't send the confirmation email. Please contact support — our team has been notified. Details: ${emailResult.error || 'Unknown error'}`,
-    }
-  }
-
-  if (!emailResult.pdfAttached) {
-    return {
-      success: true,
-      bookingId,
-      warning: `Your registration was confirmed (ID: ${registrationId}), but we couldn't generate the confirmation PDF. Please contact support if you need your registration document.`,
-    }
-  }
-
-  return { success: true, bookingId }
 }
 
 /**
