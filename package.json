@@ -2,6 +2,7 @@
   "name": "robonautsclub",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.11.1",
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
@@ -89,18 +90,5 @@
   },
   "optionalDependencies": {
     "@react-pdf/renderer": "^4.3.2"
-  },
-  "pnpm": {
-    "patchedDependencies": {
-      "jose@4.15.9": "patches/jose@4.15.9.patch"
-    },
-    "ignoredBuiltDependencies": [
-      "@firebase/util",
-      "esbuild",
-      "protobufjs",
-      "sharp",
-      "unrs-resolver",
-      "workerd"
-    ]
   }
 }

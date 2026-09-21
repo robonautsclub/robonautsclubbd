@@ -3,9 +3,11 @@ packages:
 
 ignoredBuiltDependencies:
   - '@firebase/util'
+  - esbuild
   - protobufjs
   - sharp
   - unrs-resolver
+  - workerd
 
 patchedDependencies:
   jose@4.15.9: patches/jose@4.15.9.patch
