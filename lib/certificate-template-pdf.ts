@@ -6,7 +6,7 @@ import { format } from 'date-fns'
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { setupPDFKitFonts } from '@/lib/pdfGenerator'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { resolvePublicBaseUrl } from '@/lib/site-config'
 import { sanitizeTextForPDF } from '@/lib/textSanitizer'
 import type {
   CertificateField,
@@ -62,7 +62,7 @@ async function resolveImageBuffer(url: string | undefined): Promise<Buffer | nul
   if (raw.startsWith('/')) {
     const fromDisk = readPublicAsset(raw)
     if (fromDisk) return fromDisk
-    const base = (SITE_CONFIG.url || '').replace(/\/$/, '')
+    const base = resolvePublicBaseUrl()
     if (base) {
       const fetched = await fetchImageBuffer(`${base}${raw}`)
       if (fetched) return fetched
@@ -121,7 +121,7 @@ async function drawFields(
       const url =
         values.verificationUrl ||
         values.qrVerify ||
-        `${SITE_CONFIG.url}/verify-booking`
+        `${resolvePublicBaseUrl()}/verify-booking`
       const size = Math.min(Math.max(w, 24), pageWidth * 0.35, pageHeight * 0.45)
       const qrPixels = Math.min(720, Math.max(160, Math.round(size * 4)))
       let qr: Buffer | null = null
@@ -377,7 +377,7 @@ export async function generateSampleCertificatePdf(
   baseUrl?: string,
 ): Promise<{ buffer: Buffer; filename: string } | { error: string }> {
   const sample = getSampleCertificateValues()
-  const root = (baseUrl || SITE_CONFIG.url || '').replace(/\/$/, '')
+  const root = resolvePublicBaseUrl(baseUrl)
   const signatureSlots = template.fields
     .filter((f) => f.key === 'signatureImage')
     .map((f, index) => ({

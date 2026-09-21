@@ -1,5 +1,5 @@
 import * as brevo from '@getbrevo/brevo'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { SITE_CONFIG, resolvePublicBaseUrl } from '@/lib/site-config'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -26,27 +26,7 @@ export function requireBrevoApiKey(detailed = false): { ok: true } | { ok: false
 }
 
 export function resolveBaseUrl(): string {
-  let baseUrl = process.env.NEXT_PUBLIC_BASE_URL
-
-  if (!baseUrl) {
-    if (process.env.VERCEL_URL) {
-      baseUrl = `https://${process.env.VERCEL_URL}`
-    } else if (process.env.VERCEL_BRANCH_URL) {
-      baseUrl = process.env.VERCEL_BRANCH_URL.startsWith('http')
-        ? process.env.VERCEL_BRANCH_URL
-        : `https://${process.env.VERCEL_BRANCH_URL}`
-    } else if (process.env.NODE_ENV === 'development') {
-      baseUrl = 'http://localhost:3000'
-    } else {
-      baseUrl = SITE_CONFIG.url
-    }
-  }
-
-  baseUrl = baseUrl.replace(/\/$/, '')
-  if (process.env.NODE_ENV === 'production' && baseUrl.startsWith('http://')) {
-    baseUrl = baseUrl.replace('http://', 'https://')
-  }
-  return baseUrl
+  return resolvePublicBaseUrl()
 }
 
 export function resolveSender(): { fromEmail: string; senderEmail: string; senderName: string } {

@@ -8,7 +8,7 @@ import {
   generateCertificatesFromTemplate,
 } from '@/lib/certificate-template-pdf'
 import { resolveCertificateAwardFields } from '@/lib/certificate-templates'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { resolvePublicBaseUrl } from '@/lib/site-config'
 import type { Booking } from '@/types/booking'
 import type { Event } from '@/types/event'
 
@@ -60,12 +60,7 @@ export async function POST(
     )
   }
 
-  const baseUrl = (
-    request.nextUrl.origin ||
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    SITE_CONFIG.url ||
-    ''
-  ).replace(/\/$/, '')
+  const baseUrl = resolvePublicBaseUrl(request.nextUrl.origin)
 
   const awardFields = resolveCertificateAwardFields(null)
   const pages = bookings.map((booking) => {

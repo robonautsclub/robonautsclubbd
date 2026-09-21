@@ -5,7 +5,7 @@
 import * as brevo from '@getbrevo/brevo'
 import type { Event } from '@/types/event'
 import type { RobofestTeamMember } from '@/lib/robofest-content'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { SITE_CONFIG, resolvePublicBaseUrl } from '@/lib/site-config'
 import { formatEventDateLabel } from '@/lib/dateUtils'
 import { formatAgeCategoryLabel } from '@/lib/robofest-registration-options'
 
@@ -77,25 +77,7 @@ function escapeHtml(value: string): string {
 }
 
 function resolveBaseUrl(): string {
-  let baseUrl = process.env.NEXT_PUBLIC_BASE_URL
-  if (!baseUrl) {
-    if (process.env.VERCEL_URL) {
-      baseUrl = `https://${process.env.VERCEL_URL}`
-    } else if (process.env.VERCEL_BRANCH_URL) {
-      baseUrl = process.env.VERCEL_BRANCH_URL.startsWith('http')
-        ? process.env.VERCEL_BRANCH_URL
-        : `https://${process.env.VERCEL_BRANCH_URL}`
-    } else if (process.env.NODE_ENV === 'development') {
-      baseUrl = 'http://localhost:3000'
-    } else {
-      baseUrl = SITE_CONFIG.url
-    }
-  }
-  baseUrl = baseUrl.replace(/\/$/, '')
-  if (process.env.NODE_ENV === 'production' && baseUrl.startsWith('http://')) {
-    baseUrl = baseUrl.replace('http://', 'https://')
-  }
-  return baseUrl
+  return resolvePublicBaseUrl()
 }
 
 function buildMemberRowsHtml(members: RobofestEmailTeamMember[]): string {

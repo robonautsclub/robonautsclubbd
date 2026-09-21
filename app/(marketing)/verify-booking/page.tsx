@@ -9,7 +9,7 @@ import { format } from 'date-fns'
 import Link from 'next/link'
 import Image from 'next/image'
 import type { Metadata } from 'next'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { SITE_CONFIG, resolvePublicBaseUrl } from '@/lib/site-config'
 import { buildPageMetadata } from '@/lib/seo-metadata'
 import CopyButton from './CopyButton'
 import RetryButton from './RetryButton'
@@ -181,21 +181,7 @@ export default async function VerifyBookingPage({ searchParams }: VerificationPa
   const isValid = result.kind !== 'none'
   
   // Generate base URL for QR code display
-  let baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL
-  if (!baseUrl) {
-    if (process.env.VERCEL_URL) {
-      baseUrl = `https://${process.env.VERCEL_URL}`
-    } else if (process.env.VERCEL_BRANCH_URL) {
-      baseUrl = process.env.VERCEL_BRANCH_URL.startsWith('http') 
-        ? process.env.VERCEL_BRANCH_URL 
-        : `https://${process.env.VERCEL_BRANCH_URL}`
-    } else if (process.env.NODE_ENV === 'development') {
-      baseUrl = 'http://localhost:3000'
-    } else {
-      baseUrl = SITE_CONFIG.url
-    }
-  }
-  baseUrl = baseUrl.replace(/\/$/, '')
+  const baseUrl = resolvePublicBaseUrl()
   const verificationUrl = `${baseUrl}/verify-booking?registrationId=${encodeURIComponent(registrationId)}`
   const qrCodeDataURL = isValid ? await generateQRCodeDataURL(verificationUrl, 200) : null
 

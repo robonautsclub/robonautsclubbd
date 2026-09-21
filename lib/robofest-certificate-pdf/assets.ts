@@ -7,7 +7,7 @@ import {
 } from '@/lib/robofest-certificate-signatures'
 import type { CertificateRenderValues } from '@/lib/certificate-template-pdf'
 import { loadLogoBuffer } from '@/lib/pdfGenerator'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { resolvePublicBaseUrl } from '@/lib/site-config'
 
 export async function fetchSignatureImageBuffer(
   url: string,
@@ -62,13 +62,7 @@ export function loadRobotBuffer(): Buffer | null {
 }
 
 export function resolveBaseUrl(baseUrl?: string): string {
-  const raw =
-    baseUrl ||
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    SITE_CONFIG.url ||
-    ''
-  return raw.replace(/\/$/, '')
+  return resolvePublicBaseUrl(baseUrl)
 }
 
 export function buildCertificateVerificationUrl(

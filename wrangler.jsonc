@@ -50,8 +50,8 @@
   ],
   "vars": {
     "NODE_ENV": "production",
-    "NEXT_PUBLIC_BASE_URL": "https://robonautsclubbd.atm3collab.workers.dev",
-    "NEXT_PUBLIC_SITE_URL": "https://robonautsclubbd.atm3collab.workers.dev",
+    "NEXT_PUBLIC_BASE_URL": "https://www.robonautsltd.com",
+    "NEXT_PUBLIC_SITE_URL": "https://www.robonautsltd.com",
     "BREVO_FROM_EMAIL": "no-reply@robonautsltd.com",
     "BKASH_CHECKOUT_URL_BASE": "https://tokenized.pay.bka.sh/v1.2.0-beta"
   },

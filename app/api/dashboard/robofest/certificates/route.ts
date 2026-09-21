@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { canViewTab, getServerSession, hasPermission } from '@/lib/auth'
 import { getRobofestContentFresh } from '@/lib/robofest-content'
 import { generateRobofestBulkParticipationCertificatesPDF } from '@/lib/robofest-certificate-pdf'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { resolvePublicBaseUrl } from '@/lib/site-config'
 import { loadRobofestRegistrationsByIds } from '@/app/dashboard/robofest/registrations-data'
 
 export const dynamic = 'force-dynamic'
@@ -10,15 +10,7 @@ export const dynamic = 'force-dynamic'
 const MAX_BULK_CERTIFICATE_IDS = 500
 
 function getBaseUrl(request: NextRequest): string {
-  let baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    request.nextUrl.origin
-  if (!baseUrl && process.env.VERCEL_URL) {
-    baseUrl = `https://${process.env.VERCEL_URL}`
-  }
-  if (!baseUrl) baseUrl = SITE_CONFIG.url
-  return baseUrl.replace(/\/$/, '')
+  return resolvePublicBaseUrl(request.nextUrl.origin)
 }
 
 /**

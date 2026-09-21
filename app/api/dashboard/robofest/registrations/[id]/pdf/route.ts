@@ -5,7 +5,7 @@ import {
   generateRobofestConfirmationPdfFromData,
   getRobofestRegistrationById,
 } from '@/lib/robofest-registration'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { resolvePublicBaseUrl } from '@/lib/site-config'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,15 +14,7 @@ type RouteContext = {
 }
 
 function getBaseUrl(request: NextRequest): string {
-  let baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    request.nextUrl.origin
-  if (!baseUrl && process.env.VERCEL_URL) {
-    baseUrl = `https://${process.env.VERCEL_URL}`
-  }
-  if (!baseUrl) baseUrl = SITE_CONFIG.url
-  return baseUrl.replace(/\/$/, '')
+  return resolvePublicBaseUrl(request.nextUrl.origin)
 }
 
 /**

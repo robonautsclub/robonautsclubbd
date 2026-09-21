@@ -21,6 +21,7 @@ import {
   normalizeSchoolValue,
   type BookingInput,
 } from '@/lib/event-booking'
+import { resolvePublicBaseUrl } from '@/lib/site-config'
 
 export type { BookingInput } from '@/lib/event-booking'
 
@@ -42,21 +43,7 @@ type PendingPaidRegistration = {
 }
 
 function getBaseUrl(): string {
-  let baseUrl = process.env.NEXT_PUBLIC_BASE_URL
-  if (!baseUrl) {
-    if (process.env.VERCEL_URL) {
-      baseUrl = `https://${process.env.VERCEL_URL}`
-    } else if (process.env.VERCEL_BRANCH_URL) {
-      baseUrl = process.env.VERCEL_BRANCH_URL.startsWith('http')
-        ? process.env.VERCEL_BRANCH_URL
-        : `https://${process.env.VERCEL_BRANCH_URL}`
-    } else if (process.env.NODE_ENV === 'development') {
-      baseUrl = 'http://localhost:3000'
-    } else {
-      baseUrl = 'https://robonautsclub.com'
-    }
-  }
-  return baseUrl.replace(/\/$/, '')
+  return resolvePublicBaseUrl()
 }
 
 /**

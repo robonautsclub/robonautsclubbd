@@ -8,7 +8,7 @@ import {
   generateCertificateFromTemplate,
 } from '@/lib/certificate-template-pdf'
 import { resolveCertificateAwardFields } from '@/lib/certificate-templates'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { resolvePublicBaseUrl } from '@/lib/site-config'
 import type { Booking } from '@/types/booking'
 import type { Event } from '@/types/event'
 
@@ -59,10 +59,7 @@ export async function POST(
 
   const registrationId = booking.registrationId || booking.id
   const certificateId = buildEventCertificateId(registrationId)
-  const baseUrl =
-    request.nextUrl.origin ||
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    SITE_CONFIG.url
+  const baseUrl = resolvePublicBaseUrl(request.nextUrl.origin)
 
   const awardFields = resolveCertificateAwardFields(null)
   const result = await generateCertificateFromTemplate({

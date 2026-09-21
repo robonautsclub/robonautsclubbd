@@ -24,6 +24,7 @@ import {
   formatAgeCategoryLabel,
   type RobofestAgeCategory,
 } from "@/lib/robofest-registration-options";
+import { resolvePublicBaseUrl } from "@/lib/site-config";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -132,17 +133,7 @@ function buildRegistrationInfoParts(
 }
 
 function getBaseUrl(): string {
-  let baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-  if (!baseUrl) {
-    if (process.env.VERCEL_URL) {
-      baseUrl = `https://${process.env.VERCEL_URL}`;
-    } else if (process.env.NODE_ENV === "development") {
-      baseUrl = "http://localhost:3000";
-    } else {
-      baseUrl = "https://robonautsclub.com";
-    }
-  }
-  return baseUrl.replace(/\/$/, "");
+  return resolvePublicBaseUrl();
 }
 
 export function buildRobofestEventForPdfEmail(

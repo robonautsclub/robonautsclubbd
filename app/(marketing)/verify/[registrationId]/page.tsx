@@ -9,6 +9,7 @@ import Image from 'next/image'
 import { Metadata } from 'next'
 import { absoluteSiteUrl } from '@/lib/seo'
 import { buildPageMetadata } from '@/lib/seo-metadata'
+import { resolvePublicBaseUrl } from '@/lib/site-config'
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -124,9 +125,7 @@ export default async function VerificationPage({ params }: VerificationPageProps
   const { booking, event } = await getBookingByRegistrationId(registrationId)
 
   const isValid = booking !== null && event !== null
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL 
-    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
-    || 'http://localhost:3000'
+  const baseUrl = resolvePublicBaseUrl()
   const verificationUrl = `${baseUrl}/verify/${registrationId}`
   const qrCodeDataURL = isValid ? await generateQRCodeDataURL(verificationUrl, 200) : null
 

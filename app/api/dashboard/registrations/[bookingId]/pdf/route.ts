@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession, hasPermission } from '@/lib/auth'
 import { generateBookingConfirmationPDF } from '@/lib/pdfGenerator'
-import { SITE_CONFIG } from '@/lib/site-config'
+import { resolvePublicBaseUrl } from '@/lib/site-config'
 import type { Booking } from '@/types/booking'
 import type { Event } from '@/types/event'
 
@@ -49,20 +49,7 @@ export async function POST(
     return NextResponse.json({ error: 'Booking id mismatch' }, { status: 400 })
   }
 
-  let baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    request.nextUrl.origin
-  if (!baseUrl) {
-    if (process.env.VERCEL_URL) {
-      baseUrl = `https://${process.env.VERCEL_URL}`
-    } else if (process.env.NODE_ENV === 'development') {
-      baseUrl = 'http://localhost:3000'
-    } else {
-      baseUrl = SITE_CONFIG.url
-    }
-  }
-  baseUrl = baseUrl.replace(/\/$/, '')
+  const baseUrl = resolvePublicBaseUrl(request.nextUrl.origin)
 
   const registrationId = booking.registrationId || ''
   const verificationUrl = `${baseUrl}/verify-booking?registrationId=${encodeURIComponent(registrationId)}`
