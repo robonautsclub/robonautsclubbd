@@ -140,13 +140,13 @@ async function fetchPublicEventsFromDb(lean: boolean, limit: number): Promise<Ev
 const getCachedPublicEvents = unstable_cache(
   () => fetchPublicEventsFromDb(true, PUBLIC_EVENTS_MAX),
   [PUBLIC_EVENTS_TAG, 'list'],
-  { tags: [PUBLIC_EVENTS_TAG], revalidate: 3600 },
+  { tags: [PUBLIC_EVENTS_TAG], revalidate: 120 },
 )
 
 const getCachedPublicEventsHome = unstable_cache(
   () => fetchPublicEventsFromDb(true, PUBLIC_EVENTS_HOME_MAX),
   [PUBLIC_EVENTS_TAG, 'home'],
-  { tags: [PUBLIC_EVENTS_TAG], revalidate: 3600 },
+  { tags: [PUBLIC_EVENTS_TAG], revalidate: 120 },
 )
 
 export const getPublicEvents = cache(async (): Promise<Event[]> => {

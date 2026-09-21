@@ -9,9 +9,11 @@ import d1NextTagCache from "@opennextjs/cloudflare/overrides/tag-cache/d1-next-t
  * KV incremental cache + D1 tag cache + DO revalidation queue.
  */
 export default defineCloudflareConfig({
+  // Do not bypass tag cache on regional hits — otherwise revalidateTag/revalidatePath
+  // after creating events never updates /events until the regional TTL expires.
   incrementalCache: withRegionalCache(kvIncrementalCache, {
     mode: "long-lived",
-    bypassTagCacheOnCacheHit: true,
+    bypassTagCacheOnCacheHit: false,
   }),
   queue: doQueue,
   tagCache: d1NextTagCache,

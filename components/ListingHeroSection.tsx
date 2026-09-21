@@ -13,6 +13,8 @@ export default function ListingHeroSection({
   children,
   imageSrc = '/roboclass.jpg',
 }: Props) {
+  const isAnimatedGif = imageSrc.toLowerCase().endsWith('.gif')
+
   return (
     <section className="relative text-white py-16 sm:py-20 md:py-24 px-4 sm:px-6 overflow-hidden">
       <Image
@@ -20,6 +22,7 @@ export default function ListingHeroSection({
         alt=""
         fill
         priority
+        unoptimized={isAnimatedGif}
         className="object-cover object-center"
         sizes="100vw"
         quality={75}

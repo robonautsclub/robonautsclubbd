@@ -23,7 +23,7 @@ export const metadata: Metadata = buildPageMetadata({
   path: '/events',
   absoluteTitle: true,
   ogImage: {
-    url: '/robotics-event.jpg',
+    url: '/robotics-event.gif',
     width: 1200,
     height: 630,
     alt: `${SITE_CONFIG.name} Events`,
@@ -39,8 +39,8 @@ export const metadata: Metadata = buildPageMetadata({
   ],
 })
 
-// ISR: longer window minimizes edge recompute churn; admin actions still call revalidatePath
-export const revalidate = 1800
+// ISR: admin actions also call revalidatePath / revalidateTag
+export const revalidate = 120
 
 // --- Main Page ---
 export default async function EventsPage() {
@@ -62,12 +62,7 @@ export default async function EventsPage() {
       {initialUpcoming.length > 0 ? (
         <JsonLdScript id="events-itemlist-schema" data={itemListSchema} />
       ) : null}
-      <ListingHeroSection overlay="none">
-        <div className="absolute inset-0 opacity-20 pointer-events-none">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-300 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-300 rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2" />
-        </div>
-
+      <ListingHeroSection overlay="dark" imageSrc="/robotics-event.gif">
         <div className="max-w-7xl mx-auto relative">
           <div className="text-center mb-6 sm:mb-8">
             <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/10 backdrop-blur-sm mb-4 sm:mb-6">
