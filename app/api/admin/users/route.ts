@@ -1,105 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { requireSuperAdmin } from '@/lib/auth'
+import { hashPassword } from '@/lib/auth/password'
+import { createUser, listUsers } from '@/lib/db/users'
+import { getDb } from '@/lib/db'
+import { addDoc } from '@/lib/db/documents'
 import {
   getDefaultPermissionsForRole,
-  isDashboardRole,
   normalizePermissionGrants,
   PERMISSIONS_VERSION,
   sanitizePermissions,
   type DashboardRole,
 } from '@/lib/dashboard-permissions'
 
-function mapUserRecord(user: {
-  uid: string
-  email?: string
-  displayName?: string
-  emailVerified: boolean
-  disabled: boolean
-  customClaims?: Record<string, unknown> | null
-  metadata: { creationTime?: string; lastSignInTime?: string }
-}) {
-  const role = (isDashboardRole(user.customClaims?.role)
-    ? user.customClaims!.role
-    : 'admin') as DashboardRole
-  const version = user.customClaims?.permissionsVersion
-  const sanitized = sanitizePermissions(user.customClaims?.permissions, {
-    permissionsVersion: version,
-  })
-  const permissions =
-    role === 'superAdmin'
-      ? getDefaultPermissionsForRole('superAdmin')
-      : sanitized.length > 0
-        ? sanitized
-        : getDefaultPermissionsForRole(role)
-
-  return {
-    uid: user.uid,
-    email: user.email || '',
-    displayName: user.displayName || '',
-    emailVerified: user.emailVerified,
-    role,
-    permissions,
-    createdAt: user.metadata.creationTime || '',
-    lastSignIn: user.metadata.lastSignInTime || null,
-    disabled: user.disabled,
-  }
-}
-
-/**
- * GET /api/admin/users
- */
 export async function GET() {
   try {
     await requireSuperAdmin()
-
-    if (!adminAuth) {
-      return NextResponse.json(
-        { error: 'Firebase Admin SDK is not configured' },
-        { status: 500 },
-      )
-    }
-
-    const listUsersResult = await adminAuth.listUsers(1000)
-    const users = listUsersResult.users.map((user) => mapUserRecord(user))
-
+    const users = await listUsers()
     return NextResponse.json({
       success: true,
-      users,
+      users: users.map((u) => ({
+        uid: u.id,
+        email: u.email,
+        displayName: u.name,
+        emailVerified: u.emailVerified,
+        role: u.role,
+        permissions: u.permissions,
+        createdAt: '',
+        lastSignIn: null,
+        disabled: u.disabled,
+      })),
       total: users.length,
     })
   } catch (error) {
     console.error('Error listing users:', error)
-
     if (error instanceof Error && error.message.includes('redirect')) {
       return NextResponse.json(
         { error: 'Unauthorized: Super Admin access required' },
         { status: 403 },
       )
     }
-
-    return NextResponse.json(
-      { error: 'Failed to list users' },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: 'Failed to list users' }, { status: 500 })
   }
 }
 
-/**
- * POST /api/admin/users
- * Create admin or moderator with permissions
- */
 export async function POST(request: NextRequest) {
   try {
     const session = await requireSuperAdmin()
-
-    if (!adminAuth) {
-      return NextResponse.json(
-        { error: 'Firebase Admin SDK is not configured' },
-        { status: 500 },
-      )
-    }
-
     const body = await request.json()
     const { email, password, displayName, role: rawRole, permissions: rawPerms } =
       body
@@ -113,10 +59,7 @@ export async function POST(request: NextRequest) {
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: 'Invalid email format' },
-        { status: 400 },
-      )
+      return NextResponse.json({ error: 'Invalid email format' }, { status: 400 })
     }
 
     if (password.length < 6) {
@@ -135,69 +78,53 @@ export async function POST(request: NextRequest) {
       incoming.length > 0 ? incoming : getDefaultPermissionsForRole(role),
     )
 
-    const userRecord = await adminAuth.createUser({
+    const passwordHash = await hashPassword(password)
+    const user = await createUser({
       email,
-      password,
-      displayName: displayName || '',
-      emailVerified: false,
-    })
-
-    await adminAuth.setCustomUserClaims(userRecord.uid, {
+      passwordHash,
+      name: displayName || '',
       role,
       permissions,
       permissionsVersion: PERMISSIONS_VERSION,
     })
 
-    if (adminDb) {
-      try {
-        await adminDb.collection('notifications').add({
-          type: 'user_created',
-          message: `${session.name} created a new ${role} user: ${email}`,
-          userId: session.uid,
-          userName: session.name,
-          userEmail: session.email,
-          changes: ['user created', `role:${role}`],
-          readBy: [],
-          createdAt: new Date(),
-        })
-      } catch {
-        // Silently fail
-      }
+    try {
+      const db = await getDb()
+      await addDoc(db, 'notifications', {
+        type: 'user_created',
+        message: `${session.name} created a new ${role} user: ${email}`,
+        userId: session.uid,
+        userName: session.name,
+        userEmail: session.email,
+        changes: ['user created', `role:${role}`],
+        readBy: [],
+        createdAt: new Date().toISOString(),
+      })
+    } catch {
+      // Silently fail
     }
 
     return NextResponse.json({
       success: true,
       user: {
-        uid: userRecord.uid,
-        email: userRecord.email,
-        displayName: userRecord.displayName || '',
-        emailVerified: userRecord.emailVerified,
-        role,
-        permissions,
+        uid: user.id,
+        email: user.email,
+        displayName: user.name,
+        emailVerified: user.emailVerified,
+        role: user.role,
+        permissions: user.permissions,
       },
       message: 'User created successfully',
     })
   } catch (error: unknown) {
     console.error('Error creating user:', error)
-
-    if (error instanceof Error && error.message.includes('redirect')) {
-      return NextResponse.json(
-        { error: 'Unauthorized: Super Admin access required' },
-        { status: 403 },
-      )
-    }
-
-    const firebaseError = error as { code?: string; message?: string }
-    if (firebaseError.code === 'auth/email-already-exists') {
+    const msg = error instanceof Error ? error.message : ''
+    if (msg.includes('UNIQUE') || msg.toLowerCase().includes('unique')) {
       return NextResponse.json(
         { error: 'A user with this email already exists' },
-        { status: 400 },
+        { status: 409 },
       )
     }
-
-    return NextResponse.json(
-      { error: 'Failed to create user' },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
   }
 }

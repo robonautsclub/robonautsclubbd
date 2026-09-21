@@ -2,9 +2,13 @@
  * Shared Robofest registration create + confirmation email/PDF helpers.
  */
 
-import { FieldValue } from "firebase-admin/firestore";
 import type { Event } from "@/types/event";
-import { adminDb } from "@/lib/firebase-admin";
+import {
+  collectionAdd,
+  collectionGet,
+  collectionSet,
+  collectionWhere,
+} from "@/lib/db/collections";
 import {
   sendRobofestConfirmationEmail,
   uniqueMemberEmails,
@@ -227,18 +231,17 @@ export async function hasExistingRobofestRegistration(
   normalizedEmail: string,
   excludeId?: string,
 ): Promise<boolean> {
-  if (!adminDb) return false;
-  const snap = await adminDb
-    .collection(ROBOFEST_REGISTRATIONS_COLLECTION)
-    .where("email", "==", normalizedEmail)
-    .where("category", "==", category)
-    .limit(5)
-    .get();
-
+  const matches = await collectionWhere(
+    ROBOFEST_REGISTRATIONS_COLLECTION,
+    "email",
+    "==",
+    normalizedEmail,
+  );
   const exclude = excludeId?.trim() || "";
-  return snap.docs.some((doc) => {
+  return matches.some((doc) => {
+    if (String(doc.category ?? "") !== category) return false;
     if (exclude && doc.id === exclude) return false;
-    const status = String(doc.data().status ?? "pending");
+    const status = String(doc.status ?? "pending");
     return status !== "cancelled";
   });
 }
@@ -263,13 +266,6 @@ export async function createRobofestRegistrationAndSendEmail(
 ): Promise<RobofestRegistrationWriteResult> {
   const sendEmail = options.sendEmail !== false;
   const paymentMeta = options.paymentMeta;
-
-  if (!adminDb) {
-    return {
-      success: false,
-      error: "Service temporarily unavailable. Please try again later.",
-    };
-  }
 
   const email = formData.email.trim().toLowerCase();
   const phone = formData.phone.trim().replace(/\s/g, "");
@@ -314,7 +310,7 @@ export async function createRobofestRegistrationAndSendEmail(
   }
   // Team name is the auto-assigned team number (students cannot choose a name).
   const name = teamNumber;
-  const regRef = adminDb.collection(ROBOFEST_REGISTRATIONS_COLLECTION).doc();
+  const nowIso = new Date().toISOString();
   const now = new Date();
   const isPaid = Boolean(paymentMeta);
 
@@ -334,7 +330,7 @@ export async function createRobofestRegistrationAndSendEmail(
     registrationId,
     status: "confirmed",
     paymentStatus: isPaid ? "paid" : "n/a",
-    createdAt: FieldValue.serverTimestamp(),
+    createdAt: nowIso,
   };
 
   if (pendingSchoolId) {
@@ -357,12 +353,15 @@ export async function createRobofestRegistrationAndSendEmail(
     registrationData.paidAt = now;
   }
 
-  await regRef.set(registrationData);
+  const registrationDocId = await collectionAdd(
+    ROBOFEST_REGISTRATIONS_COLLECTION,
+    registrationData,
+  );
 
   if (!sendEmail) {
     return {
       success: true,
-      registrationDocId: regRef.id,
+      registrationDocId,
       registrationId,
       teamNumber,
       emailSent: false,
@@ -410,7 +409,7 @@ export async function createRobofestRegistrationAndSendEmail(
     teamMembers,
     event,
     registrationId,
-    bookingId: regRef.id,
+    bookingId: registrationDocId,
     school,
     phone,
     information: infoParts.join("\n"),
@@ -436,31 +435,41 @@ export async function createRobofestRegistrationAndSendEmail(
     }
 
     if (emailResult.success) {
-      await regRef.update({
-        emailSent: true,
-        emailSentAt: new Date(),
-        emailSendCount: 1,
-        emailRecipientCount: recipients.length,
-        emailPartialFailure: partialFailure,
-        emailError: partialFailure
-          ? emailResult.warning ||
-            `Partial send failure: ${emailResult.failedRecipients?.join(", ")}`
-          : FieldValue.delete(),
-        ...pdfUpdate,
-      });
+      await collectionSet(
+        ROBOFEST_REGISTRATIONS_COLLECTION,
+        registrationDocId,
+        {
+          emailSent: true,
+          emailSentAt: nowIso,
+          emailSendCount: 1,
+          emailRecipientCount: recipients.length,
+          emailPartialFailure: partialFailure,
+          emailError: partialFailure
+            ? emailResult.warning ||
+              `Partial send failure: ${emailResult.failedRecipients?.join(", ")}`
+            : null,
+          ...pdfUpdate,
+        },
+        { merge: true },
+      );
     } else {
-      await regRef.update({
-        emailSent: false,
-        emailPartialFailure: false,
-        emailError: emailResult.error || "Unknown email service error",
-        emailFailedAt: new Date(),
-        emailRecipientCount: recipients.length,
-        ...pdfUpdate,
-      });
+      await collectionSet(
+        ROBOFEST_REGISTRATIONS_COLLECTION,
+        registrationDocId,
+        {
+          emailSent: false,
+          emailPartialFailure: false,
+          emailError: emailResult.error || "Unknown email service error",
+          emailFailedAt: nowIso,
+          emailRecipientCount: recipients.length,
+          ...pdfUpdate,
+        },
+        { merge: true },
+      );
     }
   } catch (updateError) {
     console.error(
-      `[robofest] Failed to update email/PDF status for ${regRef.id}:`,
+      `[robofest] Failed to update email/PDF status for ${registrationDocId}:`,
       updateError,
     );
   }
@@ -468,7 +477,7 @@ export async function createRobofestRegistrationAndSendEmail(
   if (!emailResult.success) {
     return {
       success: true,
-      registrationDocId: regRef.id,
+      registrationDocId,
       registrationId,
       teamNumber,
       emailSent: false,
@@ -479,7 +488,7 @@ export async function createRobofestRegistrationAndSendEmail(
   if (partialFailure) {
     return {
       success: true,
-      registrationDocId: regRef.id,
+      registrationDocId,
       registrationId,
       teamNumber,
       emailSent: true,
@@ -492,7 +501,7 @@ export async function createRobofestRegistrationAndSendEmail(
   if (!emailResult.pdfAttached) {
     return {
       success: true,
-      registrationDocId: regRef.id,
+      registrationDocId,
       registrationId,
       teamNumber,
       emailSent: true,
@@ -502,7 +511,7 @@ export async function createRobofestRegistrationAndSendEmail(
 
   return {
     success: true,
-    registrationDocId: regRef.id,
+    registrationDocId,
     registrationId,
     teamNumber,
     emailSent: true,
@@ -519,9 +528,6 @@ export async function resendRobofestConfirmationEmail(
   recipientCount?: number;
   emailSendCount?: number;
 }> {
-  if (!adminDb) {
-    return { success: false, error: "Database unavailable." };
-  }
   if (!registration.registrationId) {
     return { success: false, error: "Registration ID missing." };
   }
@@ -579,10 +585,6 @@ export async function resendRobofestConfirmationEmail(
     trxId: registration.trxId,
   });
 
-  const ref = adminDb
-    .collection(ROBOFEST_REGISTRATIONS_COLLECTION)
-    .doc(registration.id);
-
   const pdfUpdate: Record<string, unknown> = {};
   if (emailResult.pdfBuffer && emailResult.pdfBuffer.length > 0) {
     pdfUpdate.pdfGenerated = true;
@@ -599,18 +601,23 @@ export async function resendRobofestConfirmationEmail(
     const partialFailure =
       Array.isArray(emailResult.failedRecipients) &&
       emailResult.failedRecipients.length > 0;
-    await ref.update({
-      emailSent: true,
-      emailSentAt: new Date(),
-      emailSendCount: nextCount,
-      emailRecipientCount: recipients.length,
-      emailPartialFailure: partialFailure,
-      emailError: partialFailure
-        ? emailResult.warning ||
-          `Partial send failure: ${emailResult.failedRecipients?.join(", ")}`
-        : FieldValue.delete(),
-      ...pdfUpdate,
-    });
+    await collectionSet(
+      ROBOFEST_REGISTRATIONS_COLLECTION,
+      registration.id,
+      {
+        emailSent: true,
+        emailSentAt: new Date().toISOString(),
+        emailSendCount: nextCount,
+        emailRecipientCount: recipients.length,
+        emailPartialFailure: partialFailure,
+        emailError: partialFailure
+          ? emailResult.warning ||
+            `Partial send failure: ${emailResult.failedRecipients?.join(", ")}`
+          : null,
+        ...pdfUpdate,
+      },
+      { merge: true },
+    );
     return {
       success: true,
       recipientCount: recipients.length,
@@ -619,13 +626,18 @@ export async function resendRobofestConfirmationEmail(
     };
   }
 
-  await ref.update({
-    emailSent: false,
-    emailPartialFailure: false,
-    emailError: emailResult.error || "Unknown email service error",
-    emailFailedAt: new Date(),
-    ...pdfUpdate,
-  });
+  await collectionSet(
+    ROBOFEST_REGISTRATIONS_COLLECTION,
+    registration.id,
+    {
+      emailSent: false,
+      emailPartialFailure: false,
+      emailError: emailResult.error || "Unknown email service error",
+      emailFailedAt: new Date().toISOString(),
+      ...pdfUpdate,
+    },
+    { merge: true },
+  );
 
   return {
     success: false,
@@ -636,32 +648,30 @@ export async function resendRobofestConfirmationEmail(
 export async function getRobofestRegistrationById(
   id: string,
 ): Promise<RobofestRegistration | null> {
-  if (!adminDb) return null;
-  const snap = await adminDb
-    .collection(ROBOFEST_REGISTRATIONS_COLLECTION)
-    .doc(id)
-    .get();
-  if (!snap.exists) return null;
+  const doc = await collectionGet(ROBOFEST_REGISTRATIONS_COLLECTION, id);
+  if (!doc) return null;
   return mapRobofestRegistrationDoc(
-    snap.id,
-    snap.data() as Record<string, unknown>,
+    String(doc.id),
+    doc as Record<string, unknown>,
   );
 }
 
 export async function getRobofestRegistrationByRegistrationId(
   registrationId: string,
 ): Promise<RobofestRegistration | null> {
-  if (!adminDb || !registrationId.trim()) return null;
-  const snap = await adminDb
-    .collection(ROBOFEST_REGISTRATIONS_COLLECTION)
-    .where("registrationId", "==", registrationId.trim())
-    .limit(1)
-    .get();
-  if (snap.empty) return null;
-  const doc = snap.docs[0];
+  if (!registrationId.trim()) return null;
+  const matches = await collectionWhere(
+    ROBOFEST_REGISTRATIONS_COLLECTION,
+    "registrationId",
+    "==",
+    registrationId.trim(),
+    { limit: 1 },
+  );
+  if (matches.length === 0) return null;
+  const doc = matches[0];
   return mapRobofestRegistrationDoc(
-    doc.id,
-    doc.data() as Record<string, unknown>,
+    String(doc.id),
+    doc as Record<string, unknown>,
   );
 }
 

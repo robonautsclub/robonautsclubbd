@@ -97,3 +97,6 @@ const nextConfig: NextConfig = {
 };
 
 export default withBundleAnalyzer(nextConfig);
+
+// Bindings from wrangler.jsonc (D1 DB, R2 cache, etc.) available in `next dev`
+import('@opennextjs/cloudflare').then((m) => m.initOpenNextCloudflareForDev())

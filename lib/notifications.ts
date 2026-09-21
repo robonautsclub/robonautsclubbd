@@ -1,4 +1,4 @@
-import { adminDb } from './firebase-admin'
+import { collectionAdd } from '@/lib/db/collections'
 import type { Session } from './auth'
 
 /**
@@ -9,14 +9,10 @@ export async function createNotification(
   type: string,
   message: string,
   session: Session,
-  changes?: string[]
+  changes?: string[],
 ): Promise<void> {
   try {
-    if (!adminDb) {
-      return
-    }
-
-    await adminDb.collection('notifications').add({
+    await collectionAdd('notifications', {
       type,
       message,
       userId: session.uid,
@@ -24,9 +20,9 @@ export async function createNotification(
       userEmail: session.email,
       changes: changes || [],
       readBy: [],
-      createdAt: new Date(),
+      createdAt: new Date().toISOString(),
     })
-  } catch (error) {
+  } catch {
     // Silently fail - don't break the main operation if notification fails
   }
 }

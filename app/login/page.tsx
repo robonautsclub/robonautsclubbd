@@ -4,9 +4,6 @@ import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth'
-import { auth } from '@/lib/firebase'
-import { SESSION_DURATION_SECONDS, ASSIGN_ROLE_LAST_SYNC_STORAGE_KEY } from '@/lib/session'
 import {
   loginSchema,
   forgotPasswordSchema,
@@ -54,85 +51,32 @@ function LoginForm() {
     setError('')
     setLoading(true)
 
-    if (!auth) {
-      setError('Firebase is not configured. Please check your environment variables.')
-      setLoading(false)
-      return
-    }
-
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password)
-      const token = await userCredential.user.getIdToken()
-      const user = userCredential.user
-
-      let assignedRole: 'superAdmin' | 'admin' | 'moderator' = 'admin'
-      let assignedPermissions: string[] = []
-      let assignedPermissionsVersion = 2
-      const finalToken = token
-
-      try {
-        const roleResponse = await fetch('/api/auth/assign-role', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          credentials: 'include',
-        })
-
-        if (roleResponse.ok) {
-          const roleData = await roleResponse.json()
-          assignedRole = roleData.role || 'admin'
-          assignedPermissions = Array.isArray(roleData.permissions)
-            ? roleData.permissions
-            : []
-          assignedPermissionsVersion =
-            typeof roleData.permissionsVersion === 'number'
-              ? roleData.permissionsVersion
-              : 2
-          try {
-            sessionStorage.setItem(ASSIGN_ROLE_LAST_SYNC_STORAGE_KEY, String(Date.now()))
-          } catch {
-            /* ignore */
-          }
-        }
-      } catch (roleError) {
-        console.error('Error assigning role:', roleError)
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          email: values.email.trim(),
+          password: values.password,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(
+          typeof data.error === 'string'
+            ? data.error
+            : 'Invalid email or password',
+        )
+        return
       }
-
-      document.cookie = `auth-token=${finalToken}; path=/; max-age=${SESSION_DURATION_SECONDS}; SameSite=Lax`
-
-      const userInfo = {
-        uid: user.uid,
-        email: user.email || '',
-        name: user.displayName || user.email || 'Admin',
-        emailVerified: user.emailVerified,
-        role: assignedRole,
-        permissions: assignedPermissions,
-        permissionsVersion: assignedPermissionsVersion,
-      }
-      document.cookie = `user-info=${JSON.stringify(userInfo)}; path=/; max-age=${SESSION_DURATION_SECONDS}; SameSite=Lax`
-
-      document.cookie = `session-start=${Date.now()}; path=/; max-age=${SESSION_DURATION_SECONDS}; SameSite=Lax`
 
       const redirectTo = searchParams.get('redirect') || '/dashboard'
       router.push(redirectTo)
       router.refresh()
     } catch (err) {
       console.error('Login error:', err)
-      const firebaseError = err as { code?: string }
-
-      if (firebaseError.code === 'auth/invalid-email') {
-        setError('Invalid email address')
-      } else if (firebaseError.code === 'auth/user-not-found') {
-        setError('No account found with this email')
-      } else if (firebaseError.code === 'auth/wrong-password') {
-        setError('Incorrect password')
-      } else if (firebaseError.code === 'auth/invalid-credential') {
-        setError('Invalid email or password')
-      } else {
-        setError('Failed to sign in. Please try again.')
-      }
+      setError('Failed to sign in. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -143,14 +87,16 @@ function LoginForm() {
     setForgotPasswordSuccess(false)
     setForgotPasswordLoading(true)
 
-    if (!auth) {
-      setForgotPasswordError('Firebase is not configured. Please check your environment variables.')
-      setForgotPasswordLoading(false)
-      return
-    }
-
     try {
-      await sendPasswordResetEmail(auth, values.email.trim())
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: values.email.trim() }),
+      })
+      if (!res.ok) {
+        setForgotPasswordError('Failed to send reset email. Please try again.')
+        return
+      }
       setLastResetEmail(values.email.trim())
       setForgotPasswordSuccess(true)
       setTimeout(() => {
@@ -160,15 +106,7 @@ function LoginForm() {
       }, 3000)
     } catch (err) {
       console.error('Password reset error:', err)
-      const firebaseError = err as { code?: string }
-
-      if (firebaseError.code === 'auth/user-not-found') {
-        setForgotPasswordError('No account found with this email address')
-      } else if (firebaseError.code === 'auth/invalid-email') {
-        setForgotPasswordError('Invalid email address')
-      } else {
-        setForgotPasswordError('Failed to send reset email. Please try again.')
-      }
+      setForgotPasswordError('Failed to send reset email. Please try again.')
     } finally {
       setForgotPasswordLoading(false)
     }

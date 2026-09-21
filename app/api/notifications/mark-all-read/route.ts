@@ -1,48 +1,33 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { adminDb } from '@/lib/firebase-admin'
+import { NextResponse } from 'next/server'
+import { collectionGetAll, collectionSet } from '@/lib/db/collections'
 import { requireAuth } from '@/lib/auth'
 
 const MARK_ALL_READ_LIMIT = 200
 
-/**
- * Mark unread notifications as read for the current user.
- * Only scans a recent window (not the entire collection).
- */
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     const session = await requireAuth()
 
-    if (!adminDb) {
-      return NextResponse.json(
-        { error: 'Firebase Admin SDK is not configured' },
-        { status: 500 }
-      )
-    }
-
-    const snapshot = await adminDb
-      .collection('notifications')
-      .orderBy('createdAt', 'desc')
-      .limit(MARK_ALL_READ_LIMIT)
-      .get()
-
-    const batch = adminDb.batch()
-    let updatedCount = 0
-
-    snapshot.docs.forEach((doc) => {
-      const data = doc.data()
-      const readBy: string[] = Array.isArray(data.readBy) ? data.readBy : []
-
-      if (!readBy.includes(session.uid)) {
-        batch.update(doc.ref, {
-          readBy: [...readBy, session.uid],
-        })
-        updatedCount++
-      }
+    const docs = await collectionGetAll('notifications', {
+      orderBy: 'createdAt',
+      direction: 'desc',
+      limit: MARK_ALL_READ_LIMIT,
     })
 
-    if (updatedCount > 0) {
-      await batch.commit()
-    }
+    let updatedCount = 0
+    await Promise.all(
+      docs.map(async (doc) => {
+        const readBy: string[] = Array.isArray(doc.readBy) ? doc.readBy.filter((v): v is string => typeof v === 'string') : []
+        if (readBy.includes(session.uid)) return
+        updatedCount++
+        await collectionSet(
+          'notifications',
+          String(doc.id),
+          { readBy: [...readBy, session.uid] },
+          { merge: true },
+        )
+      }),
+    )
 
     return NextResponse.json({
       success: true,
@@ -51,9 +36,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('mark-all-read failed:', error)
-    return NextResponse.json(
-      { error: 'Failed to mark notifications as read' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to mark notifications as read' }, { status: 500 })
   }
 }

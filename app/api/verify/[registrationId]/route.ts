@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { adminDb } from '@/lib/firebase-admin'
+import { collectionGet, getBookingByRegistrationId } from '@/lib/db/collections'
 import type { Booking } from '@/types/booking'
 import type { Event } from '@/types/event'
 
@@ -9,66 +9,46 @@ interface RouteParams {
   params: Promise<{ registrationId: string }>
 }
 
-/**
- * API endpoint to verify a registration ID
- * Returns JSON with verification status and booking details
- */
-export async function GET(request: Request, { params }: RouteParams) {
+function parseCreatedAt(value: unknown): unknown {
+  if (value == null) return value
+  if (typeof value === 'object' && value !== null && 'toDate' in value) {
+    try {
+      return (value as { toDate: () => Date }).toDate()
+    } catch {
+      return value
+    }
+  }
+  return value
+}
+
+export async function GET(_request: Request, { params }: RouteParams) {
   try {
     const { registrationId } = await params
 
     if (!registrationId || registrationId.trim() === '') {
       return NextResponse.json(
-        {
-          success: false,
-          error: 'Registration ID is required',
-        },
-        { status: 400 }
+        { success: false, error: 'Registration ID is required' },
+        { status: 400 },
       )
     }
 
-    if (!adminDb) {
-      console.error('Firebase Admin SDK not available')
+    const bookingDoc = await getBookingByRegistrationId(registrationId)
+    if (!bookingDoc) {
       return NextResponse.json(
-        {
-          success: false,
-          error: 'Service temporarily unavailable',
-        },
-        { status: 503 }
+        { success: false, valid: false, error: 'Registration ID not found' },
+        { status: 404 },
       )
     }
-
-    // Query bookings collection by registrationId
-    const bookingsSnapshot = await adminDb
-      .collection('bookings')
-      .where('registrationId', '==', registrationId)
-      .limit(1)
-      .get()
-
-    if (bookingsSnapshot.empty) {
-      return NextResponse.json(
-        {
-          success: false,
-          valid: false,
-          error: 'Registration ID not found',
-        },
-        { status: 404 }
-      )
-    }
-
-    const bookingDoc = bookingsSnapshot.docs[0]
-    const bookingData = bookingDoc.data()
 
     const booking: Booking = {
-      id: bookingDoc.id,
-      ...bookingData,
-      createdAt: bookingData.createdAt?.toDate?.() || bookingData.createdAt,
+      id: String(bookingDoc.id),
+      ...(bookingDoc as Record<string, unknown>),
+      createdAt: parseCreatedAt(bookingDoc.createdAt),
     } as Booking
 
-    // Fetch event details
-    const eventDoc = await adminDb.collection('events').doc(booking.eventId).get()
+    const eventDoc = await collectionGet('events', String(booking.eventId))
 
-    if (!eventDoc.exists) {
+    if (!eventDoc) {
       return NextResponse.json(
         {
           success: true,
@@ -85,16 +65,15 @@ export async function GET(request: Request, { params }: RouteParams) {
           },
           event: null,
         },
-        { status: 200 }
+        { status: 200 },
       )
     }
 
-    const eventData = eventDoc.data()!
     const event: Event = {
-      id: eventDoc.id,
-      ...eventData,
-      createdAt: eventData.createdAt?.toDate?.() || eventData.createdAt,
-      updatedAt: eventData.updatedAt?.toDate?.() || eventData.updatedAt,
+      id: String(eventDoc.id),
+      ...(eventDoc as Record<string, unknown>),
+      createdAt: parseCreatedAt(eventDoc.createdAt),
+      updatedAt: parseCreatedAt(eventDoc.updatedAt),
     } as Event
 
     return NextResponse.json(
@@ -121,17 +100,13 @@ export async function GET(request: Request, { params }: RouteParams) {
           description: event.description,
         },
       },
-      { status: 200 }
+      { status: 200 },
     )
   } catch (error) {
     console.error('Error verifying registration:', error)
     return NextResponse.json(
-      {
-        success: false,
-        error: 'An error occurred while verifying the registration',
-      },
-      { status: 500 }
+      { success: false, error: 'An error occurred while verifying the registration' },
+      { status: 500 },
     )
   }
 }
-

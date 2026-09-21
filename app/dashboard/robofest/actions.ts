@@ -1,7 +1,6 @@
 'use server'
 
 import { revalidatePath, revalidateTag } from 'next/cache'
-import { FieldValue } from 'firebase-admin/firestore'
 import {
   requireAuth,
   requireTabAccess,
@@ -10,7 +9,14 @@ import {
   canDeleteArea,
   hasPermission,
 } from '@/lib/auth'
-import { adminDb } from '@/lib/firebase-admin'
+import {
+  collectionAdd,
+  collectionDelete,
+  collectionGet,
+  collectionGetAll,
+  collectionSet,
+  collectionWhere,
+} from '@/lib/db/collections'
 import {
   ROBOFEST_CONTENT_CACHE_TAG,
   ROBOFEST_CONTENT_COLLECTION,
@@ -98,10 +104,6 @@ export async function updateRobofestContent(
   if (!canEditOthersArea(session, 'robofest')) {
     return { success: false, error: 'You do not have permission to edit Robofest.' }
   }
-  if (!adminDb) {
-    return { success: false, error: 'Database unavailable.' }
-  }
-
   try {
     const defaults = getDefaultRobofestContent()
     const sanitized: RobofestContent = {
@@ -202,17 +204,16 @@ export async function updateRobofestContent(
 
     const synced = syncRobofestVenueFields(sanitized)
 
-    await adminDb
-      .collection(ROBOFEST_CONTENT_COLLECTION)
-      .doc(ROBOFEST_CONTENT_DOC_ID)
-      .set(
-        {
-          ...synced,
-          updatedAt: FieldValue.serverTimestamp(),
-          updatedBy: session.uid,
-        },
-        { merge: true },
-      )
+    await collectionSet(
+      ROBOFEST_CONTENT_COLLECTION,
+      ROBOFEST_CONTENT_DOC_ID,
+      {
+        ...synced,
+        updatedAt: new Date().toISOString(),
+        updatedBy: session.uid,
+      },
+      { merge: true },
+    )
 
     revalidateRobofestPublic()
     for (const category of synced.categories) {
@@ -315,26 +316,23 @@ export async function updateRobofestRegistrationStatus(
   if (!canEditOthersArea(session, 'robofest')) {
     return { success: false, error: 'You do not have permission to edit Robofest.' }
   }
-  if (!adminDb) return { success: false, error: 'Database unavailable.' }
-
   if (!['pending', 'confirmed', 'cancelled'].includes(status)) {
     return { success: false, error: 'Invalid status.' }
   }
 
-  const ref = adminDb.collection(ROBOFEST_REGISTRATIONS_COLLECTION).doc(id)
-  const snap = await ref.get()
-  if (!snap.exists) return { success: false, error: 'Registration not found.' }
+  const snap = await collectionGet(ROBOFEST_REGISTRATIONS_COLLECTION, id)
+  if (!snap) return { success: false, error: 'Registration not found.' }
 
   const update: Record<string, unknown> = {
     status,
-    updatedAt: FieldValue.serverTimestamp(),
+    updatedAt: new Date().toISOString(),
     updatedBy: session.uid,
   }
   if (adminNotes !== undefined) {
     update.adminNotes = adminNotes.trim()
   }
 
-  await ref.update(update)
+  await collectionSet(ROBOFEST_REGISTRATIONS_COLLECTION, id, update, { merge: true })
   revalidatePath('/dashboard/robofest')
   return { success: true }
 }
@@ -361,20 +359,17 @@ export async function updateRobofestRegistration(
   if (!canEditOthersArea(session, 'robofest')) {
     return { success: false, error: 'You do not have permission to edit Robofest.' }
   }
-  if (!adminDb) return { success: false, error: 'Database unavailable.' }
-
   const trimmedId = (id || '').trim()
   if (!trimmedId) {
     return { success: false, error: 'Registration id is required.' }
   }
 
-  const ref = adminDb.collection(ROBOFEST_REGISTRATIONS_COLLECTION).doc(trimmedId)
-  const snap = await ref.get()
-  if (!snap.exists) return { success: false, error: 'Registration not found.' }
+  const snap = await collectionGet(ROBOFEST_REGISTRATIONS_COLLECTION, trimmedId)
+  if (!snap) return { success: false, error: 'Registration not found.' }
 
   const existing = mapRobofestRegistrationDoc(
-    snap.id,
-    snap.data() as Record<string, unknown>,
+    String(snap.id),
+    snap as Record<string, unknown>,
   )
 
   if (input.status !== undefined && !['confirmed', 'cancelled'].includes(input.status)) {
@@ -442,14 +437,14 @@ export async function updateRobofestRegistration(
     roundCity: validated.data.roundCity,
     notes: validated.data.notes || '',
     status: nextStatus,
-    updatedAt: FieldValue.serverTimestamp(),
+    updatedAt: new Date().toISOString(),
     updatedBy: session.uid,
   }
 
   if (validated.data.pendingSchoolId) {
     update.pendingSchoolId = validated.data.pendingSchoolId
   } else {
-    update.pendingSchoolId = FieldValue.delete()
+    update.pendingSchoolId = null
   }
 
   if (validated.data.campusAmbassadorId) {
@@ -458,17 +453,17 @@ export async function updateRobofestRegistration(
     update.campusAmbassadorSchool =
       validated.data.campusAmbassadorSchool || ''
   } else {
-    update.campusAmbassadorId = FieldValue.delete()
-    update.campusAmbassadorName = FieldValue.delete()
-    update.campusAmbassadorSchool = FieldValue.delete()
+    update.campusAmbassadorId = null
+    update.campusAmbassadorName = null
+    update.campusAmbassadorSchool = null
   }
 
-  await ref.update(update)
+  await collectionSet(ROBOFEST_REGISTRATIONS_COLLECTION, trimmedId, update, { merge: true })
 
-  const refreshed = await ref.get()
+  const refreshed = await collectionGet(ROBOFEST_REGISTRATIONS_COLLECTION, trimmedId)
   const registration = mapRobofestRegistrationDoc(
-    refreshed.id,
-    refreshed.data() as Record<string, unknown>,
+    String(refreshed!.id),
+    refreshed as Record<string, unknown>,
   )
 
   revalidatePath('/dashboard/robofest')
@@ -484,8 +479,6 @@ export async function updateRobofestMemberAwardCategory(
   if (!canEditOthersArea(session, 'robofest')) {
     return { success: false, error: 'You do not have permission to edit Robofest.' }
   }
-  if (!adminDb) return { success: false, error: 'Database unavailable.' }
-
   const trimmedId = (registrationDocId || '').trim()
   if (!trimmedId) {
     return { success: false, error: 'Registration id is required.' }
@@ -502,13 +495,10 @@ export async function updateRobofestMemberAwardCategory(
     return { success: false, error: 'Selected award category is not valid.' }
   }
 
-  const ref = adminDb
-    .collection(ROBOFEST_REGISTRATIONS_COLLECTION)
-    .doc(trimmedId)
-  const snap = await ref.get()
-  if (!snap.exists) return { success: false, error: 'Registration not found.' }
+  const snap = await collectionGet(ROBOFEST_REGISTRATIONS_COLLECTION, trimmedId)
+  if (!snap) return { success: false, error: 'Registration not found.' }
 
-  const data = snap.data() as Record<string, unknown>
+  const data = snap as Record<string, unknown>
   const members = Array.isArray(data.teamMembers)
     ? [...(data.teamMembers as Record<string, unknown>[])]
     : []
@@ -533,11 +523,16 @@ export async function updateRobofestMemberAwardCategory(
     awardCategoryId: category.id,
   }
 
-  await ref.update({
-    teamMembers: members,
-    updatedAt: FieldValue.serverTimestamp(),
-    updatedBy: session.uid,
-  })
+  await collectionSet(
+    ROBOFEST_REGISTRATIONS_COLLECTION,
+    trimmedId,
+    {
+      teamMembers: members,
+      updatedAt: new Date().toISOString(),
+      updatedBy: session.uid,
+    },
+    { merge: true },
+  )
   revalidatePath('/dashboard/robofest')
   return { success: true }
 }
@@ -596,10 +591,6 @@ export async function createRobofestRegistrationManual(
   if (!canCreateArea(session, 'robofest')) {
     return { success: false, error: 'You do not have permission to create Robofest items.' }
   }
-  if (!adminDb) {
-    return { success: false, error: 'Database unavailable.' }
-  }
-
   try {
     const validated = await validateRobofestRegistrationInput({
       category: input.category,
@@ -704,17 +695,12 @@ export async function resetRobofestContentToDefaults(): Promise<{
   if (!canEditOthersArea(session, 'robofest')) {
     return { success: false, error: 'You do not have permission to edit Robofest.' }
   }
-  if (!adminDb) return { success: false, error: 'Database unavailable.' }
-
   const defaults = syncRobofestVenueFields(getDefaultRobofestContent())
-  await adminDb
-    .collection(ROBOFEST_CONTENT_COLLECTION)
-    .doc(ROBOFEST_CONTENT_DOC_ID)
-    .set({
-      ...defaults,
-      updatedAt: FieldValue.serverTimestamp(),
-      updatedBy: session.uid,
-    })
+  await collectionSet(ROBOFEST_CONTENT_COLLECTION, ROBOFEST_CONTENT_DOC_ID, {
+    ...defaults,
+    updatedAt: new Date().toISOString(),
+    updatedBy: session.uid,
+  })
 
   revalidateRobofestPublic()
   return {
@@ -727,14 +713,12 @@ export async function getRobofestCampusAmbassadors(): Promise<
   RobofestCampusAmbassador[]
 > {
   await requireAuth()
-  if (adminDb) {
-    const collection = adminDb.collection(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION)
-    const snapshot = await collection.limit(1).get()
-    if (snapshot.empty) {
-      const now = new Date()
-      const batch = adminDb.batch()
-      for (const seed of ROBOFEST_CAMPUS_AMBASSADOR_SEED) {
-        batch.set(collection.doc(seed.id), {
+  const snapshot = await collectionGetAll(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION, { limit: 1 })
+  if (snapshot.length === 0) {
+    const now = new Date().toISOString()
+    await Promise.all(
+      ROBOFEST_CAMPUS_AMBASSADOR_SEED.map((seed) =>
+        collectionSet(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION, seed.id, {
           name: seed.name,
           school: seed.school,
           phone: seed.phone || '',
@@ -742,10 +726,9 @@ export async function getRobofestCampusAmbassadors(): Promise<
           isActive: seed.isActive,
           createdAt: now,
           updatedAt: now,
-        })
-      }
-      await batch.commit()
-    }
+        }),
+      ),
+    )
   }
   return listRobofestCampusAmbassadorsCached(true)
 }
@@ -757,8 +740,6 @@ export async function createRobofestCampusAmbassador(
   if (!canCreateArea(session, 'robofest')) {
     return { success: false, error: 'You do not have permission to create Robofest items.' }
   }
-  if (!adminDb) return { success: false, error: 'Database unavailable.' }
-
   const name = (input.name || '').trim()
   const school = (input.school || '').trim()
   if (!name) return { success: false, error: 'Name is required.' }
@@ -770,13 +751,11 @@ export async function createRobofestCampusAmbassador(
     return { success: false, error: 'Enter a valid email.' }
   }
 
-  const existing = await adminDb
-    .collection(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION)
-    .get()
-  const id = nextRobofestCampusAmbassadorId(existing.docs.map((d) => d.id))
-  const now = new Date()
+  const existing = await collectionGetAll(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION)
+  const id = nextRobofestCampusAmbassadorId(existing.map((d) => String(d.id)))
+  const now = new Date().toISOString()
 
-  await adminDb.collection(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION).doc(id).set({
+  await collectionSet(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION, id, {
     name,
     school,
     phone,
@@ -798,8 +777,6 @@ export async function updateRobofestCampusAmbassador(
   if (!canEditOthersArea(session, 'robofest')) {
     return { success: false, error: 'You do not have permission to edit Robofest.' }
   }
-  if (!adminDb) return { success: false, error: 'Database unavailable.' }
-
   const trimmedId = (id || '').trim()
   if (!trimmedId) return { success: false, error: 'Ambassador id is required.' }
 
@@ -814,22 +791,24 @@ export async function updateRobofestCampusAmbassador(
     return { success: false, error: 'Enter a valid email.' }
   }
 
-  const ref = adminDb
-    .collection(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION)
-    .doc(trimmedId)
-  const snap = await ref.get()
-  if (!snap.exists) {
+  const snap = await collectionGet(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION, trimmedId)
+  if (!snap) {
     return { success: false, error: 'Ambassador not found.' }
   }
 
-  await ref.update({
-    name,
-    school,
-    phone,
-    email,
-    isActive: input.isActive ?? true,
-    updatedAt: FieldValue.serverTimestamp(),
-  })
+  await collectionSet(
+    ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION,
+    trimmedId,
+    {
+      name,
+      school,
+      phone,
+      email,
+      isActive: input.isActive ?? true,
+      updatedAt: new Date().toISOString(),
+    },
+    { merge: true },
+  )
 
   revalidateRobofestAmbassadors()
   return { success: true }
@@ -842,20 +821,15 @@ export async function deleteRobofestCampusAmbassador(
   if (!canDeleteArea(session, 'robofest')) {
     return { success: false, error: 'You do not have permission to delete Robofest items.' }
   }
-  if (!adminDb) return { success: false, error: 'Database unavailable.' }
-
   const trimmedId = (id || '').trim()
   if (!trimmedId) return { success: false, error: 'Ambassador id is required.' }
 
-  const ref = adminDb
-    .collection(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION)
-    .doc(trimmedId)
-  const snap = await ref.get()
-  if (!snap.exists) {
+  const snap = await collectionGet(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION, trimmedId)
+  if (!snap) {
     return { success: false, error: 'Ambassador not found.' }
   }
 
-  await ref.delete()
+  await collectionDelete(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION, trimmedId)
   revalidateRobofestAmbassadors()
   return { success: true }
 }
@@ -868,56 +842,56 @@ export async function seedRobofestCampusAmbassadors(): Promise<{
   if (!canCreateArea(session, 'robofest') && !canEditOthersArea(session, 'robofest')) {
     return { success: false, message: 'You do not have permission to edit Robofest.' }
   }
-  if (!adminDb) return { success: false, message: 'Database unavailable.' }
-
-  const collection = adminDb.collection(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION)
-  const existing = await collection.get()
+  const existing = await collectionGetAll(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION)
   const existingById = new Map(
-    existing.docs.map((doc) => [doc.id, doc.data() as Record<string, unknown>]),
+    existing.map((doc) => [String(doc.id), doc as Record<string, unknown>]),
   )
 
   let created = 0
   let updated = 0
-  const now = new Date()
-  const batch = adminDb.batch()
+  const now = new Date().toISOString()
+  const writes: Promise<void>[] = []
 
   for (const seed of ROBOFEST_CAMPUS_AMBASSADOR_SEED) {
-    const ref = collection.doc(seed.id)
     const prev = existingById.get(seed.id)
     if (!prev) {
-      batch.set(ref, {
-        name: seed.name,
-        school: seed.school,
-        phone: seed.phone || '',
-        email: seed.email || '',
-        isActive: seed.isActive,
-        createdAt: now,
-        updatedAt: now,
-      })
+      writes.push(
+        collectionSet(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION, seed.id, {
+          name: seed.name,
+          school: seed.school,
+          phone: seed.phone || '',
+          email: seed.email || '',
+          isActive: seed.isActive,
+          createdAt: now,
+          updatedAt: now,
+        }),
+      )
       created += 1
       continue
     }
 
-    const prevActive =
-      typeof prev.isActive === 'boolean' ? prev.isActive : true
-    batch.set(
-      ref,
-      {
-        name: seed.name,
-        school: seed.school,
-        phone: seed.phone || '',
-        email: seed.email || '',
-        isActive: prevActive,
-        updatedAt: now,
-        createdAt: prev.createdAt ?? now,
-      },
-      { merge: true },
+    const prevActive = typeof prev.isActive === 'boolean' ? prev.isActive : true
+    writes.push(
+      collectionSet(
+        ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION,
+        seed.id,
+        {
+          name: seed.name,
+          school: seed.school,
+          phone: seed.phone || '',
+          email: seed.email || '',
+          isActive: prevActive,
+          updatedAt: now,
+          createdAt: prev.createdAt ?? now,
+        },
+        { merge: true },
+      ),
     )
     updated += 1
   }
 
-  if (created + updated > 0) {
-    await batch.commit()
+  if (writes.length > 0) {
+    await Promise.all(writes)
   }
 
   revalidateRobofestAmbassadors()

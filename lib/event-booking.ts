@@ -1,5 +1,5 @@
 import { revalidatePath, revalidateTag } from 'next/cache'
-import { adminDb } from '@/lib/firebase-admin'
+import { collectionSet, collectionWhere, newId } from '@/lib/db/collections'
 import type { Event } from '@/types/event'
 import type { Booking } from '@/types/booking'
 import { sendBookingConfirmationEmail } from '@/lib/email'
@@ -43,15 +43,10 @@ export async function hasExistingRegistration(
   eventId: string,
   normalizedEmail: string
 ): Promise<boolean> {
-  if (!adminDb) return false
-
-  const existingBookings = await adminDb
-    .collection('bookings')
-    .where('eventId', '==', eventId)
-    .where('email', '==', normalizedEmail)
-    .get()
-
-  return !existingBookings.empty
+  const existingBookings = await collectionWhere('bookings', 'eventId', '==', eventId)
+  return existingBookings.some(
+    (b) => String(b.email ?? '').toLowerCase() === normalizedEmail,
+  )
 }
 
 /**
@@ -70,10 +65,6 @@ export async function createBookingRecordAndSendEmail(
   bookingId?: string
   registrationId?: string
 }> {
-  if (!adminDb) {
-    return { success: false, error: 'Service temporarily unavailable. Please try again later.' }
-  }
-
   const sendEmail = options?.sendEmail !== false
   const normalizedPhone = formData.phone.trim().replace(/\s/g, '')
   const normalizedBkash = formData.bkashNumber?.trim().replace(/\s/g, '') ?? ''
@@ -92,8 +83,8 @@ export async function createBookingRecordAndSendEmail(
   }
 
   const registrationId = generateRegistrationId()
-  const bookingRef = adminDb.collection('bookings').doc()
-  const bookingId = bookingRef.id
+  const bookingId = newId()
+  const nowIso = new Date().toISOString()
   const now = new Date()
 
   const bookingData: Record<string, unknown> = {
@@ -107,7 +98,7 @@ export async function createBookingRecordAndSendEmail(
     bkashNumber: normalizedBkash,
     information: defaultRegistrationFields.information.enabled ? trimmedInformation : '',
     customAnswers: normalizeCustomFormAnswers(event.customFormFields, formData.customAnswers),
-    createdAt: now,
+    createdAt: nowIso,
   }
 
   if (paymentMeta) {
@@ -123,7 +114,10 @@ export async function createBookingRecordAndSendEmail(
     bookingData.paymentStatus = options.paymentStatusForUnpaid
   }
 
-  await bookingRef.set(bookingData)
+  await collectionSet('bookings', bookingId, bookingData)
+
+  const mergeBooking = (patch: Record<string, unknown>) =>
+    collectionSet('bookings', bookingId, patch, { merge: true })
 
   const bookingDetails = {
     school: normalizedSchool,
@@ -147,13 +141,13 @@ export async function createBookingRecordAndSendEmail(
         verificationUrl,
       })
       if (pdfBuffer && pdfBuffer.length > 0) {
-        await bookingRef.update({
+        await mergeBooking({
           emailSent: false,
           pdfGenerated: true,
-          pdfGeneratedAt: new Date(),
+          pdfGeneratedAt: nowIso,
         })
       } else {
-        await bookingRef.update({
+        await mergeBooking({
           emailSent: false,
           pdfGenerated: false,
         })
@@ -164,7 +158,7 @@ export async function createBookingRecordAndSendEmail(
         pdfError
       )
       try {
-        await bookingRef.update({
+        await mergeBooking({
           emailSent: false,
           pdfGenerated: false,
           pdfError:
@@ -198,7 +192,7 @@ export async function createBookingRecordAndSendEmail(
 
     if (emailResult.pdfBuffer && emailResult.pdfBuffer.length > 0) {
       pdfUpdate.pdfGenerated = true
-      pdfUpdate.pdfGeneratedAt = new Date()
+      pdfUpdate.pdfGeneratedAt = nowIso
     } else {
       pdfUpdate.pdfGenerated = false
       if (emailResult.pdfError) {
@@ -207,9 +201,9 @@ export async function createBookingRecordAndSendEmail(
     }
 
     if (emailResult.success) {
-      await bookingRef.update({
+      await mergeBooking({
         emailSent: true,
-        emailSentAt: new Date(),
+        emailSentAt: nowIso,
         emailSendCount: 1,
         ...pdfUpdate,
       })
@@ -218,10 +212,10 @@ export async function createBookingRecordAndSendEmail(
         `[booking] Booking ${bookingId} (${registrationId}) saved but confirmation email FAILED:`,
         emailResult.error
       )
-      await bookingRef.update({
+      await mergeBooking({
         emailSent: false,
         emailError: emailResult.error || 'Unknown email service error',
-        emailFailedAt: new Date(),
+        emailFailedAt: nowIso,
         ...pdfUpdate,
       })
     }
@@ -266,14 +260,13 @@ export async function resendBookingConfirmationEmail(
   warning?: string
   emailSendCount?: number
 }> {
-  if (!adminDb) {
-    return { success: false, error: 'Database unavailable.' }
-  }
   if (!booking.id || !booking.registrationId || !booking.email?.trim()) {
     return { success: false, error: 'Booking is missing email or registration ID.' }
   }
 
-  const bookingRef = adminDb.collection('bookings').doc(booking.id)
+  const mergeBooking = (patch: Record<string, unknown>) =>
+    collectionSet('bookings', booking.id!, patch, { merge: true })
+
   const emailResult = await sendBookingConfirmationEmail({
     to: booking.email,
     name: booking.name,
@@ -291,7 +284,7 @@ export async function resendBookingConfirmationEmail(
   const pdfUpdate: Record<string, unknown> = {}
   if (emailResult.pdfBuffer && emailResult.pdfBuffer.length > 0) {
     pdfUpdate.pdfGenerated = true
-    pdfUpdate.pdfGeneratedAt = new Date()
+    pdfUpdate.pdfGeneratedAt = new Date().toISOString()
   } else {
     pdfUpdate.pdfGenerated = false
     if (emailResult.pdfError) {
@@ -301,9 +294,9 @@ export async function resendBookingConfirmationEmail(
 
   if (emailResult.success) {
     const nextCount = (booking.emailSendCount ?? 0) + 1
-    await bookingRef.update({
+    await mergeBooking({
       emailSent: true,
-      emailSentAt: new Date(),
+      emailSentAt: new Date().toISOString(),
       emailSendCount: nextCount,
       emailError: null,
       emailFailedAt: null,
@@ -320,10 +313,10 @@ export async function resendBookingConfirmationEmail(
     }
   }
 
-  await bookingRef.update({
+  await mergeBooking({
     emailSent: false,
     emailError: emailResult.error || 'Unknown email service error',
-    emailFailedAt: new Date(),
+    emailFailedAt: new Date().toISOString(),
     ...pdfUpdate,
   })
   revalidatePath(`/dashboard/events/${booking.eventId}`)

@@ -1,9 +1,14 @@
 'use server'
 
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
-import { FieldValue } from 'firebase-admin/firestore'
 import { requireAuth, canCreateArea, canEditOthersArea, canDeleteArea } from '@/lib/auth'
-import { adminDb } from '@/lib/firebase-admin'
+import {
+  collectionAdd,
+  collectionDelete,
+  collectionGet,
+  collectionGetAll,
+  collectionSet,
+} from '@/lib/db/collections'
 import {
   CERTIFICATE_TEMPLATES_COLLECTION,
   mapCertificateTemplateDoc,
@@ -22,10 +27,9 @@ function revalidateCertificatePaths(id?: string) {
 }
 
 async function fetchCertificateTemplatesFromDb(): Promise<CertificateTemplate[]> {
-  if (!adminDb) return []
-  const snap = await adminDb.collection(CERTIFICATE_TEMPLATES_COLLECTION).get()
-  const list = snap.docs.map((doc) =>
-    mapCertificateTemplateDoc(doc.id, doc.data() as Record<string, unknown>),
+  const docs = await collectionGetAll(CERTIFICATE_TEMPLATES_COLLECTION)
+  const list = docs.map((doc) =>
+    mapCertificateTemplateDoc(String(doc.id), doc as Record<string, unknown>),
   )
   list.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''))
   return list
@@ -33,7 +37,6 @@ async function fetchCertificateTemplatesFromDb(): Promise<CertificateTemplate[]>
 
 export async function listCertificateTemplates(): Promise<CertificateTemplate[]> {
   await requireAuth()
-  if (!adminDb) return []
   try {
     return await unstable_cache(
       fetchCertificateTemplatesFromDb,
@@ -46,30 +49,21 @@ export async function listCertificateTemplates(): Promise<CertificateTemplate[]>
   }
 }
 
-export async function listActiveCertificateTemplates(): Promise<
-  CertificateTemplate[]
-> {
+export async function listActiveCertificateTemplates(): Promise<CertificateTemplate[]> {
   const all = await listCertificateTemplates()
   return all.filter((t) => t.isActive && t.backgroundUrl)
 }
 
-export async function getCertificateTemplate(
-  id: string,
-): Promise<CertificateTemplate | null> {
+export async function getCertificateTemplate(id: string): Promise<CertificateTemplate | null> {
   await requireAuth()
-  const { loadCertificateTemplateById } = await import(
-    '@/lib/certificate-templates-db'
-  )
+  const { loadCertificateTemplateById } = await import('@/lib/certificate-templates-db')
   return loadCertificateTemplateById(id)
 }
 
-/** Unauthenticated-safe load for PDF routes after session check in the route. */
 export async function getCertificateTemplateForIssue(
   id: string,
 ): Promise<CertificateTemplate | null> {
-  const { loadActiveCertificateTemplateById } = await import(
-    '@/lib/certificate-templates-db'
-  )
+  const { loadActiveCertificateTemplateById } = await import('@/lib/certificate-templates-db')
   return loadActiveCertificateTemplateById(id)
 }
 
@@ -80,7 +74,6 @@ export async function createCertificateTemplate(
   if (!canCreateArea(session, 'certificates')) {
     return { success: false, error: 'You do not have permission to create certificate templates.' }
   }
-  if (!adminDb) return { success: false, error: 'Database unavailable.' }
 
   const name = (input.name || '').trim()
   const backgroundUrl = (input.backgroundUrl || '').trim()
@@ -91,21 +84,22 @@ export async function createCertificateTemplate(
 
   const layout: CertificatePageLayout =
     input.page?.layout === 'portrait' ? 'portrait' : 'landscape'
+  const now = new Date().toISOString()
 
   try {
-    const ref = await adminDb.collection(CERTIFICATE_TEMPLATES_COLLECTION).add({
+    const id = await collectionAdd(CERTIFICATE_TEMPLATES_COLLECTION, {
       name,
       description: (input.description || '').trim() || null,
       backgroundUrl,
       page: { size: 'A4', layout },
       fields: sanitizeCertificateFields(input.fields || []),
       isActive: input.isActive !== false,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
+      createdAt: now,
+      updatedAt: now,
       updatedBy: session.uid,
     })
-    revalidateCertificatePaths(ref.id)
-    return { success: true, id: ref.id }
+    revalidateCertificatePaths(id)
+    return { success: true, id }
   } catch (error) {
     console.error('[certificate-templates] create failed:', error)
     return { success: false, error: 'Failed to create template.' }
@@ -122,18 +116,14 @@ export async function updateCertificateTemplate(
   if (!canEditOthersArea(session, 'certificates') && !canCreateArea(session, 'certificates')) {
     return { success: false, error: 'You do not have permission to edit certificate templates.' }
   }
-  if (!adminDb) return { success: false, error: 'Database unavailable.' }
   const templateId = id.trim()
   if (!templateId) return { success: false, error: 'Template id required.' }
 
-  const ref = adminDb
-    .collection(CERTIFICATE_TEMPLATES_COLLECTION)
-    .doc(templateId)
-  const existing = await ref.get()
-  if (!existing.exists) return { success: false, error: 'Template not found.' }
+  const existing = await collectionGet(CERTIFICATE_TEMPLATES_COLLECTION, templateId)
+  if (!existing) return { success: false, error: 'Template not found.' }
 
   const patch: Record<string, unknown> = {
-    updatedAt: FieldValue.serverTimestamp(),
+    updatedAt: new Date().toISOString(),
     updatedBy: session.uid,
   }
 
@@ -164,7 +154,7 @@ export async function updateCertificateTemplate(
   }
 
   try {
-    await ref.update(patch)
+    await collectionSet(CERTIFICATE_TEMPLATES_COLLECTION, templateId, patch, { merge: true })
     revalidateCertificatePaths(templateId)
     return { success: true }
   } catch (error) {
@@ -180,24 +170,24 @@ export async function duplicateCertificateTemplate(
   if (!canCreateArea(session, 'certificates')) {
     return { success: false, error: 'You do not have permission to create certificate templates.' }
   }
-  if (!adminDb) return { success: false, error: 'Database unavailable.' }
   const source = await getCertificateTemplate(id)
   if (!source) return { success: false, error: 'Template not found.' }
 
+  const now = new Date().toISOString()
   try {
-    const ref = await adminDb.collection(CERTIFICATE_TEMPLATES_COLLECTION).add({
+    const newId = await collectionAdd(CERTIFICATE_TEMPLATES_COLLECTION, {
       name: `${source.name} (copy)`,
       description: source.description || null,
       backgroundUrl: source.backgroundUrl,
       page: source.page,
       fields: sanitizeCertificateFields(source.fields),
       isActive: source.isActive,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
+      createdAt: now,
+      updatedAt: now,
       updatedBy: session.uid,
     })
-    revalidateCertificatePaths(ref.id)
-    return { success: true, id: ref.id }
+    revalidateCertificatePaths(newId)
+    return { success: true, id: newId }
   } catch (error) {
     console.error('[certificate-templates] duplicate failed:', error)
     return { success: false, error: 'Failed to duplicate template.' }
@@ -211,15 +201,11 @@ export async function deleteCertificateTemplate(
   if (!canDeleteArea(session, 'certificates')) {
     return { success: false, error: 'You do not have permission to delete certificate templates.' }
   }
-  if (!adminDb) return { success: false, error: 'Database unavailable.' }
   const templateId = id.trim()
   if (!templateId) return { success: false, error: 'Template id required.' }
 
   try {
-    await adminDb
-      .collection(CERTIFICATE_TEMPLATES_COLLECTION)
-      .doc(templateId)
-      .delete()
+    await collectionDelete(CERTIFICATE_TEMPLATES_COLLECTION, templateId)
     revalidateCertificatePaths()
     return { success: true }
   } catch (error) {

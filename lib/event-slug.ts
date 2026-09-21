@@ -1,4 +1,4 @@
-import { adminDb } from '@/lib/firebase-admin'
+import { collectionSet, collectionWhere } from '@/lib/db/collections'
 import { slugifyForUrl } from '@/lib/multilingualText'
 
 export function slugifyEventTitle(title: string): string {
@@ -11,14 +11,13 @@ export async function ensureUniqueEventSlug(
   excludeDocId?: string,
   reserved?: Set<string>,
 ): Promise<string> {
-  if (!adminDb) throw new Error('Database not configured')
   let slug = baseSlug
   let n = 0
   for (;;) {
     const takenInMemory = reserved?.has(slug)
     if (!takenInMemory) {
-      const snap = await adminDb.collection('events').where('slug', '==', slug).limit(5).get()
-      const conflict = snap.docs.find((d) => d.id !== excludeDocId)
+      const conflicts = await collectionWhere('events', 'slug', '==', slug, { limit: 5 })
+      const conflict = conflicts.find((d) => d.id !== excludeDocId)
       if (!conflict) return slug
     }
     n += 1
@@ -30,7 +29,6 @@ export async function ensureUniqueEventSlug(
 export async function persistMissingEventSlugs(
   events: Array<{ id: string; title: string; slug?: string }>,
 ): Promise<void> {
-  if (!adminDb) return
   const missing = events.filter((event) => !event.slug?.trim())
   if (missing.length === 0) return
 
@@ -46,11 +44,9 @@ export async function persistMissingEventSlugs(
       writes.push({ id: event.id, slug, event })
     }
 
-    const batch = adminDb.batch()
-    for (const write of writes) {
-      batch.update(adminDb.collection('events').doc(write.id), { slug: write.slug })
-    }
-    await batch.commit()
+    await Promise.all(
+      writes.map((write) => collectionSet('events', write.id, { slug: write.slug }, { merge: true })),
+    )
 
     for (const write of writes) {
       write.event.slug = write.slug

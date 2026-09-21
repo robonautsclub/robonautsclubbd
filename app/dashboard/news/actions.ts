@@ -1,37 +1,29 @@
 'use server'
 
 import { revalidatePath, revalidateTag } from 'next/cache'
-import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { requireAuth, canCreateArea, canEditResource, canDeleteResource } from '@/lib/auth'
-import { adminDb } from '@/lib/firebase-admin'
-import type { NewsArticle } from '@/types/news'
 import {
-  sanitizeNewsBody,
-  sanitizeNewsTitle,
-  slugifyForUrl,
-} from '@/lib/multilingualText'
+  collectionAdd,
+  collectionDelete,
+  collectionGet,
+  collectionGetAll,
+  collectionSet,
+  collectionWhere,
+} from '@/lib/db/collections'
+import type { NewsArticle } from '@/types/news'
+import { sanitizeNewsBody, sanitizeNewsTitle, slugifyForUrl } from '@/lib/multilingualText'
 import { parseDateInputToTimestamp, timestampUtcNoonToday } from '@/lib/dateInput'
 import { PUBLIC_NEWS_TAG } from '@/lib/public-cache-tags'
-
-async function fetchNewsArticlesFromDb(): Promise<NewsArticle[]> {
-  const db = adminDb!
-  const snap = await db.collection('news').get()
-  const items: NewsArticle[] = []
-  snap.forEach((doc) => {
-    items.push(mapNewsDoc(doc.id, doc.data() as Record<string, unknown>))
-  })
-  items.sort((a, b) => {
-    const ca = new Date(a.createdAt).getTime()
-    const cb = new Date(b.createdAt).getTime()
-    return cb - ca
-  })
-  return items
-}
 
 function toIso(v: unknown): string | null {
   if (v == null) return null
   if (v instanceof Date) return v.toISOString()
-  if (typeof v === 'object' && v !== null && 'toDate' in v && typeof (v as { toDate: () => Date }).toDate === 'function') {
+  if (
+    typeof v === 'object' &&
+    v !== null &&
+    'toDate' in v &&
+    typeof (v as { toDate: () => Date }).toDate === 'function'
+  ) {
     return (v as { toDate: () => Date }).toDate().toISOString()
   }
   if (typeof v === 'string') return v
@@ -55,6 +47,13 @@ function mapNewsDoc(id: string, data: Record<string, unknown>): NewsArticle {
   }
 }
 
+async function fetchNewsArticlesFromDb(): Promise<NewsArticle[]> {
+  const docs = await collectionGetAll('news')
+  const items = docs.map((doc) => mapNewsDoc(String(doc.id), doc as Record<string, unknown>))
+  items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  return items
+}
+
 function resolveNewsDisplayDate(ymd: string | undefined, published: boolean) {
   const parsed = parseDateInputToTimestamp(ymd)
   if (parsed) return parsed
@@ -63,12 +62,11 @@ function resolveNewsDisplayDate(ymd: string | undefined, published: boolean) {
 }
 
 async function ensureUniqueSlug(baseSlug: string, excludeDocId?: string): Promise<string> {
-  if (!adminDb) throw new Error('Database not configured')
   let slug = baseSlug
   let n = 0
   for (;;) {
-    const snap = await adminDb.collection('news').where('slug', '==', slug).limit(5).get()
-    const conflict = snap.docs.find((d) => d.id !== excludeDocId)
+    const matches = await collectionWhere('news', 'slug', '==', slug, { limit: 5 })
+    const conflict = matches.find((d) => d.id !== excludeDocId)
     if (!conflict) return slug
     n += 1
     slug = `${baseSlug}-${n}`
@@ -77,10 +75,6 @@ async function ensureUniqueSlug(baseSlug: string, excludeDocId?: string): Promis
 
 export async function getNewsArticles(): Promise<NewsArticle[]> {
   await requireAuth()
-  if (!adminDb) {
-    console.warn('Firebase Admin SDK not available. Cannot fetch news. Set FIREBASE_ADMIN_* in .env')
-    return []
-  }
   try {
     return await fetchNewsArticlesFromDb()
   } catch {
@@ -90,14 +84,9 @@ export async function getNewsArticles(): Promise<NewsArticle[]> {
 
 export async function getNewsArticleForDashboard(id: string): Promise<NewsArticle | null> {
   await requireAuth()
-  if (!adminDb) {
-    console.warn('Firebase Admin SDK not available. Cannot fetch news article.')
-    return null
-  }
-
-  const doc = await adminDb.collection('news').doc(id).get()
-  if (!doc.exists) return null
-  return mapNewsDoc(doc.id, doc.data() as Record<string, unknown>)
+  const doc = await collectionGet('news', id)
+  if (!doc) return null
+  return mapNewsDoc(String(doc.id), doc as Record<string, unknown>)
 }
 
 export async function createNewsArticle(input: {
@@ -113,7 +102,6 @@ export async function createNewsArticle(input: {
   if (!canCreateArea(session, 'news')) {
     throw new Error('You do not have permission to create news articles.')
   }
-  if (!adminDb) throw new Error('Firebase Admin SDK is not configured.')
 
   const title = sanitizeNewsTitle(input.title)
   const body = sanitizeNewsBody(input.body)
@@ -123,14 +111,14 @@ export async function createNewsArticle(input: {
   const baseSlug = slugifyForUrl((input.slug?.trim() || title).trim())
   const slug = await ensureUniqueSlug(baseSlug)
 
-  const now = Timestamp.now()
+  const now = new Date().toISOString()
   const published = Boolean(input.published)
   const images = Array.isArray(input.images)
     ? input.images.filter((u) => typeof u === 'string' && u.trim()).map((u) => u.trim())
     : []
   const displayDate = resolveNewsDisplayDate(input.displayDate, published)
 
-  const doc = {
+  await collectionAdd('news', {
     title,
     slug,
     body,
@@ -142,9 +130,7 @@ export async function createNewsArticle(input: {
     createdAt: now,
     updatedAt: now,
     createdBy: session.uid,
-  }
-
-  await adminDb.collection('news').add(doc)
+  })
   revalidatePath('/news')
   revalidatePath('/')
   revalidateTag(PUBLIC_NEWS_TAG, 'max')
@@ -160,16 +146,14 @@ export async function updateNewsArticle(
     images?: string[]
     published: boolean
     displayDate?: string
-  }
+  },
 ) {
   const session = await requireAuth()
-  if (!adminDb) throw new Error('Firebase Admin SDK is not configured.')
 
-  const ref = adminDb.collection('news').doc(id)
-  const existing = await ref.get()
-  if (!existing.exists) throw new Error('Article not found.')
+  const existing = await collectionGet('news', id)
+  if (!existing) throw new Error('Article not found.')
 
-  const data = existing.data() as Record<string, unknown>
+  const data = existing as Record<string, unknown>
   if (!canEditResource(session, 'news', data.createdBy as string | undefined)) {
     throw new Error('You do not have permission to edit this article.')
   }
@@ -190,6 +174,7 @@ export async function updateNewsArticle(
     : []
 
   const displayDate = resolveNewsDisplayDate(input.displayDate, published)
+  const now = new Date().toISOString()
 
   const update: Record<string, unknown> = {
     title,
@@ -199,16 +184,16 @@ export async function updateNewsArticle(
     images,
     published,
     displayDate,
-    updatedAt: FieldValue.serverTimestamp(),
+    updatedAt: now,
   }
 
   if (published && !wasPublished) {
-    update.publishedAt = Timestamp.now()
+    update.publishedAt = now
   } else if (!published) {
     update.publishedAt = null
   }
 
-  await ref.update(update)
+  await collectionSet('news', id, update, { merge: true })
   revalidatePath('/news')
   revalidatePath(`/news/${data.slug as string}`)
   revalidatePath(`/news/${slug}`)
@@ -218,18 +203,16 @@ export async function updateNewsArticle(
 
 export async function deleteNewsArticle(id: string) {
   const session = await requireAuth()
-  if (!adminDb) throw new Error('Firebase Admin SDK is not configured.')
 
-  const ref = adminDb.collection('news').doc(id)
-  const existing = await ref.get()
-  if (!existing.exists) throw new Error('Article not found.')
+  const existing = await collectionGet('news', id)
+  if (!existing) throw new Error('Article not found.')
 
-  const data = existing.data() as Record<string, unknown>
+  const data = existing as Record<string, unknown>
   if (!canDeleteResource(session, 'news', data.createdBy as string | undefined)) {
     throw new Error('You do not have permission to delete this article.')
   }
 
-  await ref.delete()
+  await collectionDelete('news', id)
   revalidatePath('/news')
   revalidatePath(`/news/${String(data.slug)}`)
   revalidatePath('/')

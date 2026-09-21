@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { finalizePaidEventBooking } from '@/app/(marketing)/events/actions'
 import { finalizeRobofestPaidRegistration } from '@/app/(marketing)/robofest/actions'
-import { adminDb } from '@/lib/firebase-admin'
+import { collectionGet } from '@/lib/db/collections'
 
 function normalizeStatus(raw: string): string {
   const value = raw.toLowerCase()
@@ -10,13 +10,10 @@ function normalizeStatus(raw: string): string {
 }
 
 async function isRobofestPending(paymentId: string): Promise<boolean> {
-  if (!adminDb || !paymentId) return false
-  const snap = await adminDb
-    .collection('bkash_pending_registrations')
-    .doc(paymentId)
-    .get()
-  if (!snap.exists) return false
-  return snap.data()?.kind === 'robofest'
+  if (!paymentId) return false
+  const doc = await collectionGet('bkash_pending_registrations', paymentId)
+  if (!doc) return false
+  return doc.kind === 'robofest'
 }
 
 async function handleCallback(

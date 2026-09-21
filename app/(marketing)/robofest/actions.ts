@@ -1,13 +1,12 @@
 "use server";
 
-import { FieldValue } from "firebase-admin/firestore";
 import {
   BkashApiError,
   bkashCreateCheckout,
   bkashExecutePayment,
   bkashQueryPayment,
 } from "@/lib/bkash";
-import { adminDb } from "@/lib/firebase-admin";
+import { collectionGet, collectionSet } from "@/lib/db/collections";
 import {
   getRobofestCategoryByName,
   getRobofestContentFresh,
@@ -75,13 +74,6 @@ export async function submitRobofestRegistration(
   formData: RobofestRegistrationInput,
 ): Promise<RobofestRegistrationResult> {
   try {
-    if (!adminDb) {
-      return {
-        success: false,
-        error: "Service temporarily unavailable. Please try again later.",
-      };
-    }
-
     const validated = await validateRobofestRegistrationInput(formData);
     if (!validated.ok) return { success: false, error: validated.error };
 
@@ -132,13 +124,6 @@ export async function initiateRobofestPaidCheckout(
   formData: RobofestRegistrationInput,
 ): Promise<RobofestRegistrationResult> {
   try {
-    if (!adminDb) {
-      return {
-        success: false,
-        error: "Service temporarily unavailable. Please try again later.",
-      };
-    }
-
     const validated = await validateRobofestRegistrationInput(formData);
     if (!validated.ok) return { success: false, error: validated.error };
 
@@ -227,10 +212,11 @@ export async function initiateRobofestPaidCheckout(
       updatedAt: now,
     };
 
-    await adminDb
-      .collection("bkash_pending_registrations")
-      .doc(checkout.paymentId)
-      .set(pending);
+    await collectionSet("bkash_pending_registrations", checkout.paymentId, {
+      ...pending,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    });
 
     return { success: true, checkoutUrl: checkout.checkoutUrl };
   } catch (error) {
@@ -251,17 +237,6 @@ export async function finalizeRobofestPaidRegistration(paymentId: string): Promi
   emailSent?: boolean;
 }> {
   try {
-    if (!adminDb) {
-      return {
-        success: false,
-        error: "Service temporarily unavailable. Please try again later.",
-      };
-    }
-
-    const pendingRef = adminDb
-      .collection("bkash_pending_registrations")
-      .doc(paymentId);
-
     type ClaimResult =
       | {
           ok: true;
@@ -276,64 +251,57 @@ export async function finalizeRobofestPaidRegistration(paymentId: string): Promi
         }
       | { ok: false; error: string };
 
-    const claim = await adminDb.runTransaction(async (tx): Promise<ClaimResult> => {
-      const pendingSnap = await tx.get(pendingRef);
-      if (!pendingSnap.exists) {
-        return { ok: false, error: "Payment session not found or expired." };
-      }
+    const mergePending = (patch: Record<string, unknown>) =>
+      collectionSet("bkash_pending_registrations", paymentId, patch, { merge: true });
 
-      const pending = pendingSnap.data() as PendingRobofestRegistration;
+    const pendingSnap = await collectionGet("bkash_pending_registrations", paymentId);
+    let claim: ClaimResult;
+    if (!pendingSnap) {
+      claim = { ok: false, error: "Payment session not found or expired." };
+    } else {
+      const pending = pendingSnap as PendingRobofestRegistration;
       if (pending.kind !== "robofest") {
-        return { ok: false, error: "Not a Robofest payment session." };
-      }
-
-      if (pending.status === "completed" && pending.registrationDocId) {
-        return { ok: true, alreadyCompleted: true, pending };
-      }
-
-      if (pending.status === "processing") {
-        return {
+        claim = { ok: false, error: "Not a Robofest payment session." };
+      } else if (pending.status === "completed" && pending.registrationDocId) {
+        claim = { ok: true, alreadyCompleted: true, pending };
+      } else if (pending.status === "processing") {
+        claim = {
           ok: false,
           error:
             "Payment is still being finalized. Please wait a moment and refresh.",
         };
-      }
-
-      // Retry create after payment was captured but registration write failed.
-      if (pending.status === "failed" && pending.paymentCaptured) {
-        tx.update(pendingRef, {
+      } else if (pending.status === "failed" && pending.paymentCaptured) {
+        await mergePending({
           status: "processing",
-          error: FieldValue.delete(),
-          updatedAt: new Date(),
+          error: null,
+          updatedAt: new Date().toISOString(),
         });
-        return {
+        claim = {
           ok: true,
           alreadyCompleted: false,
           pending,
           skipExecute: true,
         };
-      }
-
-      if (pending.status === "failed") {
-        return {
+      } else if (pending.status === "failed") {
+        claim = {
           ok: false,
           error:
             pending.error ||
             "This payment session already failed. Please contact support.",
         };
+      } else {
+        await mergePending({
+          status: "processing",
+          updatedAt: new Date().toISOString(),
+        });
+        claim = {
+          ok: true,
+          alreadyCompleted: false,
+          pending,
+          skipExecute: false,
+        };
       }
-
-      tx.update(pendingRef, {
-        status: "processing",
-        updatedAt: new Date(),
-      });
-      return {
-        ok: true,
-        alreadyCompleted: false,
-        pending,
-        skipExecute: false,
-      };
-    });
+    }
 
     if (!claim.ok) {
       return { success: false, error: claim.error };
@@ -381,14 +349,14 @@ export async function finalizeRobofestPaidRegistration(paymentId: string): Promi
             : false;
 
         if (!isNoResponseFromExecute) {
-          await pendingRef.update({
+          await mergePending({
             status: "failed",
             paymentCaptured: false,
             error:
               executeError instanceof BkashApiError
                 ? executeError.statusMessage || executeError.message
                 : "Failed to execute payment with bKash.",
-            updatedAt: new Date(),
+            updatedAt: new Date().toISOString(),
           });
           return {
             success: false,
@@ -402,13 +370,13 @@ export async function finalizeRobofestPaidRegistration(paymentId: string): Promi
         try {
           const queried = await bkashQueryPayment(paymentId);
           if (queried.transactionStatus.toLowerCase() !== "completed") {
-            await pendingRef.update({
+            await mergePending({
               status: "failed",
               paymentCaptured: false,
               error:
                 queried.statusMessage ||
                 `Payment is not successful (${queried.transactionStatus}).`,
-              updatedAt: new Date(),
+              updatedAt: new Date().toISOString(),
             });
             return {
               success: false,
@@ -419,14 +387,14 @@ export async function finalizeRobofestPaidRegistration(paymentId: string): Promi
           }
           execution = queried;
         } catch (queryError) {
-          await pendingRef.update({
+          await mergePending({
             status: "failed",
             paymentCaptured: false,
             error:
               queryError instanceof BkashApiError
                 ? queryError.statusMessage || queryError.message
                 : "Failed to verify payment status with bKash.",
-            updatedAt: new Date(),
+            updatedAt: new Date().toISOString(),
           });
           return {
             success: false,
@@ -439,13 +407,13 @@ export async function finalizeRobofestPaidRegistration(paymentId: string): Promi
       }
 
       if (execution.transactionStatus.toLowerCase() !== "completed") {
-        await pendingRef.update({
+        await mergePending({
           status: "failed",
           paymentCaptured: false,
           error:
             execution.statusMessage ||
             `Payment is not successful (${execution.transactionStatus}).`,
-          updatedAt: new Date(),
+          updatedAt: new Date().toISOString(),
         });
         return {
           success: false,
@@ -456,10 +424,10 @@ export async function finalizeRobofestPaidRegistration(paymentId: string): Promi
       }
 
       // Payment confirmed — mark captured before registration create.
-      await pendingRef.update({
+      await mergePending({
         paymentCaptured: true,
         trxId: execution.trxId,
-        updatedAt: new Date(),
+        updatedAt: new Date().toISOString(),
       });
     }
 
@@ -501,17 +469,17 @@ export async function finalizeRobofestPaidRegistration(paymentId: string): Promi
           error: result.error,
         },
       );
-      await pendingRef.update({
+      await mergePending({
         status: "failed",
         paymentCaptured: true,
         trxId: execution.trxId || pending.trxId || null,
         error: result.error || "Failed to create registration after payment.",
-        updatedAt: new Date(),
+        updatedAt: new Date().toISOString(),
       });
       return result;
     }
 
-    await pendingRef.update({
+    await mergePending({
       status: "completed",
       registrationDocId: result.registrationDocId,
       registrationId: result.registrationId,
@@ -519,7 +487,7 @@ export async function finalizeRobofestPaidRegistration(paymentId: string): Promi
       trxId: execution.trxId || pending.trxId || null,
       paymentCaptured: true,
       error: null,
-      updatedAt: new Date(),
+      updatedAt: new Date().toISOString(),
     });
 
     return {

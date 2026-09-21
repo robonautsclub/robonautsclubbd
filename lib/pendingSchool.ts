@@ -1,9 +1,8 @@
 /**
- * Pending school helpers for public registration flows (Admin SDK).
+ * Pending school helpers for public registration flows.
  */
 
-import { FieldValue } from 'firebase-admin/firestore'
-import { adminDb } from '@/lib/firebase-admin'
+import { collectionAdd, collectionWhere } from '@/lib/db/collections'
 import {
   PRIVATE_CANDIDATE_OPTION,
   SCHOOL_DIRECTORY_COLLECTION,
@@ -45,44 +44,40 @@ export async function createPendingSchoolIfNeeded(
     return { school: '', schoolIsCustom: false }
   }
 
-  // Private Candidate is a synthetic option, not a directory school.
   if (name === PRIVATE_CANDIDATE_OPTION) {
     return { school: name, schoolIsCustom: false }
   }
 
-  if (!adminDb) {
-    return { school: name, schoolIsCustom: true }
-  }
+  const existing = await collectionWhere(
+    SCHOOL_DIRECTORY_COLLECTION,
+    'nameLower',
+    '==',
+    name.toLowerCase(),
+    { limit: 5 },
+  )
 
-  const existing = await adminDb
-    .collection(SCHOOL_DIRECTORY_COLLECTION)
-    .where('nameLower', '==', name.toLowerCase())
-    .limit(5)
-    .get()
-
-  for (const doc of existing.docs) {
-    const data = doc.data()
-    const status = data.status === 'pending' ? 'pending' : 'approved'
-    const isActive = typeof data.isActive === 'boolean' ? data.isActive : true
+  for (const doc of existing) {
+    const status = doc.status === 'pending' ? 'pending' : 'approved'
+    const isActive = typeof doc.isActive === 'boolean' ? doc.isActive : true
 
     if (status === 'approved' && isActive) {
       return {
-        school: typeof data.name === 'string' ? normalizeSchoolName(data.name) : name,
+        school: typeof doc.name === 'string' ? normalizeSchoolName(doc.name) : name,
         schoolIsCustom: false,
       }
     }
 
     if (status === 'pending') {
       return {
-        school: typeof data.name === 'string' ? normalizeSchoolName(data.name) : name,
+        school: typeof doc.name === 'string' ? normalizeSchoolName(doc.name) : name,
         schoolIsCustom: true,
-        pendingSchoolId: doc.id,
+        pendingSchoolId: String(doc.id),
       }
     }
   }
 
-  const now = new Date()
-  const ref = await adminDb.collection(SCHOOL_DIRECTORY_COLLECTION).add({
+  const now = new Date().toISOString()
+  const pendingSchoolId = await collectionAdd(SCHOOL_DIRECTORY_COLLECTION, {
     name,
     nameLower: name.toLowerCase(),
     city: '',
@@ -93,7 +88,7 @@ export async function createPendingSchoolIfNeeded(
     source: meta.source ?? 'robofest',
     requestedByName: meta.requestedByName?.trim() || '',
     requestedByEmail: meta.requestedByEmail?.trim().toLowerCase() || '',
-    requestedAt: FieldValue.serverTimestamp(),
+    requestedAt: now,
     createdAt: now,
     updatedAt: now,
   })
@@ -101,6 +96,6 @@ export async function createPendingSchoolIfNeeded(
   return {
     school: name,
     schoolIsCustom: true,
-    pendingSchoolId: ref.id,
+    pendingSchoolId,
   }
 }

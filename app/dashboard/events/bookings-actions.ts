@@ -1,14 +1,17 @@
 'use server'
 
 import { revalidateTag, unstable_cache } from 'next/cache'
-import { FieldPath } from 'firebase-admin/firestore'
 import {
   requireAuth,
   canEditArea,
   canDeleteArea,
   hasPermission,
 } from '@/lib/auth'
-import { adminDb } from '@/lib/firebase-admin'
+import {
+  collectionDelete,
+  collectionGet,
+  getBookingsByEventId,
+} from '@/lib/db/collections'
 import { Event } from '@/types/event'
 import { Booking } from '@/types/booking'
 import { getEventRegistrationFields } from '@/lib/registrationFields'
@@ -67,25 +70,18 @@ function toIsoString(value: unknown): string | undefined {
  * Get bookings for a specific event
  */
 async function fetchBookingsForEventFromDb(eventId: string): Promise<Booking[]> {
-  const db = adminDb!
-  const bookingsSnapshot = await db
-    .collection('bookings')
-    .where('eventId', '==', eventId)
-    .get()
-
-  const bookings: Booking[] = []
-  bookingsSnapshot.forEach((doc) => {
-    const data = doc.data()
-
-    bookings.push({
-      id: doc.id,
+  const docs = await getBookingsByEventId(eventId)
+  const bookings: Booking[] = docs.map((doc) => {
+    const data = doc as Record<string, unknown>
+    return {
+      id: String(doc.id),
       ...data,
       createdAt: toIsoString(data.createdAt) ?? '',
       paidAt: toIsoString(data.paidAt),
       pdfGeneratedAt: toIsoString(data.pdfGeneratedAt),
       emailSentAt: toIsoString(data.emailSentAt),
       emailFailedAt: toIsoString(data.emailFailedAt),
-    } as Booking)
+    } as Booking
   })
 
   bookings.sort((a, b) => {
@@ -103,11 +99,6 @@ async function fetchBookingsForEventFromDb(eventId: string): Promise<Booking[]> 
 
 export async function getBookings(eventId: string): Promise<Booking[]> {
   await requireAuth()
-
-  if (!adminDb) {
-    console.warn('Firebase Admin SDK not available. Cannot fetch bookings.')
-    return []
-  }
 
   try {
     return await unstable_cache(
@@ -155,16 +146,6 @@ function createdAtToDate(value: unknown): Date | null {
     return Number.isNaN(d.getTime()) ? null : d
   }
   return null
-}
-
-function isMissingIndexError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false
-  const err = error as { code?: number | string; message?: string }
-  return (
-    err.code === 9 ||
-    err.code === 'failed-precondition' ||
-    /FAILED_PRECONDITION|requires an index/i.test(String(err.message || ''))
-  )
 }
 
 function isBookingAfterCursor(item: Booking, cursor: BookingCursor): boolean {
@@ -238,9 +219,6 @@ export async function getEventBookingStats(
   eventId: string,
 ): Promise<EventBookingStats> {
   await requireAuth()
-  if (!adminDb) {
-    return { ...EMPTY_EVENT_BOOKING_STATS }
-  }
   try {
     const bookings = await fetchBookingsForEventFromDb(eventId)
     return computeStatsFromBookings(bookings)
@@ -264,10 +242,6 @@ export async function getBookingsPage(
 ): Promise<BookingsPage> {
   await requireAuth()
 
-  if (!adminDb) {
-    return { items: [], nextCursor: null, hasMore: false, matchedTotal: 0 }
-  }
-
   const pageSize = Math.min(
     Math.max(options.pageSize ?? BOOKING_DEFAULT_PAGE_SIZE, 1),
     100,
@@ -275,91 +249,13 @@ export async function getBookingsPage(
   const nameFilter = options.nameFilter?.trim().toLowerCase() || ''
   const categoryFilter = options.categoryFilter?.trim() || ''
 
-  // Name substring search is not indexable — filter + paginate in memory.
-  if (nameFilter) {
-    const all = await fetchBookingsForEventFromDb(eventId)
-    const filtered = all.filter((booking) => {
-      const matchName = booking.name.toLowerCase().includes(nameFilter)
-      const matchCategory =
-        !categoryFilter || (booking.category || '') === categoryFilter
-      return matchName && matchCategory
-    })
-    return pageBookingsFromItems(filtered, options.cursor, pageSize)
-  }
-
-  try {
-    let q = adminDb
-      .collection('bookings')
-      .where('eventId', '==', eventId)
-
-    if (categoryFilter) {
-      q = q.where('category', '==', categoryFilter)
-    }
-
-    q = q
-      .orderBy('createdAt', 'desc')
-      .orderBy(FieldPath.documentId(), 'desc')
-
-    const cursor = options.cursor
-    if (cursor?.id && cursor.createdAt) {
-      const cursorDate = createdAtToDate(cursor.createdAt)
-      if (cursorDate) {
-        q = q.startAfter(cursorDate, cursor.id)
-      }
-    }
-
-    const countPromise = categoryFilter
-      ? adminDb
-          .collection('bookings')
-          .where('eventId', '==', eventId)
-          .where('category', '==', categoryFilter)
-          .count()
-          .get()
-          .then((snap) => snap.data().count)
-          .catch(() => null)
-      : Promise.resolve(null)
-
-    const [snap, matchedTotal] = await Promise.all([
-      q.limit(pageSize + 1).get(),
-      countPromise,
-    ])
-
-    const docs = snap.docs.slice(0, pageSize)
-    const items = docs.map((doc) => mapBookingDoc(doc.id, doc.data() as Record<string, unknown>))
-    const hasMore = snap.docs.length > pageSize
-    const last = docs[docs.length - 1]
-
-    let nextCursor: BookingCursor | null = null
-    if (hasMore && last) {
-      const createdAt =
-        createdAtToDate(last.data().createdAt)?.toISOString() ||
-        String(items[items.length - 1]?.createdAt || '')
-      if (createdAt) {
-        nextCursor = { createdAt, id: last.id }
-      }
-    }
-
-    return {
-      items,
-      nextCursor,
-      hasMore,
-      matchedTotal: typeof matchedTotal === 'number' ? matchedTotal : null,
-    }
-  } catch (error) {
-    if (!isMissingIndexError(error)) {
-      console.error('Error fetching bookings page:', error)
-      throw new Error('Failed to fetch bookings page')
-    }
-    console.warn(
-      '[events] Composite index missing for bookings pagination; using in-memory fallback.',
-      error instanceof Error ? error.message : error,
-    )
-    const all = await fetchBookingsForEventFromDb(eventId)
-    const filtered = categoryFilter
-      ? all.filter((b) => (b.category || '') === categoryFilter)
-      : all
-    return pageBookingsFromItems(filtered, options.cursor, pageSize)
-  }
+  const all = await fetchBookingsForEventFromDb(eventId)
+  const filtered = all.filter((booking) => {
+    const matchName = !nameFilter || booking.name.toLowerCase().includes(nameFilter)
+    const matchCategory = !categoryFilter || (booking.category || '') === categoryFilter
+    return matchName && matchCategory
+  })
+  return pageBookingsFromItems(filtered, options.cursor, pageSize)
 }
 
 export type CreateBookingManualInput = BookingInput & {
@@ -387,25 +283,18 @@ export async function createBookingManual(
     return { success: false, error: 'You do not have permission to add registrations.' }
   }
 
-  if (!adminDb) {
-    return {
-      success: false,
-      error: 'Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.',
-    }
-  }
-
   try {
-    const eventDoc = await adminDb.collection('events').doc(input.eventId).get()
-    if (!eventDoc.exists) {
+    const eventDoc = await collectionGet('events', input.eventId)
+    if (!eventDoc) {
       return { success: false, error: 'Event not found' }
     }
 
-    const eventData = eventDoc.data()!
+    const eventData = eventDoc as Record<string, unknown>
     const event: Event = {
-      id: eventDoc.id,
+      id: String(eventDoc.id),
       ...eventData,
-      createdAt: eventData.createdAt?.toDate?.() || eventData.createdAt,
-      updatedAt: eventData.updatedAt?.toDate?.() || eventData.updatedAt,
+      createdAt: eventData.createdAt,
+      updatedAt: eventData.updatedAt,
     } as Event
 
     const defaultRegistrationFields = getEventRegistrationFields(event)
@@ -536,19 +425,15 @@ export async function resendBookingEmail(bookingId: string): Promise<{
     }
   }
 
-  if (!adminDb) {
-    return { success: false, error: 'Database unavailable.' }
-  }
-
   try {
-    const bookingDoc = await adminDb.collection('bookings').doc(bookingId).get()
-    if (!bookingDoc.exists) {
+    const bookingDoc = await collectionGet('bookings', bookingId)
+    if (!bookingDoc) {
       return { success: false, error: 'Booking not found.' }
     }
 
-    const bookingData = bookingDoc.data()!
+    const bookingData = bookingDoc as Record<string, unknown>
     const booking = {
-      id: bookingDoc.id,
+      id: String(bookingDoc.id),
       ...bookingData,
       createdAt: toIsoString(bookingData.createdAt) ?? '',
       paidAt: toIsoString(bookingData.paidAt),
@@ -557,17 +442,17 @@ export async function resendBookingEmail(bookingId: string): Promise<{
       emailFailedAt: toIsoString(bookingData.emailFailedAt),
     } as Booking
 
-    const eventDoc = await adminDb.collection('events').doc(booking.eventId).get()
-    if (!eventDoc.exists) {
+    const eventDoc = await collectionGet('events', String(booking.eventId))
+    if (!eventDoc) {
       return { success: false, error: 'Event not found.' }
     }
 
-    const eventData = eventDoc.data()!
+    const eventData = eventDoc as Record<string, unknown>
     const event = {
-      id: eventDoc.id,
+      id: String(eventDoc.id),
       ...eventData,
-      createdAt: eventData.createdAt?.toDate?.() || eventData.createdAt,
-      updatedAt: eventData.updatedAt?.toDate?.() || eventData.updatedAt,
+      createdAt: eventData.createdAt,
+      updatedAt: eventData.updatedAt,
     } as Event
 
     return await resendBookingConfirmationEmail(booking, event)
@@ -586,44 +471,31 @@ export async function cancelBooking(bookingId: string): Promise<{ success: boole
     return { success: false, error: 'You do not have permission to cancel bookings.' }
   }
 
-  if (!adminDb) {
-    console.error('Firebase Admin SDK not available. Cannot cancel booking.')
-    return {
-      success: false,
-      error: 'Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.',
-    }
-  }
-
   try {
-    // Check if booking exists and fetch booking details
-    const bookingDoc = await adminDb.collection('bookings').doc(bookingId).get()
-    if (!bookingDoc.exists) {
+    const bookingDoc = await collectionGet('bookings', bookingId)
+    if (!bookingDoc) {
       return {
         success: false,
         error: 'Booking not found',
       }
     }
 
-    const bookingData = bookingDoc.data()!
     const booking = {
-      id: bookingDoc.id,
-      ...bookingData,
+      id: String(bookingDoc.id),
+      ...(bookingDoc as Record<string, unknown>),
     } as Booking
 
-    // Fetch event details
-    const eventDoc = await adminDb.collection('events').doc(booking.eventId).get()
-    if (!eventDoc.exists) {
-      // Event not found, still proceed with deletion but skip email
-      await adminDb.collection('bookings').doc(bookingId).delete()
+    const eventDoc = await collectionGet('events', String(booking.eventId))
+    if (!eventDoc) {
+      await collectionDelete('bookings', bookingId)
       return {
         success: true,
       }
     }
 
-    const eventData = eventDoc.data()!
     const event = {
-      id: eventDoc.id,
-      ...eventData,
+      id: String(eventDoc.id),
+      ...(eventDoc as Record<string, unknown>),
     } as Event
 
     // Send cancellation email before deleting the booking
@@ -653,7 +525,7 @@ export async function cancelBooking(bookingId: string): Promise<{ success: boole
     }
 
     // Delete the booking after sending email
-    await adminDb.collection('bookings').doc(bookingId).delete()
+    await collectionDelete('bookings', bookingId)
     revalidateTag(getEventBookingsTag(booking.eventId), 'max')
 
     return {

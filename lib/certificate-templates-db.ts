@@ -1,8 +1,8 @@
 /**
- * Server-only Firestore access for certificate templates.
+ * Server-only D1 access for certificate templates.
  */
 
-import { adminDb } from '@/lib/firebase-admin'
+import { collectionGet } from '@/lib/db/collections'
 import {
   CERTIFICATE_TEMPLATES_COLLECTION,
   mapCertificateTemplateDoc,
@@ -12,16 +12,10 @@ import {
 export async function loadCertificateTemplateById(
   id: string,
 ): Promise<CertificateTemplate | null> {
-  if (!adminDb || !id.trim()) return null
-  const doc = await adminDb
-    .collection(CERTIFICATE_TEMPLATES_COLLECTION)
-    .doc(id.trim())
-    .get()
-  if (!doc.exists) return null
-  return mapCertificateTemplateDoc(
-    doc.id,
-    doc.data() as Record<string, unknown>,
-  )
+  if (!id.trim()) return null
+  const doc = await collectionGet(CERTIFICATE_TEMPLATES_COLLECTION, id.trim())
+  if (!doc) return null
+  return mapCertificateTemplateDoc(String(doc.id), doc as Record<string, unknown>)
 }
 
 export async function loadActiveCertificateTemplateById(

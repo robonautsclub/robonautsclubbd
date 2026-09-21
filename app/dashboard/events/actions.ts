@@ -7,7 +7,14 @@ import {
   canEditResource,
   canDeleteResource,
 } from '@/lib/auth'
-import { adminDb } from '@/lib/firebase-admin'
+import {
+  collectionAdd,
+  collectionDelete,
+  collectionGet,
+  collectionSet,
+  collectionWhere,
+  getBookingsByEventId,
+} from '@/lib/db/collections'
 import { Event } from '@/types/event'
 import { ensureUniqueEventSlug, slugifyEventTitle } from '@/lib/event-slug'
 import { sanitizeEventForDatabase } from '@/lib/textSanitizer'
@@ -33,10 +40,6 @@ import {
  */
 export async function getEvents(): Promise<Event[]> {
   await requireAuth() // Ensure user is authenticated
-  if (!adminDb) {
-    console.warn('Firebase Admin SDK not available. Cannot fetch events. Set FIREBASE_ADMIN_* in .env')
-    return []
-  }
   try {
     return await getCachedEventsList()
   } catch (error) {
@@ -52,10 +55,6 @@ export async function getEvents(): Promise<Event[]> {
 export async function getDashboardEventsSummary(): Promise<DashboardEventSummary[]> {
   await requireAuth() // Ensure user is authenticated
 
-  if (!adminDb) {
-    console.warn('Firebase Admin SDK not available. Cannot fetch dashboard events summary.')
-    return []
-  }
   try {
     return await getCachedDashboardEventsSummary()
   } catch (error) {
@@ -66,11 +65,6 @@ export async function getDashboardEventsSummary(): Promise<DashboardEventSummary
 
 export async function getEvent(id: string): Promise<Event | null> {
   await requireAuth()
-
-  if (!adminDb) {
-    console.warn('Firebase Admin SDK not available. Cannot fetch event.')
-    return null
-  }
 
   try {
     return await unstable_cache(
@@ -119,14 +113,6 @@ export async function createEvent(formData: {
     return { success: false, error: 'You do not have permission to create events.' }
   }
 
-  if (!adminDb) {
-    console.error('Firebase Admin SDK not available. Cannot create event.')
-    return {
-      success: false,
-      error: 'Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.',
-    }
-  }
-
   try {
     // Apply default time before sanitization for consistency
     const defaultTime = '9:00 AM - 5:00 PM'
@@ -145,12 +131,9 @@ export async function createEvent(formData: {
     })
 
     // Check if event with same sanitized title already exists
-    const existingEvents = await adminDb
-      .collection('events')
-      .where('title', '==', sanitized.title)
-      .get()
+    const existingEvents = await collectionWhere('events', 'title', '==', sanitized.title)
 
-    if (!existingEvents.empty) {
+    if (existingEvents.length > 0) {
       return {
         success: false,
         error: 'An event with this name already exists',
@@ -158,7 +141,7 @@ export async function createEvent(formData: {
     }
 
     // Create event in Firestore
-    const now = new Date()
+    const now = new Date().toISOString()
     // Normalize date: convert array to comma-separated string, or use string as-is
     const normalizedDate = Array.isArray(formData.date) 
       ? formData.date.length === 1 
@@ -174,7 +157,7 @@ export async function createEvent(formData: {
       hasCategories: categories.length > 0,
     })
     const slug = await ensureUniqueEventSlug(slugifyEventTitle(sanitized.title))
-    const eventRef = await adminDb.collection('events').add({
+    const eventId = await collectionAdd('events', {
       title: sanitized.title,
       slug,
       date: normalizedDate,
@@ -222,7 +205,7 @@ export async function createEvent(formData: {
 
     return {
       success: true,
-      eventId: eventRef.id,
+      eventId,
     }
   } catch (error) {
     return {
@@ -265,25 +248,16 @@ export async function updateEvent(
 ): Promise<{ success: boolean; error?: string }> {
   const session = await requireAuth()
 
-  if (!adminDb) {
-    console.error('Firebase Admin SDK not available. Cannot update event.')
-    return {
-      success: false,
-      error: 'Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.',
-    }
-  }
-
   try {
-    // Check if event exists
-    const eventDoc = await adminDb.collection('events').doc(eventId).get()
-    if (!eventDoc.exists) {
+    const eventDoc = await collectionGet('events', eventId)
+    if (!eventDoc) {
       return {
         success: false,
         error: 'Event not found',
       }
     }
 
-    const eventData = eventDoc.data()!
+    const eventData = eventDoc as Record<string, unknown>
 
     if (!canEditResource(session, 'events', eventData.createdBy as string | undefined)) {
       return {
@@ -309,12 +283,9 @@ export async function updateEvent(
     })
 
     // Check if another event with the same sanitized title exists (excluding current event)
-    const existingEvents = await adminDb
-      .collection('events')
-      .where('title', '==', sanitized.title)
-      .get()
+    const existingEvents = await collectionWhere('events', 'title', '==', sanitized.title)
 
-    const hasDuplicate = existingEvents.docs.some((doc) => doc.id !== eventId)
+    const hasDuplicate = existingEvents.some((doc) => String(doc.id) !== eventId)
     if (hasDuplicate) {
       return {
         success: false,
@@ -340,7 +311,7 @@ export async function updateEvent(
     const previousSlug =
       typeof eventData.slug === 'string' && eventData.slug.trim() ? eventData.slug.trim() : ''
     const slug = await ensureUniqueEventSlug(slugifyEventTitle(sanitized.title), eventId)
-    await adminDb.collection('events').doc(eventId).update({
+    await collectionSet('events', eventId, {
       title: sanitized.title,
       slug,
       date: normalizedDate,
@@ -365,8 +336,8 @@ export async function updateEvent(
       customFormFields,
       defaultRegistrationFields,
       certificateTemplateId: formData.certificateTemplateId?.trim() || null,
-      updatedAt: new Date(),
-    })
+      updatedAt: new Date().toISOString(),
+    }, { merge: true })
 
     // Revalidate ISR pages to show updated event immediately
     revalidatePath('/events')
@@ -407,25 +378,16 @@ export async function updateEvent(
 export async function deleteEvent(eventId: string): Promise<{ success: boolean; error?: string }> {
   const session = await requireAuth()
 
-  if (!adminDb) {
-    console.error('Firebase Admin SDK not available. Cannot delete event.')
-    return {
-      success: false,
-      error: 'Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.',
-    }
-  }
-
   try {
-    // Check if event exists
-    const eventDoc = await adminDb.collection('events').doc(eventId).get()
-    if (!eventDoc.exists) {
+    const eventDoc = await collectionGet('events', eventId)
+    if (!eventDoc) {
       return {
         success: false,
         error: 'Event not found',
       }
     }
 
-    const eventData = eventDoc.data()!
+    const eventData = eventDoc as Record<string, unknown>
 
     if (!canDeleteResource(session, 'events', eventData.createdBy as string | undefined)) {
       return {
@@ -435,21 +397,11 @@ export async function deleteEvent(eventId: string): Promise<{ success: boolean; 
     }
 
     // Delete all bookings associated with this event
-    const bookingsSnapshot = await adminDb
-      .collection('bookings')
-      .where('eventId', '==', eventId)
-      .get()
-
-    const batch = adminDb.batch()
-    bookingsSnapshot.forEach((doc) => {
-      batch.delete(doc.ref)
-    })
-
-    // Delete the event
-    batch.delete(adminDb.collection('events').doc(eventId))
-
-    // Commit the batch delete
-    await batch.commit()
+    const bookings = await getBookingsByEventId(eventId)
+    await Promise.all([
+      ...bookings.map((b) => collectionDelete('bookings', String(b.id))),
+      collectionDelete('events', eventId),
+    ])
 
     // Revalidate ISR pages to remove deleted event immediately
     const deletedSlug =

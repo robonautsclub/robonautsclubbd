@@ -1,146 +1,81 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { requireSuperAdmin } from '@/lib/auth'
+import { hashPassword } from '@/lib/auth/password'
 import {
-  getDefaultPermissionsForRole,
-  isDashboardRole,
+  deleteUser,
+  findUserById,
+  updateUser,
+} from '@/lib/db/users'
+import { getDb } from '@/lib/db'
+import { addDoc } from '@/lib/db/documents'
+import {
   normalizePermissionGrants,
   sanitizePermissions,
   PERMISSIONS_VERSION,
-  type DashboardPermission,
   type DashboardRole,
 } from '@/lib/dashboard-permissions'
 
-function resolveUserRoleAndPerms(user: {
-  customClaims?: Record<string, unknown> | null
-}): { role: DashboardRole; permissions: DashboardPermission[] } {
-  const role = (isDashboardRole(user.customClaims?.role)
-    ? user.customClaims!.role
-    : 'admin') as DashboardRole
-  const version = user.customClaims?.permissionsVersion
-  const sanitized = sanitizePermissions(user.customClaims?.permissions, {
-    permissionsVersion: version,
-  })
-  const permissions =
-    role === 'superAdmin'
-      ? getDefaultPermissionsForRole('superAdmin')
-      : sanitized.length > 0
-        ? sanitized
-        : getDefaultPermissionsForRole(role)
-  return { role, permissions }
+function isProtectedSuperAdmin(email: string, role: DashboardRole): boolean {
+  const superAdminEmails = (process.env.SUPER_ADMIN_EMAILS || '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
+  return role === 'superAdmin' || superAdminEmails.includes(email.toLowerCase())
 }
 
-/**
- * GET /api/admin/users/[uid]
- * Get a single user by UID
- * Super Admin only
- */
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ uid: string }> }
+  _request: NextRequest,
+  { params }: { params: Promise<{ uid: string }> },
 ) {
   try {
-    // Require Super Admin
     await requireSuperAdmin()
-
-    if (!adminAuth) {
-      return NextResponse.json(
-        { error: 'Firebase Admin SDK is not configured' },
-        { status: 500 }
-      )
-    }
-
     const { uid } = await params
-
     if (!uid) {
-      return NextResponse.json(
-        { error: 'User UID is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'User UID is required' }, { status: 400 })
     }
-
-    // Get user
-    const user = await adminAuth.getUser(uid)
-    const { role, permissions } = resolveUserRoleAndPerms(user)
-
+    const user = await findUserById(uid)
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
     return NextResponse.json({
       success: true,
       user: {
-        uid: user.uid,
-        email: user.email || '',
-        displayName: user.displayName || '',
+        uid: user.id,
+        email: user.email,
+        displayName: user.name,
         emailVerified: user.emailVerified,
-        role,
-        permissions,
-        createdAt: user.metadata.creationTime,
-        lastSignIn: user.metadata.lastSignInTime,
+        role: user.role,
+        permissions: user.permissions,
+        createdAt: '',
+        lastSignIn: null,
         disabled: user.disabled,
       },
     })
   } catch (error: unknown) {
-    // Check if it's an auth error (not Super Admin)
     if (error instanceof Error && error.message.includes('redirect')) {
       return NextResponse.json(
         { error: 'Unauthorized: Super Admin access required' },
-        { status: 403 }
+        { status: 403 },
       )
     }
-
-    // Handle Firebase Auth errors
-    const firebaseError = error as { code?: string; message?: string }
-    if (firebaseError.code === 'auth/user-not-found') {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
-    }
-    
-    return NextResponse.json(
-      { error: 'Failed to get user' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to get user' }, { status: 500 })
   }
 }
 
-/**
- * PUT /api/admin/users/[uid]
- * Update a user
- * Super Admin only
- */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ uid: string }> }
+  { params }: { params: Promise<{ uid: string }> },
 ) {
   try {
-    // Require Super Admin
     const session = await requireSuperAdmin()
-
-    if (!adminAuth) {
-      return NextResponse.json(
-        { error: 'Firebase Admin SDK is not configured' },
-        { status: 500 }
-      )
-    }
-
     const { uid } = await params
     const body = await request.json()
     const { displayName, password, disabled, role: rawRole, permissions: rawPerms } =
       body
 
     if (!uid) {
-      return NextResponse.json(
-        { error: 'User UID is required' },
-        { status: 400 },
-      )
+      return NextResponse.json({ error: 'User UID is required' }, { status: 400 })
     }
-
-    // Prevent Super Admins from editing any Super Admin account via this endpoint.
-    const superAdminEmailsEnv = process.env.SUPER_ADMIN_EMAILS || ''
-    const superAdminEmails = superAdminEmailsEnv
-      .split(',')
-      .map((email) => email.trim().toLowerCase())
-      .filter((email) => email.length > 0)
-
     if (body.email !== undefined) {
       return NextResponse.json(
         {
@@ -151,16 +86,25 @@ export async function PUT(
       )
     }
 
-    const updateData: {
-      displayName?: string
-      password?: string
-      disabled?: boolean
-    } = {}
-
-    if (displayName !== undefined) {
-      updateData.displayName = displayName
+    const currentUser = await findUserById(uid)
+    if (!currentUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
+    if (isProtectedSuperAdmin(currentUser.email, currentUser.role)) {
+      return NextResponse.json(
+        { error: 'Super Admin accounts cannot be edited via user management.' },
+        { status: 403 },
+      )
+    }
+
+    const changes: string[] = []
+    const patch: Parameters<typeof updateUser>[1] = {}
+
+    if (displayName !== undefined && displayName !== currentUser.name) {
+      patch.name = displayName
+      changes.push('display name')
+    }
     if (password !== undefined) {
       if (password.length < 6) {
         return NextResponse.json(
@@ -168,81 +112,50 @@ export async function PUT(
           { status: 400 },
         )
       }
-      updateData.password = password
+      patch.passwordHash = await hashPassword(password)
+      changes.push('password')
     }
-
-    if (disabled !== undefined) {
-      updateData.disabled = disabled
-    }
-
-    const currentUser = await adminAuth.getUser(uid)
-    const { role: currentRole, permissions: currentPermissions } =
-      resolveUserRoleAndPerms(currentUser)
-    const currentEmail = (currentUser.email || '').toLowerCase()
-    const isProtectedSuperAdmin =
-      currentRole === 'superAdmin' ||
-      (currentEmail && superAdminEmails.includes(currentEmail))
-
-    if (isProtectedSuperAdmin) {
-      return NextResponse.json(
-        {
-          error:
-            'Super Admin accounts cannot be edited via user management.',
-        },
-        { status: 403 },
-      )
-    }
-
-    const changes: string[] = []
-    if (
-      updateData.displayName &&
-      updateData.displayName !== currentUser.displayName
-    ) {
-      changes.push('display name')
-    }
-    if (updateData.password) changes.push('password')
-    if (
-      updateData.disabled !== undefined &&
-      updateData.disabled !== currentUser.disabled
-    ) {
-      changes.push(updateData.disabled ? 'disabled' : 'enabled')
+    if (disabled !== undefined && disabled !== currentUser.disabled) {
+      patch.disabled = disabled
+      changes.push(disabled ? 'disabled' : 'enabled')
     }
 
     const nextRole: DashboardRole =
-      rawRole === 'moderator' || rawRole === 'admin' ? rawRole : currentRole
+      rawRole === 'moderator' || rawRole === 'admin' ? rawRole : currentUser.role
     const nextPermissions = normalizePermissionGrants(
       Array.isArray(rawPerms)
         ? sanitizePermissions(rawPerms, {
             permissionsVersion: PERMISSIONS_VERSION,
           })
-        : currentPermissions,
+        : currentUser.permissions,
     )
 
-    if (nextRole !== currentRole) changes.push(`role:${nextRole}`)
+    if (nextRole !== currentUser.role) {
+      patch.role = nextRole
+      changes.push(`role:${nextRole}`)
+    }
     const permsChanged =
-      nextPermissions.length !== currentPermissions.length ||
-      nextPermissions.some((p) => !currentPermissions.includes(p))
-    if (permsChanged) changes.push('permissions')
-
-    if (Object.keys(updateData).length > 0) {
-      await adminAuth.updateUser(uid, updateData)
+      nextPermissions.length !== currentUser.permissions.length ||
+      nextPermissions.some((p) => !currentUser.permissions.includes(p))
+    if (permsChanged) {
+      patch.permissions = nextPermissions
+      patch.permissionsVersion = PERMISSIONS_VERSION
+      changes.push('permissions')
     }
 
-    if (nextRole !== currentRole || permsChanged) {
-      await adminAuth.setCustomUserClaims(uid, {
-        role: nextRole,
-        permissions: nextPermissions,
-        permissionsVersion: PERMISSIONS_VERSION,
-      })
-      await adminAuth.revokeRefreshTokens(uid)
+    if (Object.keys(patch).length > 0) {
+      await updateUser(uid, patch)
     }
 
-    const user = await adminAuth.getUser(uid)
-    const { role, permissions } = resolveUserRoleAndPerms(user)
+    const user = await findUserById(uid)
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
 
-    if (adminDb && changes.length > 0) {
+    if (changes.length > 0) {
       try {
-        await adminDb.collection('notifications').add({
+        const db = await getDb()
+        await addDoc(db, 'notifications', {
           type: 'user_updated',
           message: `${session.name} updated user ${currentUser.email || uid}: ${changes.join(', ')}`,
           userId: session.uid,
@@ -250,136 +163,75 @@ export async function PUT(
           userEmail: session.email,
           changes,
           readBy: [],
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
         })
       } catch {
-        // Silently fail
+        /* ignore */
       }
     }
 
     return NextResponse.json({
       success: true,
       user: {
-        uid: user.uid,
-        email: user.email || '',
-        displayName: user.displayName || '',
+        uid: user.id,
+        email: user.email,
+        displayName: user.name,
         emailVerified: user.emailVerified,
-        role,
-        permissions,
+        role: user.role,
+        permissions: user.permissions,
         disabled: user.disabled,
       },
       message: 'User updated successfully',
     })
   } catch (error: unknown) {
-    // Check if it's an auth error (not Super Admin)
     if (error instanceof Error && error.message.includes('redirect')) {
       return NextResponse.json(
         { error: 'Unauthorized: Super Admin access required' },
-        { status: 403 }
+        { status: 403 },
       )
     }
-
-    // Handle Firebase Auth errors
-    const firebaseError = error as { code?: string; message?: string }
-    if (firebaseError.code === 'auth/user-not-found') {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
-    }
-    if (firebaseError.code === 'auth/email-already-exists') {
-      return NextResponse.json(
-        { error: 'A user with this email already exists' },
-        { status: 400 }
-      )
-    }
-    
-    return NextResponse.json(
-      { error: 'Failed to update user' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to update user' }, { status: 500 })
   }
 }
 
-/**
- * DELETE /api/admin/users/[uid]
- * Delete a user
- * Super Admin only
- */
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ uid: string }> }
+  _request: NextRequest,
+  { params }: { params: Promise<{ uid: string }> },
 ) {
   try {
-    // Require Super Admin
     const session = await requireSuperAdmin()
-
-    if (!adminAuth) {
-      return NextResponse.json(
-        { error: 'Firebase Admin SDK is not configured' },
-        { status: 500 }
-      )
-    }
-
     const { uid } = await params
-
     if (!uid) {
+      return NextResponse.json({ error: 'User UID is required' }, { status: 400 })
+    }
+
+    const user = await findUserById(uid)
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+    if (isProtectedSuperAdmin(user.email, user.role)) {
       return NextResponse.json(
-        { error: 'User UID is required' },
-        { status: 400 }
+        { error: 'Super Admin accounts cannot be deleted.' },
+        { status: 403 },
       )
     }
 
-    // Get user data before deletion for notification
-    let userEmail = ''
+    await deleteUser(uid)
+
     try {
-      const user = await adminAuth.getUser(uid)
-      userEmail = user.email || ''
-
-      // Prevent Super Admins from deleting any Super Admin account.
-      const superAdminEmailsEnv = process.env.SUPER_ADMIN_EMAILS || ''
-      const superAdminEmails = superAdminEmailsEnv
-        .split(',')
-        .map((email) => email.trim().toLowerCase())
-        .filter((email) => email.length > 0)
-
-      const targetRole = isDashboardRole(user.customClaims?.role)
-        ? user.customClaims!.role
-        : 'admin'
-      const targetEmail = (user.email || '').toLowerCase()
-      const isProtectedSuperAdmin =
-        targetRole === 'superAdmin' ||
-        (targetEmail && superAdminEmails.includes(targetEmail))
-
-      if (isProtectedSuperAdmin) {
-        return NextResponse.json(
-          { error: 'Super Admin accounts cannot be deleted.' },
-          { status: 403 }
-        )
-      }
-    } catch (error) {
-      // User might not exist, continue with deletion
-    }
-
-    // Delete user
-    await adminAuth.deleteUser(uid)
-
-    // Create notification for user deletion
-    if (adminDb) {
-      try {
-        await adminDb.collection('notifications').add({
-          type: 'user_deleted',
-          message: `${session.name} deleted user: ${userEmail || uid}`,
-          userId: session.uid,
-          userName: session.name,
-          userEmail: session.email,
-          changes: ['user deleted'],
-          readBy: [],
-          createdAt: new Date(),
-        })
-      } catch (error) {
-        // Silently fail
-      }
+      const db = await getDb()
+      await addDoc(db, 'notifications', {
+        type: 'user_deleted',
+        message: `${session.name} deleted user: ${user.email || uid}`,
+        userId: session.uid,
+        userName: session.name,
+        userEmail: session.email,
+        changes: ['user deleted'],
+        readBy: [],
+        createdAt: new Date().toISOString(),
+      })
+    } catch {
+      /* ignore */
     }
 
     return NextResponse.json({
@@ -387,26 +239,12 @@ export async function DELETE(
       message: 'User deleted successfully',
     })
   } catch (error: unknown) {
-    // Check if it's an auth error (not Super Admin)
     if (error instanceof Error && error.message.includes('redirect')) {
       return NextResponse.json(
         { error: 'Unauthorized: Super Admin access required' },
-        { status: 403 }
+        { status: 403 },
       )
     }
-
-    // Handle Firebase Auth errors
-    const firebaseError = error as { code?: string; message?: string }
-    if (firebaseError.code === 'auth/user-not-found') {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
-    }
-    
-    return NextResponse.json(
-      { error: 'Failed to delete user' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 })
   }
 }

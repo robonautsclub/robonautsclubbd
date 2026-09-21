@@ -1,4 +1,4 @@
-import { adminDb } from '@/lib/firebase-admin'
+import { collectionGet, collectionSet } from '@/lib/db/collections'
 
 type BkashConfig = {
   baseUrl: string
@@ -183,12 +183,10 @@ async function getCachedTokenFromStorage(): Promise<string | null> {
     return memoryTokenCache.token
   }
 
-  if (!adminDb) return null
-  const tokenRef = adminDb.collection(BKASH_TOKEN_COLLECTION).doc(BKASH_TOKEN_DOC_ID)
-  const tokenDoc = await tokenRef.get()
-  if (!tokenDoc.exists) return null
-
-  const data = tokenDoc.data() as { idToken?: string; expiresAtMs?: number } | undefined
+  const data = (await collectionGet(BKASH_TOKEN_COLLECTION, BKASH_TOKEN_DOC_ID)) as
+    | { idToken?: string; expiresAtMs?: number }
+    | null
+  if (!data) return null
   if (!data?.idToken || !data?.expiresAtMs || !isTokenStillValid(data.expiresAtMs)) {
     return null
   }
@@ -201,15 +199,16 @@ async function cacheGrantedToken(idToken: string): Promise<void> {
   const expiresAtMs = Date.now() + BKASH_TOKEN_TTL_MS
   memoryTokenCache = { token: idToken, expiresAtMs }
 
-  if (!adminDb) return
-  await adminDb.collection(BKASH_TOKEN_COLLECTION).doc(BKASH_TOKEN_DOC_ID).set(
+  await collectionSet(
+    BKASH_TOKEN_COLLECTION,
+    BKASH_TOKEN_DOC_ID,
     {
       idToken,
       expiresAtMs,
       grantedAtMs: Date.now(),
-      updatedAt: new Date(),
+      updatedAt: new Date().toISOString(),
     },
-    { merge: true }
+    { merge: true },
   )
 }
 

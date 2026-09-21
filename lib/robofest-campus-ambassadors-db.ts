@@ -1,5 +1,5 @@
 import { unstable_cache } from 'next/cache'
-import { adminDb } from '@/lib/firebase-admin'
+import { collectionGet, collectionGetAll } from '@/lib/db/collections'
 import {
   PUBLIC_ROBOFEST_AMBASSADORS_TAG,
   ROBOFEST_CAMPUS_AMBASSADOR_SEED,
@@ -14,19 +14,9 @@ export const DASHBOARD_ROBOFEST_AMBASSADORS_TAG = 'dashboard-robofest-ambassador
 export async function listRobofestCampusAmbassadorsFromDb(
   includeInactive = true,
 ): Promise<RobofestCampusAmbassador[]> {
-  if (!adminDb) {
-    return sortRobofestCampusAmbassadors(
-      includeInactive
-        ? ROBOFEST_CAMPUS_AMBASSADOR_SEED
-        : ROBOFEST_CAMPUS_AMBASSADOR_SEED.filter((a) => a.isActive),
-    )
-  }
+  const docs = await collectionGetAll(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION)
 
-  const snapshot = await adminDb
-    .collection(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION)
-    .get()
-
-  if (snapshot.empty) {
+  if (docs.length === 0) {
     return sortRobofestCampusAmbassadors(
       includeInactive
         ? ROBOFEST_CAMPUS_AMBASSADOR_SEED
@@ -35,10 +25,10 @@ export async function listRobofestCampusAmbassadorsFromDb(
   }
 
   const list: RobofestCampusAmbassador[] = []
-  for (const doc of snapshot.docs) {
+  for (const doc of docs) {
     const mapped = mapRobofestCampusAmbassadorDoc(
-      doc.id,
-      doc.data() as Record<string, unknown>,
+      String(doc.id),
+      doc as Record<string, unknown>,
     )
     if (!mapped) continue
     if (!includeInactive && !mapped.isActive) continue
@@ -48,7 +38,6 @@ export async function listRobofestCampusAmbassadorsFromDb(
   return sortRobofestCampusAmbassadors(list)
 }
 
-/** Cached dashboard list (invalidate via DASHBOARD_ROBOFEST_AMBASSADORS_TAG). */
 export async function listRobofestCampusAmbassadorsCached(
   includeInactive = true,
 ): Promise<RobofestCampusAmbassador[]> {
@@ -62,30 +51,17 @@ export async function listRobofestCampusAmbassadorsCached(
   )()
 }
 
-/** Active ambassador by id for registration validation. */
 export async function getActiveRobofestCampusAmbassadorById(
   id: string,
 ): Promise<RobofestCampusAmbassador | undefined> {
   const trimmed = id.trim()
   if (!trimmed) return undefined
 
-  if (!adminDb) {
-    const seed = ROBOFEST_CAMPUS_AMBASSADOR_SEED.find((a) => a.id === trimmed)
-    return seed?.isActive ? seed : undefined
-  }
+  const doc = await collectionGet(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION, trimmed)
 
-  const snap = await adminDb
-    .collection(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION)
-    .doc(trimmed)
-    .get()
-
-  if (!snap.exists) {
-    // Empty collection fallback: allow seed ids until seeded.
-    const countSnap = await adminDb
-      .collection(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION)
-      .limit(1)
-      .get()
-    if (countSnap.empty) {
+  if (!doc) {
+    const all = await collectionGetAll(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION, { limit: 1 })
+    if (all.length === 0) {
       const seed = ROBOFEST_CAMPUS_AMBASSADOR_SEED.find((a) => a.id === trimmed)
       return seed?.isActive ? seed : undefined
     }
@@ -93,8 +69,8 @@ export async function getActiveRobofestCampusAmbassadorById(
   }
 
   const mapped = mapRobofestCampusAmbassadorDoc(
-    snap.id,
-    snap.data() as Record<string, unknown>,
+    String(doc.id),
+    doc as Record<string, unknown>,
   )
   if (!mapped || !mapped.isActive) return undefined
   return mapped
@@ -103,31 +79,22 @@ export async function getActiveRobofestCampusAmbassadorById(
 export async function getPublicRobofestCampusAmbassadors(): Promise<
   RobofestCampusAmbassador[]
 > {
-  const db = adminDb
-  if (!db) {
-    return sortRobofestCampusAmbassadors(
-      ROBOFEST_CAMPUS_AMBASSADOR_SEED.filter((a) => a.isActive),
-    )
-  }
-
   try {
     return await unstable_cache(
       async (): Promise<RobofestCampusAmbassador[]> => {
-        const snapshot = await db
-          .collection(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION)
-          .get()
+        const docs = await collectionGetAll(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION)
 
-        if (snapshot.empty) {
+        if (docs.length === 0) {
           return sortRobofestCampusAmbassadors(
             ROBOFEST_CAMPUS_AMBASSADOR_SEED.filter((a) => a.isActive),
           )
         }
 
         const list: RobofestCampusAmbassador[] = []
-        for (const doc of snapshot.docs) {
+        for (const doc of docs) {
           const mapped = mapRobofestCampusAmbassadorDoc(
-            doc.id,
-            doc.data() as Record<string, unknown>,
+            String(doc.id),
+            doc as Record<string, unknown>,
           )
           if (!mapped || !mapped.isActive) continue
           list.push(mapped)

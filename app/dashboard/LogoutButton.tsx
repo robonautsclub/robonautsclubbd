@@ -1,8 +1,6 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { signOut } from 'firebase/auth'
-import { auth } from '@/lib/firebase'
 import { LogOut, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -38,9 +36,7 @@ export default function LogoutButton() {
   const handleLogout = async () => {
     setLoading(true)
     try {
-      if (auth) {
-        await signOut(auth)
-      }
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
       clearAuthCookies()
       toast.success('Signed out successfully')
       router.push('/login')

@@ -2,13 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { onAuthStateChanged } from 'firebase/auth'
-import { auth } from '@/lib/firebase'
-import {
-  SESSION_DURATION_MS,
-  ASSIGN_ROLE_LAST_SYNC_STORAGE_KEY,
-  ASSIGN_ROLE_MIN_SYNC_INTERVAL_MS,
-} from '@/lib/session'
+import { SESSION_DURATION_MS } from '@/lib/session'
 
 function getSessionStart(): number | null {
   if (typeof window === 'undefined') return null
@@ -25,137 +19,31 @@ function clearSessionCookies() {
   document.cookie = 'auth-token=; path=/; max-age=0'
   document.cookie = 'user-info=; path=/; max-age=0'
   document.cookie = 'session-start=; path=/; max-age=0'
-  try {
-    sessionStorage.removeItem(ASSIGN_ROLE_LAST_SYNC_STORAGE_KEY)
-  } catch {
-    /* ignore */
-  }
-}
-
-function shouldSyncAssignRole(): boolean {
-  if (typeof window === 'undefined') return true
-  try {
-    const raw = sessionStorage.getItem(ASSIGN_ROLE_LAST_SYNC_STORAGE_KEY)
-    if (!raw) return true
-    const t = parseInt(raw, 10)
-    if (!Number.isFinite(t)) return true
-    return Date.now() - t > ASSIGN_ROLE_MIN_SYNC_INTERVAL_MS
-  } catch {
-    return true
-  }
-}
-
-function markAssignRoleSynced(): void {
-  try {
-    sessionStorage.setItem(ASSIGN_ROLE_LAST_SYNC_STORAGE_KEY, String(Date.now()))
-  } catch {
-    /* ignore */
-  }
-}
-
-function getRemainingSessionSeconds(): number {
-  const sessionStart = getSessionStart()
-  if (sessionStart == null) return 0
-  const remainingMs = sessionStart + SESSION_DURATION_MS - Date.now()
-  return Math.max(0, Math.floor(remainingMs / 1000))
 }
 
 /**
- * Client-side component that checks for token expiration
- * and redirects to login if the token has expired
+ * Client-side session expiry check (JWT cookie + 30-minute wall clock).
+ * No Firebase Auth on the Cloudflare Worker.
  */
 export default function TokenExpirationChecker() {
   const router = useRouter()
 
   useEffect(() => {
-    // Only run on client side and if auth is available
-    if (!auth) {
-      return
-    }
-
-    // Check auth state changes (handles token expiration)
-    const unsubscribe = onAuthStateChanged(
-      auth,
-      async (user) => {
-        if (!user) {
-          clearSessionCookies()
-          router.push('/login')
-          return
-        }
-
-        try {
-          let token = await user.getIdToken(false)
-
-          if (!token) {
-            clearSessionCookies()
-            router.push('/login')
-            return
-          }
-
-          const remainingSeconds = getRemainingSessionSeconds()
-          if (remainingSeconds <= 0) {
-            clearSessionCookies()
-            router.push('/login')
-            return
-          }
-
-          if (shouldSyncAssignRole()) {
-            try {
-              const roleResponse = await fetch('/api/auth/assign-role', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${token}`,
-                },
-                credentials: 'include',
-              })
-
-              if (roleResponse.ok) {
-                const roleData = await roleResponse.json()
-                token = await user.getIdToken(true)
-                markAssignRoleSynced()
-                const remaining = getRemainingSessionSeconds()
-                const userInfo = {
-                  uid: user.uid,
-                  email: user.email || '',
-                  name: user.displayName || user.email || 'Admin',
-                  emailVerified: user.emailVerified,
-                  role: roleData.role || 'admin',
-                  permissions: Array.isArray(roleData.permissions)
-                    ? roleData.permissions
-                    : [],
-                  permissionsVersion:
-                    typeof roleData.permissionsVersion === 'number'
-                      ? roleData.permissionsVersion
-                      : 2,
-                }
-                document.cookie = `user-info=${JSON.stringify(userInfo)}; path=/; max-age=${remaining}; SameSite=Lax`
-              }
-            } catch (roleError) {
-              console.error('Error assigning role during token refresh:', roleError)
-            }
-          }
-
-          document.cookie = `auth-token=${token}; path=/; max-age=${getRemainingSessionSeconds()}; SameSite=Lax`
-        } catch (error: unknown) {
-          console.error('Token refresh error:', error)
-          clearSessionCookies()
-          router.push('/login')
-        }
-      },
-      (error) => {
-        console.error('Auth state change error:', error)
+    const check = () => {
+      const sessionStart = getSessionStart()
+      if (sessionStart == null) return
+      if (Date.now() - sessionStart > SESSION_DURATION_MS) {
         clearSessionCookies()
+        void fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
         router.push('/login')
+        router.refresh()
       }
-    )
-
-    // Cleanup subscription on unmount
-    return () => {
-      unsubscribe()
     }
+
+    check()
+    const id = setInterval(check, 30_000)
+    return () => clearInterval(id)
   }, [router])
 
-  // This component doesn't render anything
   return null
 }

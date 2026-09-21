@@ -1,31 +1,27 @@
 'use server'
 
 import { revalidatePath, revalidateTag } from 'next/cache'
-import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { requireAuth, canCreateArea, canEditResource, canDeleteResource } from '@/lib/auth'
-import { adminDb } from '@/lib/firebase-admin'
+import {
+  collectionAdd,
+  collectionDelete,
+  collectionGet,
+  collectionGetAll,
+  collectionSet,
+} from '@/lib/db/collections'
 import type { GalleryGroup, GalleryImage } from '@/types/gallery'
 import { sanitizeGalleryLocation, sanitizeGalleryTitle } from '@/lib/multilingualText'
 import { parseDateInputToTimestamp, timestampUtcNoonToday } from '@/lib/dateInput'
 import { PUBLIC_GALLERY_TAG } from '@/lib/public-cache-tags'
 
-async function fetchDashboardGalleryGroupsFromDb(): Promise<GalleryGroup[]> {
-  const db = adminDb!
-  const snap = await db.collection('galleryGroups').get()
-  const items: GalleryGroup[] = []
-  snap.forEach((doc) => {
-    items.push(mapGalleryDoc(doc.id, doc.data() as Record<string, unknown>))
-  })
-  items.sort((a, b) => {
-    if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  })
-  return items
-}
-
 function toIso(v: unknown): string {
   if (v instanceof Date) return v.toISOString()
-  if (typeof v === 'object' && v !== null && 'toDate' in v && typeof (v as { toDate: () => Date }).toDate === 'function') {
+  if (
+    typeof v === 'object' &&
+    v !== null &&
+    'toDate' in v &&
+    typeof (v as { toDate: () => Date }).toDate === 'function'
+  ) {
     return (v as { toDate: () => Date }).toDate().toISOString()
   }
   if (typeof v === 'string') return v
@@ -62,26 +58,30 @@ function mapGalleryDoc(id: string, data: Record<string, unknown>): GalleryGroup 
   }
 }
 
+async function fetchDashboardGalleryGroupsFromDb(): Promise<GalleryGroup[]> {
+  const docs = await collectionGetAll('galleryGroups')
+  const items = docs.map((doc) => mapGalleryDoc(String(doc.id), doc as Record<string, unknown>))
+  items.sort((a, b) => {
+    if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  })
+  return items
+}
+
 function resolveGalleryDisplayDate(ymd: string | undefined) {
   return parseDateInputToTimestamp(ymd) ?? timestampUtcNoonToday()
 }
 
 export async function getGalleryGroupsForDashboard(): Promise<GalleryGroup[]> {
   await requireAuth()
-  if (!adminDb) {
-    console.warn('Firebase Admin SDK not available. Cannot fetch gallery. Set FIREBASE_ADMIN_* in .env')
-    return []
-  }
-  return await fetchDashboardGalleryGroupsFromDb()
+  return fetchDashboardGalleryGroupsFromDb()
 }
 
 export async function getGalleryGroupForDashboard(id: string): Promise<GalleryGroup | null> {
   await requireAuth()
-  if (!adminDb) throw new Error('Firebase Admin SDK is not configured.')
-
-  const doc = await adminDb.collection('galleryGroups').doc(id).get()
-  if (!doc.exists) return null
-  return mapGalleryDoc(doc.id, doc.data() as Record<string, unknown>)
+  const doc = await collectionGet('galleryGroups', id)
+  if (!doc) return null
+  return mapGalleryDoc(String(doc.id), doc as Record<string, unknown>)
 }
 
 export async function createGalleryGroup(input: {
@@ -95,7 +95,6 @@ export async function createGalleryGroup(input: {
   if (!canCreateArea(session, 'gallery')) {
     throw new Error('You do not have permission to create gallery groups.')
   }
-  if (!adminDb) throw new Error('Firebase Admin SDK is not configured.')
 
   const title = sanitizeGalleryTitle(input.title)
   const location = sanitizeGalleryLocation(input.location)
@@ -103,10 +102,10 @@ export async function createGalleryGroup(input: {
 
   const sortOrder = Number.isFinite(input.sortOrder) ? Math.floor(input.sortOrder) : 0
   const images = input.images.filter((i) => i.url?.trim())
-
-  const now = Timestamp.now()
+  const now = new Date().toISOString()
   const displayDate = resolveGalleryDisplayDate(input.displayDate)
-  await adminDb.collection('galleryGroups').add({
+
+  await collectionAdd('galleryGroups', {
     title,
     location,
     sortOrder,
@@ -130,16 +129,14 @@ export async function updateGalleryGroup(
     sortOrder: number
     images: GalleryImage[]
     displayDate?: string
-  }
+  },
 ) {
   const session = await requireAuth()
-  if (!adminDb) throw new Error('Firebase Admin SDK is not configured.')
 
-  const ref = adminDb.collection('galleryGroups').doc(id)
-  const existing = await ref.get()
-  if (!existing.exists) throw new Error('Group not found.')
+  const existing = await collectionGet('galleryGroups', id)
+  if (!existing) throw new Error('Group not found.')
 
-  const data = existing.data() as Record<string, unknown>
+  const data = existing as Record<string, unknown>
   if (!canEditResource(session, 'gallery', data.createdBy as string | undefined)) {
     throw new Error('You do not have permission to edit this group.')
   }
@@ -150,17 +147,21 @@ export async function updateGalleryGroup(
 
   const sortOrder = Number.isFinite(input.sortOrder) ? Math.floor(input.sortOrder) : 0
   const images = input.images.filter((i) => i.url?.trim())
-
   const displayDate = resolveGalleryDisplayDate(input.displayDate)
 
-  await ref.update({
-    title,
-    location,
-    sortOrder,
-    images,
-    displayDate,
-    updatedAt: FieldValue.serverTimestamp(),
-  })
+  await collectionSet(
+    'galleryGroups',
+    id,
+    {
+      title,
+      location,
+      sortOrder,
+      images,
+      displayDate,
+      updatedAt: new Date().toISOString(),
+    },
+    { merge: true },
+  )
 
   revalidatePath('/gallery')
   revalidatePath('/')
@@ -169,18 +170,16 @@ export async function updateGalleryGroup(
 
 export async function deleteGalleryGroup(id: string) {
   const session = await requireAuth()
-  if (!adminDb) throw new Error('Firebase Admin SDK is not configured.')
 
-  const ref = adminDb.collection('galleryGroups').doc(id)
-  const existing = await ref.get()
-  if (!existing.exists) throw new Error('Group not found.')
+  const existing = await collectionGet('galleryGroups', id)
+  if (!existing) throw new Error('Group not found.')
 
-  const data = existing.data() as Record<string, unknown>
+  const data = existing as Record<string, unknown>
   if (!canDeleteResource(session, 'gallery', data.createdBy as string | undefined)) {
     throw new Error('You do not have permission to delete this group.')
   }
 
-  await ref.delete()
+  await collectionDelete('galleryGroups', id)
   revalidatePath('/gallery')
   revalidatePath('/')
   revalidateTag(PUBLIC_GALLERY_TAG, 'max')

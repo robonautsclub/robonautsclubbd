@@ -2,7 +2,13 @@
 
 import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
-import { adminDb } from '@/lib/firebase-admin'
+import {
+  collectionGet,
+  collectionGetAll,
+  collectionSet,
+  collectionWhere,
+  getEventBySlug,
+} from '@/lib/db/collections'
 import { Event } from '@/types/event'
 import { persistMissingEventSlugs, slugifyEventTitle } from '@/lib/event-slug'
 import { Course } from '@/types/course'
@@ -43,21 +49,20 @@ const PUBLIC_HOMEPAGE_ORGS_MAX = 100
  * Cached via unstable_cache — never cache the empty "no admin" path or builds without credentials poison the cache.
  */
 async function fetchPublicEventsFromFirestore(): Promise<Event[]> {
-  const db = adminDb!
   try {
-    const eventsSnapshot = await db
-      .collection('events')
-      .orderBy('createdAt', 'desc')
-      .limit(PUBLIC_EVENTS_MAX)
-      .get()
+    const docs = await collectionGetAll('events', {
+      orderBy: 'createdAt',
+      direction: 'desc',
+      limit: PUBLIC_EVENTS_MAX,
+    })
 
     const events: Event[] = []
-    eventsSnapshot.forEach((doc) => {
-      const data = doc.data()
+    for (const doc of docs) {
+      const data = doc as Record<string, unknown>
 
       // Convert Firestore Timestamps to ISO strings for serialization
-      const createdAt = data.createdAt?.toDate?.() || data.createdAt
-      const updatedAt = data.updatedAt?.toDate?.() || data.updatedAt
+      const createdAt = (typeof data.createdAt === 'object' && data.createdAt && typeof (data.createdAt as {toDate?:()=>Date}).toDate === 'function' ? (data.createdAt as {toDate:()=>Date}).toDate() : data.createdAt)
+      const updatedAt = (typeof data.updatedAt === 'object' && data.updatedAt && typeof (data.updatedAt as {toDate?:()=>Date}).toDate === 'function' ? (data.updatedAt as {toDate:()=>Date}).toDate() : data.updatedAt)
 
       // Convert Date objects to ISO strings for Next.js serialization
       const createdAtStr = createdAt instanceof Date
@@ -74,23 +79,22 @@ async function fetchPublicEventsFromFirestore(): Promise<Event[]> {
 
       // Handle date field - convert Timestamp to string if needed
       let dateValue = data.date
-      if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue) {
-        // It's a Firestore Timestamp
-        dateValue = dateValue.toDate().toISOString().split('T')[0] // Convert to YYYY-MM-DD
+      if (dateValue && typeof dateValue === 'object' && 'toDate' in dateValue && typeof (dateValue as {toDate?: unknown}).toDate === 'function') {
+        dateValue = (dateValue as { toDate: () => Date }).toDate().toISOString().split('T')[0]
       } else if (dateValue && typeof dateValue === 'object' && '_seconds' in dateValue) {
-        // It's a Firestore Timestamp (alternative format)
-        dateValue = new Date(dateValue._seconds * 1000).toISOString().split('T')[0]
+        const seconds = Number((dateValue as { _seconds: number })._seconds)
+        dateValue = new Date(seconds * 1000).toISOString().split('T')[0]
       }
 
       events.push({
-        id: doc.id,
+        id: String(doc.id),
         ...data,
         slug: typeof data.slug === 'string' && data.slug.trim() ? data.slug.trim() : undefined,
         date: dateValue,
         createdAt: createdAtStr || new Date().toISOString(),
         updatedAt: updatedAtStr || new Date().toISOString(),
       } as Event)
-    })
+    }
 
     // Sort by createdAt in descending order (newest first)
     events.sort((a, b) => {
@@ -117,10 +121,6 @@ const getCachedPublicEvents = unstable_cache(fetchPublicEventsFromFirestore, [PU
 })
 
 export const getPublicEvents = cache(async (): Promise<Event[]> => {
-  if (!adminDb) {
-    console.warn('Firebase Admin SDK not available. Cannot fetch events.')
-    return []
-  }
   return getCachedPublicEvents()
 })
 
@@ -133,8 +133,8 @@ function mapPublicEventDoc(
     slug?: unknown
   },
 ): Event {
-  const createdAt = data.createdAt?.toDate?.() || data.createdAt
-  const updatedAt = data.updatedAt?.toDate?.() || data.updatedAt
+  const createdAt = (typeof data.createdAt === 'object' && data.createdAt && typeof (data.createdAt as {toDate?:()=>Date}).toDate === 'function' ? (data.createdAt as {toDate:()=>Date}).toDate() : data.createdAt)
+  const updatedAt = (typeof data.updatedAt === 'object' && data.updatedAt && typeof (data.updatedAt as {toDate?:()=>Date}).toDate === 'function' ? (data.updatedAt as {toDate:()=>Date}).toDate() : data.updatedAt)
 
   const createdAtStr = createdAt instanceof Date
     ? createdAt.toISOString()
@@ -178,23 +178,28 @@ function eventMatchesPublicParam(event: Event, param: string): boolean {
  * Slug query, ID lookup, and title-slug fallback are isolated so one miss cannot 404 the page.
  */
 async function fetchPublicEventFromFirestore(param: string): Promise<Event | null> {
-  const db = adminDb!
   const normalized = param.trim()
   if (!normalized) return null
 
   try {
-    const bySlug = await db.collection('events').where('slug', '==', normalized).limit(1).get()
-    if (!bySlug.empty) {
-      return mapPublicEventDoc(bySlug.docs[0], bySlug.docs[0].data() as Parameters<typeof mapPublicEventDoc>[1])
+    const bySlug = await getEventBySlug(normalized)
+    if (bySlug) {
+      return mapPublicEventDoc(
+        { id: String(bySlug.id) },
+        bySlug as Parameters<typeof mapPublicEventDoc>[1],
+      )
     }
   } catch (error) {
     console.error('Error fetching event by slug:', error)
   }
 
   try {
-    const eventDoc = await db.collection('events').doc(normalized).get()
-    if (eventDoc.exists) {
-      const event = mapPublicEventDoc(eventDoc, eventDoc.data()! as Parameters<typeof mapPublicEventDoc>[1])
+    const eventDoc = await collectionGet('events', normalized)
+    if (eventDoc) {
+      const event = mapPublicEventDoc(
+        { id: String(eventDoc.id) },
+        eventDoc as Parameters<typeof mapPublicEventDoc>[1],
+      )
       await persistMissingEventSlugs([event])
       return event
     }
@@ -217,57 +222,22 @@ async function fetchPublicEventFromFirestore(param: string): Promise<Event | nul
 }
 
 export const getPublicEvent = cache(async (slugOrId: string): Promise<Event | null> => {
-  if (!adminDb) {
-    console.error('Firebase Admin SDK not available. Cannot fetch event.')
-    return null
-  }
   return fetchPublicEventFromFirestore(slugOrId)
 })
 
 export const getPublicEnglishMediumSchools = cache(async (): Promise<string[]> => {
-  const db = adminDb
-  if (!db) return []
   try {
     return unstable_cache(
       async (): Promise<string[]> => {
-        try {
-          const snapshot = await db
-            .collection(SCHOOL_DIRECTORY_COLLECTION)
-            .where('status', '==', 'approved')
-            .where('isActive', '==', true)
-            .select('name')
-            .get()
-          return snapshot.docs
-            .map((doc) => {
-              const name =
-                typeof doc.data().name === 'string' ? doc.data().name.trim() : ''
-              return name
-            })
-            .filter((name): name is string => Boolean(name))
-            .sort((a, b) => a.localeCompare(b))
-        } catch (queryError) {
-          // Missing composite index or legacy docs without status → fall back once.
-          console.warn(
-            'Filtered school query failed; falling back to full scan:',
-            queryError,
-          )
-          const snapshot = await db.collection(SCHOOL_DIRECTORY_COLLECTION).get()
-          return snapshot.docs
-            .map((doc) => {
-              const data = doc.data()
-              const name = typeof data.name === 'string' ? data.name.trim() : ''
-              const isActive =
-                typeof data.isActive === 'boolean' ? data.isActive : true
-              const status = data.status === 'pending' ? 'pending' : 'approved'
-              if (!name || !isActive || status !== 'approved') return ''
-              return name
-            })
-            .filter((name): name is string => Boolean(name))
-            .sort((a, b) => a.localeCompare(b))
-        }
+        const approved = await collectionWhere(SCHOOL_DIRECTORY_COLLECTION, 'status', '==', 'approved')
+        return approved
+          .filter((doc) => (typeof doc.isActive === 'boolean' ? doc.isActive : true))
+          .map((doc) => (typeof doc.name === 'string' ? doc.name.trim() : ''))
+          .filter((name): name is string => Boolean(name))
+          .sort((a, b) => a.localeCompare(b))
       },
       [PUBLIC_SCHOOLS_TAG],
-      { tags: [PUBLIC_SCHOOLS_TAG], revalidate: 3600 }
+      { tags: [PUBLIC_SCHOOLS_TAG], revalidate: 3600 },
     )()
   } catch (error) {
     console.error('Error fetching schools:', error)
@@ -321,23 +291,20 @@ export async function createBooking(
   formData: BookingInput
 ): Promise<{ success: boolean; error?: string; warning?: string; bookingId?: string }> {
   try {
-    if (!adminDb) {
-      return {
-        success: false,
-        error: 'Service temporarily unavailable. Please try again later.',
-      }
-    }
-
-    const eventDoc = await adminDb.collection('events').doc(formData.eventId).get()
-    if (!eventDoc.exists) {
+    const eventDoc = await collectionGet('events', formData.eventId)
+    if (!eventDoc) {
       return { success: false, error: 'Event not found' }
     }
-    const eventData = eventDoc.data()!
+    const eventData = eventDoc as Record<string, unknown>
     const event: Event = {
-      id: eventDoc.id,
+      id: String(eventDoc.id),
       ...eventData,
-      createdAt: eventData.createdAt?.toDate?.() || eventData.createdAt,
-      updatedAt: eventData.updatedAt?.toDate?.() || eventData.updatedAt,
+      createdAt: (typeof eventData.createdAt === 'string' || eventData.createdAt instanceof Date)
+        ? eventData.createdAt
+        : String(eventData.createdAt ?? ''),
+      updatedAt: (typeof eventData.updatedAt === 'string' || eventData.updatedAt instanceof Date)
+        ? eventData.updatedAt
+        : String(eventData.updatedAt ?? ''),
     } as Event
 
     if (!isRegistrationOpen(event)) {
@@ -409,21 +376,17 @@ export async function initiatePaidEventCheckout(
   formData: BookingInput
 ): Promise<{ success: boolean; error?: string; checkoutUrl?: string }> {
   try {
-    if (!adminDb) {
-      return { success: false, error: 'Service temporarily unavailable. Please try again later.' }
-    }
-
-    const eventDoc = await adminDb.collection('events').doc(formData.eventId).get()
-    if (!eventDoc.exists) {
+    const eventDoc = await collectionGet('events', formData.eventId)
+    if (!eventDoc) {
       return { success: false, error: 'Event not found' }
     }
 
-    const eventData = eventDoc.data()!
+    const eventData = eventDoc as Record<string, unknown>
     const event: Event = {
-      id: eventDoc.id,
+      id: String(eventDoc.id),
       ...eventData,
-      createdAt: eventData.createdAt?.toDate?.() || eventData.createdAt,
-      updatedAt: eventData.updatedAt?.toDate?.() || eventData.updatedAt,
+      createdAt: eventData.createdAt,
+      updatedAt: eventData.updatedAt,
     } as Event
 
     if (!event.isPaid) {
@@ -515,7 +478,11 @@ export async function initiatePaidEventCheckout(
       updatedAt: now,
     }
 
-    await adminDb.collection('bkash_pending_registrations').doc(checkout.paymentId).set(pending)
+    await collectionSet('bkash_pending_registrations', checkout.paymentId, {
+      ...pending,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    })
     return { success: true, checkoutUrl: checkout.checkoutUrl }
   } catch (error) {
     console.error('Error initiating bKash checkout:', error)
@@ -530,17 +497,14 @@ export async function finalizePaidEventBooking(paymentId: string): Promise<{
   bookingId?: string
 }> {
   try {
-    if (!adminDb) {
-      return { success: false, error: 'Service temporarily unavailable. Please try again later.' }
-    }
-
-    const pendingRef = adminDb.collection('bkash_pending_registrations').doc(paymentId)
-    const pendingSnap = await pendingRef.get()
-    if (!pendingSnap.exists) {
+    const pendingSnap = await collectionGet('bkash_pending_registrations', paymentId)
+    if (!pendingSnap) {
       return { success: false, error: 'Payment session not found or expired.' }
     }
 
-    const pending = pendingSnap.data() as PendingPaidRegistration
+    const pending = pendingSnap as PendingPaidRegistration
+    const mergePending = (patch: Record<string, unknown>) =>
+      collectionSet('bkash_pending_registrations', paymentId, patch, { merge: true })
     if (pending.status === 'completed' && pending.bookingId) {
       return { success: true, bookingId: pending.bookingId }
     }
@@ -555,7 +519,7 @@ export async function finalizePaidEventBooking(paymentId: string): Promise<{
           : false
 
       if (!isNoResponseFromExecute) {
-        await pendingRef.update({ status: 'failed', updatedAt: new Date() })
+        await mergePending({ status: 'failed', updatedAt: new Date().toISOString() })
         return {
           success: false,
           error:
@@ -570,7 +534,7 @@ export async function finalizePaidEventBooking(paymentId: string): Promise<{
         const queried = await bkashQueryPayment(paymentId)
         const queriedStatus = queried.transactionStatus.toLowerCase()
         if (queriedStatus !== 'completed') {
-          await pendingRef.update({ status: 'failed', updatedAt: new Date() })
+          await mergePending({ status: 'failed', updatedAt: new Date().toISOString() })
           return {
             success: false,
             error: queried.statusMessage || `Payment is not successful (${queried.transactionStatus}).`,
@@ -583,7 +547,7 @@ export async function finalizePaidEventBooking(paymentId: string): Promise<{
           executeError: executeError instanceof Error ? executeError.message : String(executeError),
           queryError: queryError instanceof Error ? queryError.message : String(queryError),
         })
-        await pendingRef.update({ status: 'failed', updatedAt: new Date() })
+        await mergePending({ status: 'failed', updatedAt: new Date().toISOString() })
         return {
           success: false,
           error:
@@ -596,29 +560,33 @@ export async function finalizePaidEventBooking(paymentId: string): Promise<{
 
     const transactionStatus = execution.transactionStatus.toLowerCase()
     if (transactionStatus !== 'completed' ) {
-      await pendingRef.update({ status: 'failed', updatedAt: new Date() })
+      await mergePending({ status: 'failed', updatedAt: new Date().toISOString() })
       return {
         success: false,
         error: execution.statusMessage || `Payment is not successful (${execution.transactionStatus}).`,
       }
     }
 
-    const eventDoc = await adminDb.collection('events').doc(pending.eventId).get()
-    if (!eventDoc.exists) {
-      await pendingRef.update({ status: 'failed', updatedAt: new Date() })
+    const eventDoc = await collectionGet('events', String(pending.eventId))
+    if (!eventDoc) {
+      await mergePending({ status: 'failed', updatedAt: new Date().toISOString() })
       return { success: false, error: 'Event no longer exists.' }
     }
 
-    const eventData = eventDoc.data()!
+    const eventData = eventDoc as Record<string, unknown>
     const event: Event = {
-      id: eventDoc.id,
+      id: String(eventDoc.id),
       ...eventData,
-      createdAt: eventData.createdAt?.toDate?.() || eventData.createdAt,
-      updatedAt: eventData.updatedAt?.toDate?.() || eventData.updatedAt,
+      createdAt: (typeof eventData.createdAt === 'string' || eventData.createdAt instanceof Date)
+        ? eventData.createdAt
+        : String(eventData.createdAt ?? ''),
+      updatedAt: (typeof eventData.updatedAt === 'string' || eventData.updatedAt instanceof Date)
+        ? eventData.updatedAt
+        : String(eventData.updatedAt ?? ''),
     } as Event
 
     if (!isRegistrationOpen(event)) {
-      await pendingRef.update({ status: 'failed', updatedAt: new Date() })
+      await mergePending({ status: 'failed', updatedAt: new Date().toISOString() })
       return { success: false, error: 'Registration for this event is closed.' }
     }
 
@@ -642,14 +610,14 @@ export async function finalizePaidEventBooking(paymentId: string): Promise<{
     )
 
     if (!result.success) {
-      await pendingRef.update({ status: 'failed', updatedAt: new Date() })
+      await mergePending({ status: 'failed', updatedAt: new Date().toISOString() })
       return result
     }
 
-    await pendingRef.update({
+    await mergePending({
       status: 'completed',
       bookingId: result.bookingId,
-      updatedAt: new Date(),
+      updatedAt: new Date().toISOString(),
       trxId: execution.trxId,
     })
 
@@ -692,22 +660,18 @@ export async function refundPaidEventPayment(input: {
  * Wrapped with cache() for request deduplication
  */
 async function fetchPublicCoursesFromFirestore(): Promise<Course[]> {
-  const db = adminDb!
   try {
-    // Query for non-archived courses only
-    const coursesSnapshot = await db
-      .collection('courses')
-      .where('isArchived', '==', false)
-      .limit(PUBLIC_COURSES_MAX)
-      .get()
+    const docs = await collectionWhere('courses', 'isArchived', '==', false, {
+      limit: PUBLIC_COURSES_MAX,
+    })
 
     const courses: Course[] = []
-    coursesSnapshot.forEach((doc) => {
-      const data = doc.data()
+    for (const doc of docs) {
+      const data = doc as Record<string, unknown>
 
       // Convert Firestore Timestamps to ISO strings for serialization
-      const createdAt = data.createdAt?.toDate?.() || data.createdAt
-      const updatedAt = data.updatedAt?.toDate?.() || data.updatedAt
+      const createdAt = (typeof data.createdAt === 'object' && data.createdAt && typeof (data.createdAt as {toDate?:()=>Date}).toDate === 'function' ? (data.createdAt as {toDate:()=>Date}).toDate() : data.createdAt)
+      const updatedAt = (typeof data.updatedAt === 'object' && data.updatedAt && typeof (data.updatedAt as {toDate?:()=>Date}).toDate === 'function' ? (data.updatedAt as {toDate:()=>Date}).toDate() : data.updatedAt)
 
       // Convert Date objects to ISO strings for Next.js serialization
       const createdAtStr = createdAt instanceof Date
@@ -723,12 +687,12 @@ async function fetchPublicCoursesFromFirestore(): Promise<Course[]> {
         : new Date().toISOString()
 
       courses.push({
-        id: doc.id,
+        id: String(doc.id),
         ...data,
         createdAt: createdAtStr,
         updatedAt: updatedAtStr,
       } as Course)
-    })
+    }
 
     // Sort by createdAt in descending order (newest first)
     courses.sort((a, b) => {
@@ -754,24 +718,17 @@ const getCachedPublicCourses = unstable_cache(fetchPublicCoursesFromFirestore, [
 })
 
 export const getPublicCourses = cache(async (): Promise<Course[]> => {
-  if (!adminDb) {
-    console.warn('Firebase Admin SDK not available. Cannot fetch courses.')
-    return []
-  }
   return getCachedPublicCourses()
 })
 
 async function fetchPublicHomepageOrgsFromFirestore(): Promise<PublicHomepageOrgs> {
-  const db = adminDb!
   try {
-    const snapshot = await db
-      .collection(HOMEPAGE_ORGS_COLLECTION)
-      .where('isActive', '==', true)
-      .limit(PUBLIC_HOMEPAGE_ORGS_MAX)
-      .get()
+    const docs = await collectionWhere(HOMEPAGE_ORGS_COLLECTION, 'isActive', '==', true, {
+      limit: PUBLIC_HOMEPAGE_ORGS_MAX,
+    })
 
-    const orgs = snapshot.docs
-      .map((doc) => mapHomepageOrgDoc(doc.id, doc.data() as Record<string, unknown>))
+    const orgs = docs
+      .map((doc) => mapHomepageOrgDoc(String(doc.id), doc as Record<string, unknown>))
       .filter((org): org is NonNullable<typeof org> => Boolean(org))
 
     return splitHomepageOrgs(orgs)
@@ -791,9 +748,5 @@ const getCachedPublicHomepageOrgs = unstable_cache(
 )
 
 export const getPublicHomepageOrgs = cache(async (): Promise<PublicHomepageOrgs> => {
-  if (!adminDb) {
-    console.warn('Firebase Admin SDK not available. Cannot fetch homepage orgs.')
-    return { partners: [], schools: [] }
-  }
   return getCachedPublicHomepageOrgs()
 })

@@ -48,3 +48,9 @@ lib/firebase-service-account.json
 next-env.d.ts
 
 .cursor/debug.log
+# Cloudflare deploy secrets (never commit)
+.cf-secrets.env
+.dev.vars
+# Firebase → D1 dump (local only; never commit)
+/tmp/firebase-dump/
+tmp/firebase-dump/

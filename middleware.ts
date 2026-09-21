@@ -12,11 +12,13 @@ function clearAuthAndRedirect(loginUrl: URL) {
   return response
 }
 
-export function proxy(request: NextRequest) {
+/**
+ * Edge middleware for Cloudflare OpenNext (Node.js middleware / proxy.ts is unsupported).
+ */
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const token = request.cookies.get('auth-token')?.value
 
-  // Protect dashboard routes
   if (pathname.startsWith('/dashboard')) {
     if (!token) {
       const loginUrl = new URL('/login', request.url)
@@ -48,13 +50,11 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  // If user is logged in with valid token and tries to access login, redirect to dashboard
   if (pathname === '/login' && token) {
     const tokenParts = token.split('.')
     if (tokenParts.length === 3 && !isTokenExpired(token)) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
-    // Expired or invalid token: clear cookies so login page loads
     return clearAuthAndRedirect(new URL('/login', request.url))
   }
 

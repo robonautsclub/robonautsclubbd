@@ -2,7 +2,15 @@
 
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
 import { requireAuth, canCreateArea, canEditOthersArea, canDeleteArea } from '@/lib/auth'
-import { adminDb } from '@/lib/firebase-admin'
+import {
+  collectionAdd,
+  collectionDelete,
+  collectionGet,
+  collectionGetAll,
+  collectionSet,
+  collectionWhere,
+  newId,
+} from '@/lib/db/collections'
 import {
   BANGLADESH_ENGLISH_MEDIUM_SCHOOLS,
   SCHOOL_DIRECTORY_COLLECTION,
@@ -86,15 +94,14 @@ function isQuotaExceededError(error: unknown): boolean {
 async function fetchSchoolDirectoryFromDb(
   includeInactive: boolean,
 ): Promise<SchoolDirectoryEntry[]> {
-  const db = adminDb!
-  const snapshot = await db.collection(SCHOOL_DIRECTORY_COLLECTION).get()
+  const docs = await collectionGetAll(SCHOOL_DIRECTORY_COLLECTION)
   const schools: SchoolDirectoryEntry[] = []
-  snapshot.docs.forEach((doc) => {
-    const mapped = mapSchoolDoc(doc.id, doc.data() as Record<string, unknown>)
-    if (!mapped) return
-    if (!includeInactive && !mapped.isActive) return
+  for (const doc of docs) {
+    const mapped = mapSchoolDoc(String(doc.id), doc as Record<string, unknown>)
+    if (!mapped) continue
+    if (!includeInactive && !mapped.isActive) continue
     schools.push(mapped)
-  })
+  }
   return schools.sort((a, b) => a.name.localeCompare(b.name))
 }
 
@@ -102,8 +109,6 @@ export async function getSchoolDirectory(
   includeInactive = true,
 ): Promise<{ schools: SchoolDirectoryEntry[]; error?: string }> {
   await requireAuth()
-  if (!adminDb) return { schools: [] }
-
   try {
     const schools = await unstable_cache(
       () => fetchSchoolDirectoryFromDb(includeInactive),
@@ -132,23 +137,23 @@ export async function createSchoolDirectoryEntry(input: SchoolDirectoryWriteInpu
   if (!canCreateArea(session, 'schools')) {
     return { success: false, error: 'You do not have permission to create schools.' }
   }
-  if (!adminDb) return { success: false, error: 'Service unavailable.' }
-
   const name = normalizeSchoolName(input.name || '')
   if (!name) return { success: false, error: 'School name is required.' }
 
-  const existing = await adminDb
-    .collection(SCHOOL_DIRECTORY_COLLECTION)
-    .where('nameLower', '==', name.toLowerCase())
-    .limit(1)
-    .get()
+  const existing = await collectionWhere(
+    SCHOOL_DIRECTORY_COLLECTION,
+    'nameLower',
+    '==',
+    name.toLowerCase(),
+    { limit: 1 },
+  )
 
-  if (!existing.empty) {
+  if (existing.length > 0) {
     return { success: false, error: 'School already exists in the directory.' }
   }
 
-  const now = new Date()
-  await adminDb.collection(SCHOOL_DIRECTORY_COLLECTION).add({
+  const now = new Date().toISOString()
+  await collectionAdd(SCHOOL_DIRECTORY_COLLECTION, {
     name,
     nameLower: name.toLowerCase(),
     city: (input.city || '').trim(),
@@ -177,29 +182,30 @@ export async function updateSchoolDirectoryEntry(
   if (!canEditOthersArea(session, 'schools')) {
     return { success: false, error: 'You do not have permission to edit schools.' }
   }
-  if (!adminDb) return { success: false, error: 'Service unavailable.' }
   if (!id) return { success: false, error: 'School id is required.' }
 
   const name = normalizeSchoolName(input.name || '')
   if (!name) return { success: false, error: 'School name is required.' }
 
-  const snapshot = await adminDb
-    .collection(SCHOOL_DIRECTORY_COLLECTION)
-    .where('nameLower', '==', name.toLowerCase())
-    .get()
-  const conflict = snapshot.docs.some((doc) => doc.id !== id)
+  const snapshot = await collectionWhere(
+    SCHOOL_DIRECTORY_COLLECTION,
+    'nameLower',
+    '==',
+    name.toLowerCase(),
+  )
+  const conflict = snapshot.some((doc) => String(doc.id) !== id)
   if (conflict) {
     return { success: false, error: 'Another school with this name already exists.' }
   }
 
-  await adminDb.collection(SCHOOL_DIRECTORY_COLLECTION).doc(id).update({
+  await collectionSet(SCHOOL_DIRECTORY_COLLECTION, id, {
     name,
     nameLower: name.toLowerCase(),
     city: (input.city || '').trim(),
     isActive: input.isActive ?? true,
     status: 'approved',
-    updatedAt: new Date(),
-  })
+    updatedAt: new Date().toISOString(),
+  }, { merge: true })
   revalidatePath('/dashboard/schools')
   revalidatePath('/events')
   revalidatePath('/robofest')
@@ -215,16 +221,14 @@ export async function confirmPendingSchool(
   if (!canEditOthersArea(session, 'schools')) {
     return { success: false, error: 'You do not have permission to edit schools.' }
   }
-  if (!adminDb) return { success: false, error: 'Service unavailable.' }
   if (!id) return { success: false, error: 'School id is required.' }
 
-  const ref = adminDb.collection(SCHOOL_DIRECTORY_COLLECTION).doc(id)
-  const snap = await ref.get()
-  if (!snap.exists) {
+  const snap = await collectionGet(SCHOOL_DIRECTORY_COLLECTION, id)
+  if (!snap) {
     return { success: false, error: 'Pending school not found.' }
   }
 
-  const data = snap.data() || {}
+  const data = snap as Record<string, unknown>
   if (data.status !== 'pending') {
     return { success: false, error: 'This school is not pending confirmation.' }
   }
@@ -235,24 +239,31 @@ export async function confirmPendingSchool(
   }
 
   // Ensure no other approved school already has this name.
-  const existing = await adminDb
-    .collection(SCHOOL_DIRECTORY_COLLECTION)
-    .where('nameLower', '==', name.toLowerCase())
-    .get()
-  const conflict = existing.docs.some((doc) => {
-    if (doc.id === id) return false
-    const status = doc.data().status === 'pending' ? 'pending' : 'approved'
+  const existing = await collectionWhere(
+    SCHOOL_DIRECTORY_COLLECTION,
+    'nameLower',
+    '==',
+    name.toLowerCase(),
+  )
+  const conflict = existing.some((doc) => {
+    if (String(doc.id) === id) return false
+    const status = doc.status === 'pending' ? 'pending' : 'approved'
     return status === 'approved'
   })
   if (conflict) {
     return { success: false, error: 'An approved school with this name already exists.' }
   }
 
-  await ref.update({
-    status: 'approved',
-    isActive: true,
-    updatedAt: new Date(),
-  })
+  await collectionSet(
+    SCHOOL_DIRECTORY_COLLECTION,
+    id,
+    {
+      status: 'approved',
+      isActive: true,
+      updatedAt: new Date().toISOString(),
+    },
+    { merge: true },
+  )
 
   revalidatePath('/dashboard/schools')
   revalidatePath('/events')
@@ -269,21 +280,19 @@ export async function rejectPendingSchool(
   if (!canDeleteArea(session, 'schools') && !canEditOthersArea(session, 'schools')) {
     return { success: false, error: 'You do not have permission to reject schools.' }
   }
-  if (!adminDb) return { success: false, error: 'Service unavailable.' }
   if (!id) return { success: false, error: 'School id is required.' }
 
-  const ref = adminDb.collection(SCHOOL_DIRECTORY_COLLECTION).doc(id)
-  const snap = await ref.get()
-  if (!snap.exists) {
+  const snap = await collectionGet(SCHOOL_DIRECTORY_COLLECTION, id)
+  if (!snap) {
     return { success: false, error: 'Pending school not found.' }
   }
 
-  const data = snap.data() || {}
+  const data = snap as Record<string, unknown>
   if (data.status !== 'pending') {
     return { success: false, error: 'This school is not pending confirmation.' }
   }
 
-  await ref.delete()
+  await collectionDelete(SCHOOL_DIRECTORY_COLLECTION, id)
 
   revalidatePath('/dashboard/schools')
   revalidateTag(DASHBOARD_SCHOOLS_TAG, 'max')
@@ -295,18 +304,15 @@ export async function seedEnglishMediumSchools(): Promise<{ success: boolean; me
   if (!canCreateArea(session, 'schools') && !canEditOthersArea(session, 'schools')) {
     return { success: false, message: 'You do not have permission to seed schools.' }
   }
-  if (!adminDb) return { success: false, message: 'Service unavailable.' }
-
-  const existingSnapshot = await adminDb.collection(SCHOOL_DIRECTORY_COLLECTION).get()
+  const existingSnapshot = await collectionGetAll(SCHOOL_DIRECTORY_COLLECTION)
   const existingNames = new Set(
-    existingSnapshot.docs
+    existingSnapshot
       .map((doc) => {
-        const data = doc.data()
-        if (typeof data.nameLower === 'string') return data.nameLower
-        if (typeof data.name === 'string') return normalizeSchoolName(data.name).toLowerCase()
+        if (typeof doc.nameLower === 'string') return doc.nameLower
+        if (typeof doc.name === 'string') return normalizeSchoolName(doc.name).toLowerCase()
         return null
       })
-      .filter((name): name is string => typeof name === 'string')
+      .filter((name): name is string => typeof name === 'string'),
   )
 
   const seedSchools: Array<{ name: string; city?: string }> = [
@@ -315,31 +321,33 @@ export async function seedEnglishMediumSchools(): Promise<{ success: boolean; me
   ]
 
   let created = 0
-  const batch = adminDb.batch()
-  const now = new Date()
+  const now = new Date().toISOString()
+  const writes: Promise<void>[] = []
   for (const school of seedSchools) {
     const normalized = normalizeSchoolName(school.name)
     const lower = normalized.toLowerCase()
     if (!normalized || existingNames.has(lower)) continue
-    const ref = adminDb.collection(SCHOOL_DIRECTORY_COLLECTION).doc()
-    batch.set(ref, {
-      name: normalized,
-      nameLower: lower,
-      ...(school.city ? { city: school.city } : {}),
-      country: 'bangladesh',
-      medium: 'english',
-      isActive: true,
-      status: 'approved',
-      source: 'seed',
-      createdAt: now,
-      updatedAt: now,
-    })
+    const docId = newId()
+    writes.push(
+      collectionSet(SCHOOL_DIRECTORY_COLLECTION, docId, {
+        name: normalized,
+        nameLower: lower,
+        ...(school.city ? { city: school.city } : {}),
+        country: 'bangladesh',
+        medium: 'english',
+        isActive: true,
+        status: 'approved',
+        source: 'seed',
+        createdAt: now,
+        updatedAt: now,
+      }),
+    )
     existingNames.add(lower)
     created += 1
   }
 
-  if (created > 0) {
-    await batch.commit()
+  if (writes.length > 0) {
+    await Promise.all(writes)
   }
   revalidatePath('/dashboard/schools')
   revalidatePath('/events')

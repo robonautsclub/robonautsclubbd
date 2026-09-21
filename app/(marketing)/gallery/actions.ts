@@ -1,12 +1,17 @@
 import { cache } from 'react'
 import { unstable_cache } from 'next/cache'
-import { adminDb } from '@/lib/firebase-admin'
+import { collectionGet, collectionGetAll } from '@/lib/db/collections'
 import type { GalleryGroup, GalleryImage } from '@/types/gallery'
 import { PUBLIC_GALLERY_TAG } from '@/lib/public-cache-tags'
 
 function toIso(v: unknown): string {
   if (v instanceof Date) return v.toISOString()
-  if (typeof v === 'object' && v !== null && 'toDate' in v && typeof (v as { toDate: () => Date }).toDate === 'function') {
+  if (
+    typeof v === 'object' &&
+    v !== null &&
+    'toDate' in v &&
+    typeof (v as { toDate: () => Date }).toDate === 'function'
+  ) {
     return (v as { toDate: () => Date }).toDate().toISOString()
   }
   if (typeof v === 'string') return v
@@ -44,12 +49,8 @@ function mapGalleryDoc(id: string, data: Record<string, unknown>): GalleryGroup 
 }
 
 async function fetchGalleryGroupsFromDb(): Promise<GalleryGroup[]> {
-  const db = adminDb!
-  const snap = await db.collection('galleryGroups').get()
-  const items: GalleryGroup[] = []
-  snap.forEach((doc) => {
-    items.push(mapGalleryDoc(doc.id, doc.data() as Record<string, unknown>))
-  })
+  const docs = await collectionGetAll('galleryGroups')
+  const items = docs.map((doc) => mapGalleryDoc(String(doc.id), doc as Record<string, unknown>))
   items.sort((a, b) => {
     if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -57,21 +58,20 @@ async function fetchGalleryGroupsFromDb(): Promise<GalleryGroup[]> {
   return items
 }
 
-const getCachedGalleryGroups = unstable_cache(
-  fetchGalleryGroupsFromDb,
-  [PUBLIC_GALLERY_TAG],
-  { tags: [PUBLIC_GALLERY_TAG], revalidate: 3600 },
-)
+const getCachedGalleryGroups = unstable_cache(fetchGalleryGroupsFromDb, [PUBLIC_GALLERY_TAG], {
+  tags: [PUBLIC_GALLERY_TAG],
+  revalidate: 3600,
+})
 
 export const getPublicGalleryGroupById = cache(async (id: string): Promise<GalleryGroup | null> => {
   const trimmed = id?.trim()
-  if (!adminDb || !trimmed) return null
+  if (!trimmed) return null
   try {
     return await unstable_cache(
       async () => {
-        const doc = await adminDb!.collection('galleryGroups').doc(trimmed).get()
-        if (!doc.exists) return null
-        return mapGalleryDoc(doc.id, doc.data() as Record<string, unknown>)
+        const doc = await collectionGet('galleryGroups', trimmed)
+        if (!doc) return null
+        return mapGalleryDoc(String(doc.id), doc as Record<string, unknown>)
       },
       [PUBLIC_GALLERY_TAG, 'by-id', trimmed],
       { tags: [PUBLIC_GALLERY_TAG], revalidate: 3600 },
@@ -83,11 +83,6 @@ export const getPublicGalleryGroupById = cache(async (id: string): Promise<Galle
 })
 
 export const getGalleryGroups = cache(async (): Promise<GalleryGroup[]> => {
-  if (!adminDb) {
-    console.warn('Firebase Admin SDK not available. Cannot fetch gallery.')
-    return []
-  }
-
   try {
     return await getCachedGalleryGroups()
   } catch (e) {

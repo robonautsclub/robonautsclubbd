@@ -1,8 +1,5 @@
 import { requirePermission } from '@/lib/auth'
 import {
-  getDefaultPermissionsForRole,
-  isDashboardRole,
-  sanitizePermissions,
   type DashboardPermission,
   type DashboardRole,
 } from '@/lib/dashboard-permissions'
@@ -37,41 +34,19 @@ type User = {
 
 async function getUsers(): Promise<User[]> {
   try {
-    const { adminAuth } = await import('@/lib/firebase-admin')
-
-    if (!adminAuth) {
-      return []
-    }
-
-    const listUsersResult = await adminAuth.listUsers(1000)
-
-    return listUsersResult.users.map((user) => {
-      const role = (isDashboardRole(user.customClaims?.role)
-        ? user.customClaims!.role
-        : 'admin') as DashboardRole
-      const version = user.customClaims?.permissionsVersion
-      const sanitized = sanitizePermissions(user.customClaims?.permissions, {
-        permissionsVersion: version,
-      })
-      const permissions =
-        role === 'superAdmin'
-          ? getDefaultPermissionsForRole('superAdmin')
-          : sanitized.length > 0
-            ? sanitized
-            : getDefaultPermissionsForRole(role)
-
-      return {
-        uid: user.uid,
-        email: user.email || '',
-        displayName: user.displayName || '',
-        emailVerified: user.emailVerified,
-        role,
-        permissions,
-        createdAt: user.metadata.creationTime || '',
-        lastSignIn: user.metadata.lastSignInTime || null,
-        disabled: user.disabled,
-      }
-    })
+    const { listUsers } = await import('@/lib/db/users')
+    const users = await listUsers()
+    return users.map((user) => ({
+      uid: user.id,
+      email: user.email,
+      displayName: user.name,
+      emailVerified: user.emailVerified,
+      role: user.role,
+      permissions: user.permissions,
+      createdAt: '',
+      lastSignIn: null,
+      disabled: user.disabled,
+    }))
   } catch (error) {
     console.error('Error fetching users:', error)
     return []

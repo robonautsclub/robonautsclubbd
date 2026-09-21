@@ -1,9 +1,8 @@
 'use server'
 
 import { requireAuth } from '@/lib/auth'
-import { isDashboardRole } from '@/lib/dashboard-permissions'
-import { adminDb } from '@/lib/firebase-admin'
-import { adminAuth } from '@/lib/firebase-admin'
+import { listUsers } from '@/lib/db/users'
+import { collectionGetAll } from '@/lib/db/collections'
 import type { Session } from '@/lib/auth'
 import type {
   DashboardBootstrapData,
@@ -16,7 +15,12 @@ import { getCachedCoursesList } from './courses/actions'
 function toIso(value: unknown): string {
   if (value == null) return ''
   if (value instanceof Date) return value.toISOString()
-  if (typeof value === 'object' && value !== null && 'toDate' in value && typeof (value as { toDate: () => Date }).toDate === 'function') {
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'toDate' in value &&
+    typeof (value as { toDate: () => Date }).toDate === 'function'
+  ) {
     return (value as { toDate: () => Date }).toDate().toISOString()
   }
   if (typeof value === 'string') return value
@@ -24,66 +28,48 @@ function toIso(value: unknown): string {
 }
 
 async function getDashboardMembers(session: Session): Promise<DashboardMember[]> {
-  if (session.role !== 'superAdmin' || !adminAuth) return []
+  if (session.role !== 'superAdmin') return []
 
-  const listUsersResult = await adminAuth.listUsers(1000)
-  return listUsersResult.users.map((user) => {
-    const role = (isDashboardRole(user.customClaims?.role)
-      ? user.customClaims!.role
-      : 'admin') as Session['role']
-    return {
-      uid: user.uid,
-      email: user.email || '',
-      displayName: user.displayName || '',
-      emailVerified: user.emailVerified,
-      role,
-      createdAt: user.metadata.creationTime,
-      lastSignIn: user.metadata.lastSignInTime,
-      disabled: user.disabled,
-    }
-  })
+  const users = await listUsers()
+  return users.map((user) => ({
+    uid: user.id,
+    email: user.email || '',
+    displayName: user.name || '',
+    emailVerified: user.emailVerified,
+    role: user.role,
+    createdAt: '',
+    lastSignIn: '',
+    disabled: user.disabled,
+  }))
 }
 
 async function getDashboardNotifications(session: Session): Promise<DashboardNotification[]> {
-  if (!adminDb) return []
-
-  const snapshot = await adminDb.collection('notifications').orderBy('createdAt', 'desc').limit(10).get()
-  return snapshot.docs.map((doc) => {
-    const data = doc.data()
-    const readBy = Array.isArray(data.readBy) ? data.readBy : []
+  const docs = await collectionGetAll('notifications', {
+    orderBy: 'createdAt',
+    direction: 'desc',
+    limit: 10,
+  })
+  return docs.map((doc) => {
+    const readBy = Array.isArray(doc.readBy) ? doc.readBy : []
     return {
-      id: doc.id,
-      type: String(data.type || ''),
-      message: String(data.message || ''),
-      userId: String(data.userId || ''),
-      userName: String(data.userName || ''),
-      userEmail: String(data.userEmail || ''),
-      changes: Array.isArray(data.changes) ? data.changes.filter((v): v is string => typeof v === 'string') : [],
-      readBy,
+      id: String(doc.id),
+      type: String(doc.type || ''),
+      message: String(doc.message || ''),
+      userId: String(doc.userId || ''),
+      userName: String(doc.userName || ''),
+      userEmail: String(doc.userEmail || ''),
+      changes: Array.isArray(doc.changes)
+        ? doc.changes.filter((v): v is string => typeof v === 'string')
+        : [],
+      readBy: readBy.filter((v): v is string => typeof v === 'string'),
       isRead: readBy.includes(session.uid),
-      createdAt: toIso(data.createdAt),
+      createdAt: toIso(doc.createdAt),
     }
   })
 }
 
 export async function getDashboardBootstrapData(sessionArg?: Session): Promise<DashboardBootstrapData> {
   const session = sessionArg ?? (await requireAuth())
-
-  if (!adminDb) {
-    console.warn('Firebase Admin SDK not available. Dashboard lists will be empty until FIREBASE_ADMIN_* is configured.')
-    const [notifications, members] = await Promise.all([
-      getDashboardNotifications(session),
-      getDashboardMembers(session),
-    ])
-    return {
-      events: [],
-      courses: [],
-      news: [],
-      galleryGroups: [],
-      notifications,
-      members,
-    }
-  }
 
   const [events, courses, news, galleryGroups, notifications, members] = await Promise.all([
     getCachedEventsList(),

@@ -2,8 +2,6 @@
 
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { signOut } from 'firebase/auth'
-import { auth } from '@/lib/firebase'
 import { SESSION_DURATION_MS } from '@/lib/session'
 
 function getSessionStart(): number | null {
@@ -24,7 +22,7 @@ function clearSessionCookies() {
 }
 
 /**
- * Proactive 30-minute session timer. Clears cookies, signs out, and redirects to login when the session expires.
+ * Proactive 30-minute session timer. Clears cookies and redirects to login when the session expires.
  */
 export default function SessionTimer() {
   const router = useRouter()
@@ -38,9 +36,7 @@ export default function SessionTimer() {
 
     const handleExpiry = () => {
       clearSessionCookies()
-      if (auth) {
-        signOut(auth).catch(() => {})
-      }
+      void fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
       router.push('/login')
       router.refresh()
     }

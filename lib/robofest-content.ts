@@ -4,8 +4,7 @@
  */
 
 import { unstable_cache } from "next/cache";
-import { FieldValue } from "firebase-admin/firestore";
-import { adminDb } from "@/lib/firebase-admin";
+import { collectionGet, collectionSet } from "@/lib/db/collections";
 import {
   ROBOFEST_CATEGORIES,
   ROBOFEST_HOW_IT_WORKS,
@@ -660,19 +659,18 @@ export function mapRobofestRegistrationDoc(
 
 export async function seedRobofestContentIfMissing(): Promise<RobofestContent> {
   const defaults = getDefaultRobofestContent();
-  if (!adminDb) return defaults;
 
-  const ref = adminDb
-    .collection(ROBOFEST_CONTENT_COLLECTION)
-    .doc(ROBOFEST_CONTENT_DOC_ID);
-  const snap = await ref.get();
-  if (snap.exists) {
-    return mapRobofestContentDoc(snap.data() as Record<string, unknown>);
+  const existing = await collectionGet(
+    ROBOFEST_CONTENT_COLLECTION,
+    ROBOFEST_CONTENT_DOC_ID,
+  );
+  if (existing) {
+    return mapRobofestContentDoc(existing as Record<string, unknown>);
   }
 
-  await ref.set({
+  await collectionSet(ROBOFEST_CONTENT_COLLECTION, ROBOFEST_CONTENT_DOC_ID, {
     ...defaults,
-    updatedAt: FieldValue.serverTimestamp(),
+    updatedAt: new Date().toISOString(),
     updatedBy: "system-seed",
   });
 
@@ -680,7 +678,6 @@ export async function seedRobofestContentIfMissing(): Promise<RobofestContent> {
 }
 
 async function fetchRobofestContentFromDb(): Promise<RobofestContent> {
-  if (!adminDb) return getDefaultRobofestContent();
   return seedRobofestContentIfMissing();
 }
 

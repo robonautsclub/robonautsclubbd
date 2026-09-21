@@ -1,64 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { adminDb } from '@/lib/firebase-admin'
+import { collectionAdd, collectionGetAll } from '@/lib/db/collections'
 import { requireAuth } from '@/lib/auth'
 
-/**
- * Notifications API Routes
- * GET: List notifications for authenticated users (admins/super admins)
- * POST: Create a notification (internal use)
- */
+function toIso(value: unknown): string | undefined {
+  if (value == null) return undefined
+  if (value instanceof Date) return value.toISOString()
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'toDate' in value &&
+    typeof (value as { toDate: () => Date }).toDate === 'function'
+  ) {
+    return (value as { toDate: () => Date }).toDate().toISOString()
+  }
+  if (typeof value === 'string') return value
+  return undefined
+}
 
-/**
- * GET /api/notifications
- * Get all notifications for the current user
- */
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth()
 
-    if (!adminDb) {
-      return NextResponse.json(
-        { error: 'Firebase Admin SDK is not configured' },
-        { status: 500 }
-      )
-    }
-
-    // Get query parameters
     const { searchParams } = new URL(request.url)
     const unreadOnly = searchParams.get('unreadOnly') === 'true'
-    const limit = parseInt(searchParams.get('limit') || '50')
+    const limit = parseInt(searchParams.get('limit') || '50', 10)
 
-    // Build query - get all notifications ordered by date
-    const snapshot = await adminDb
-      .collection('notifications')
-      .orderBy('createdAt', 'desc')
-      .limit(limit)
-      .get()
+    const docs = await collectionGetAll('notifications', {
+      orderBy: 'createdAt',
+      direction: 'desc',
+      limit,
+    })
 
-    // Map and filter notifications
-    const allNotifications = snapshot.docs
-      .map((doc) => {
-        const data = doc.data()
-        const isRead = (data.readBy || []).includes(session.uid)
+    const allNotifications = docs.map((doc) => {
+      const readBy = Array.isArray(doc.readBy) ? doc.readBy : []
+      const isRead = readBy.includes(session.uid)
+      return {
+        id: String(doc.id),
+        type: doc.type,
+        message: doc.message,
+        userId: doc.userId,
+        userName: doc.userName,
+        userEmail: doc.userEmail,
+        changes: doc.changes || [],
+        readBy,
+        isRead,
+        createdAt: toIso(doc.createdAt),
+      }
+    })
 
-        return {
-          id: doc.id,
-          type: data.type,
-          message: data.message,
-          userId: data.userId,
-          userName: data.userName,
-          userEmail: data.userEmail,
-          changes: data.changes || [],
-          readBy: data.readBy || [],
-          isRead,
-          createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt,
-        }
-      })
-
-    // Count unread from all notifications
     const unreadCount = allNotifications.filter((n) => !n.isRead).length
-
-    // Filter unread if requested
     const filteredNotifications = unreadOnly
       ? allNotifications.filter((n) => !n.isRead)
       : allNotifications
@@ -69,37 +59,20 @@ export async function GET(request: NextRequest) {
       unreadCount,
       total: filteredNotifications.length,
     })
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to fetch notifications' },
-      { status: 500 }
-    )
+  } catch {
+    return NextResponse.json({ error: 'Failed to fetch notifications' }, { status: 500 })
   }
 }
 
-/**
- * POST /api/notifications
- * Create a notification (internal use, typically called from other API routes)
- */
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth()
-
-    if (!adminDb) {
-      return NextResponse.json(
-        { error: 'Firebase Admin SDK is not configured' },
-        { status: 500 }
-      )
-    }
 
     const body = await request.json()
     const { type, message, userId, userName, userEmail, changes } = body
 
     if (!type || !message) {
-      return NextResponse.json(
-        { error: 'Type and message are required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Type and message are required' }, { status: 400 })
     }
 
     const notification = {
@@ -110,20 +83,17 @@ export async function POST(request: NextRequest) {
       userEmail: userEmail || session.email,
       changes: changes || [],
       readBy: [],
-      createdAt: new Date(),
+      createdAt: new Date().toISOString(),
     }
 
-    const docRef = await adminDb.collection('notifications').add(notification)
+    const notificationId = await collectionAdd('notifications', notification)
 
     return NextResponse.json({
       success: true,
-      notificationId: docRef.id,
+      notificationId,
       notification,
     })
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to create notification' },
-      { status: 500 }
-    )
+  } catch {
+    return NextResponse.json({ error: 'Failed to create notification' }, { status: 500 })
   }
 }

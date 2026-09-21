@@ -1,56 +1,48 @@
 'use server'
 
 import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache'
+import { requireAuth, canCreateArea, canEditResource, canDeleteResource } from '@/lib/auth'
 import {
-  requireAuth,
-  canCreateArea,
-  canEditResource,
-  canDeleteResource,
-} from '@/lib/auth'
-import { adminDb } from '@/lib/firebase-admin'
+  collectionAdd,
+  collectionDelete,
+  collectionGet,
+  collectionGetAll,
+  collectionSet,
+  collectionWhere,
+} from '@/lib/db/collections'
 import { Course } from '@/types/course'
 import { createNotification } from '@/lib/notifications'
 
 const DASHBOARD_COURSES_LIST_TAG = 'dashboard-courses-list'
-
-const DASHBOARD_COURSE_LIST_FIELDS = [
-  'title',
-  'level',
-  'blurb',
-  'href',
-  'image',
-  'isArchived',
-  'createdAt',
-  'updatedAt',
-  'createdBy',
-  'createdByName',
-  'createdByEmail',
-] as const
 const PUBLIC_COURSES_TAG = 'public-courses'
 
-async function fetchDashboardCoursesListFromDb(): Promise<Course[]> {
-  const db = adminDb!
-  const coursesSnapshot = await db
-    .collection('courses')
-    .select(...(DASHBOARD_COURSE_LIST_FIELDS as unknown as string[]))
-    .get()
+function parseDateField(value: unknown): Date | string | undefined {
+  if (value == null) return undefined
+  if (value instanceof Date) return value
+  if (typeof value === 'string') return value
+  if (typeof value === 'object' && value !== null && 'toDate' in value) {
+    try {
+      return (value as { toDate: () => Date }).toDate()
+    } catch {
+      return undefined
+    }
+  }
+  return undefined
+}
 
-  const courses: Course[] = []
-  coursesSnapshot.forEach((doc) => {
-    const data = doc.data()
-    courses.push({
-      id: doc.id,
-      ...data,
-      createdAt: data.createdAt?.toDate?.() || data.createdAt,
-      updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
-    } as Course)
-  })
+async function fetchDashboardCoursesListFromDb(): Promise<Course[]> {
+  const docs = await collectionGetAll('courses')
+  const courses: Course[] = docs.map((doc) => ({
+    id: String(doc.id),
+    ...doc,
+    createdAt: parseDateField(doc.createdAt),
+    updatedAt: parseDateField(doc.updatedAt),
+  })) as Course[]
 
   courses.sort((a, b) => {
     if (!a.createdAt && !b.createdAt) return 0
     if (!a.createdAt) return 1
     if (!b.createdAt) return -1
-
     const dateA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime()
     const dateB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime()
     return dateB - dateA
@@ -64,17 +56,8 @@ export const getCachedCoursesList = unstable_cache(fetchDashboardCoursesListFrom
   revalidate: 900,
 })
 
-// ==================== COURSE MANAGEMENT ====================
-
-/**
- * Get all courses from Firestore (admin only)
- */
 export async function getCourses(): Promise<Course[]> {
-  await requireAuth() // Ensure user is authenticated
-  if (!adminDb) {
-    console.warn('Firebase Admin SDK not available. Cannot fetch courses. Set FIREBASE_ADMIN_* in .env')
-    return []
-  }
+  await requireAuth()
   try {
     return await getCachedCoursesList()
   } catch (error) {
@@ -83,30 +66,16 @@ export async function getCourses(): Promise<Course[]> {
   }
 }
 
-/**
- * Get a single course by ID
- */
 export async function getCourse(id: string): Promise<Course | null> {
   await requireAuth()
-
-  if (!adminDb) {
-    console.warn('Firebase Admin SDK not available. Cannot fetch course.')
-    return null
-  }
-
   try {
-    const courseDoc = await adminDb.collection('courses').doc(id).get()
-    
-    if (!courseDoc.exists) {
-      return null
-    }
-
-    const data = courseDoc.data()!
+    const doc = await collectionGet('courses', id)
+    if (!doc) return null
     return {
-      id: courseDoc.id,
-      ...data,
-      createdAt: data.createdAt?.toDate?.() || data.createdAt,
-      updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
+      id: String(doc.id),
+      ...doc,
+      createdAt: parseDateField(doc.createdAt),
+      updatedAt: parseDateField(doc.updatedAt),
     } as Course
   } catch (error) {
     console.error('Error fetching course:', error)
@@ -114,9 +83,6 @@ export async function getCourse(id: string): Promise<Course | null> {
   }
 }
 
-/**
- * Create a new course
- */
 export async function createCourse(formData: {
   title: string
   level: string
@@ -128,38 +94,19 @@ export async function createCourse(formData: {
   if (!canCreateArea(session, 'courses')) {
     return { success: false, error: 'You do not have permission to create courses.' }
   }
-  if (!adminDb) {
-    return {
-      success: false,
-      error: 'Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.',
-    }
-  }
 
   try {
-    // Validate required fields
     if (!formData.title.trim() || !formData.level.trim() || !formData.blurb.trim() || !formData.image.trim()) {
-      return {
-        success: false,
-        error: 'Title, level, blurb, and image are required fields.',
-      }
+      return { success: false, error: 'Title, level, blurb, and image are required fields.' }
     }
 
-    // Check if course with same title already exists
-    const existingCourses = await adminDb
-      .collection('courses')
-      .where('title', '==', formData.title.trim())
-      .get()
-
-    if (!existingCourses.empty) {
-      return {
-        success: false,
-        error: 'A course with this name already exists',
-      }
+    const existingCourses = await collectionWhere('courses', 'title', '==', formData.title.trim())
+    if (existingCourses.length > 0) {
+      return { success: false, error: 'A course with this name already exists' }
     }
 
-    // Create course in Firestore
-    const now = new Date()
-    const courseRef = await adminDb.collection('courses').add({
+    const now = new Date().toISOString()
+    const courseId = await collectionAdd('courses', {
       title: formData.title.trim(),
       level: formData.level.trim(),
       blurb: formData.blurb.trim(),
@@ -173,35 +120,24 @@ export async function createCourse(formData: {
       createdByEmail: session.email,
     })
 
-    // Revalidate pages to show new course immediately
     revalidatePath('/')
     revalidatePath('/dashboard/courses')
     revalidateTag(DASHBOARD_COURSES_LIST_TAG, 'max')
     revalidateTag(PUBLIC_COURSES_TAG, 'max')
 
-    // Create notification for course creation
     await createNotification(
       'course_created',
       `${session.name} created a new course: "${formData.title.trim()}"`,
       session,
-      ['course created']
+      ['course created'],
     )
 
-    return {
-      success: true,
-      courseId: courseRef.id,
-    }
-  } catch (error) {
-    return {
-      success: false,
-      error: 'Failed to create course. Please try again.',
-    }
+    return { success: true, courseId }
+  } catch {
+    return { success: false, error: 'Failed to create course. Please try again.' }
   }
 }
 
-/**
- * Update an existing course
- */
 export async function updateCourse(
   courseId: string,
   formData: {
@@ -210,215 +146,128 @@ export async function updateCourse(
     blurb: string
     href: string
     image: string
-  }
+  },
 ): Promise<{ success: boolean; error?: string }> {
   const session = await requireAuth()
 
-  if (!adminDb) {
-    return {
-      success: false,
-      error: 'Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.',
-    }
-  }
-
   try {
-    // Check if course exists
-    const courseDoc = await adminDb.collection('courses').doc(courseId).get()
-    if (!courseDoc.exists) {
-      return {
-        success: false,
-        error: 'Course not found',
-      }
-    }
+    const courseDoc = await collectionGet('courses', courseId)
+    if (!courseDoc) return { success: false, error: 'Course not found' }
 
-    const courseData = courseDoc.data()!
-
+    const courseData = courseDoc as Record<string, unknown>
     if (!canEditResource(session, 'courses', courseData.createdBy as string | undefined)) {
-      return {
-        success: false,
-        error: 'You do not have permission to edit this course.',
-      }
+      return { success: false, error: 'You do not have permission to edit this course.' }
     }
 
-    // Validate required fields
     if (!formData.title.trim() || !formData.level.trim() || !formData.blurb.trim() || !formData.image.trim()) {
-      return {
-        success: false,
-        error: 'Title, level, blurb, and image are required fields.',
-      }
+      return { success: false, error: 'Title, level, blurb, and image are required fields.' }
     }
 
-    // Check if another course with the same title exists (excluding current course)
-    const existingCourses = await adminDb
-      .collection('courses')
-      .where('title', '==', formData.title.trim())
-      .get()
-
-    const hasDuplicate = existingCourses.docs.some((doc) => doc.id !== courseId)
+    const existingCourses = await collectionWhere('courses', 'title', '==', formData.title.trim())
+    const hasDuplicate = existingCourses.some((doc) => String(doc.id) !== courseId)
     if (hasDuplicate) {
-      return {
-        success: false,
-        error: 'A course with this name already exists',
-      }
+      return { success: false, error: 'A course with this name already exists' }
     }
 
-    // Update course in Firestore
-    await adminDb.collection('courses').doc(courseId).update({
-      title: formData.title.trim(),
-      level: formData.level.trim(),
-      blurb: formData.blurb.trim(),
-      href: formData.href.trim() || `/courses/${formData.title.toLowerCase().replace(/\s+/g, '-')}`,
-      image: formData.image.trim(),
-      updatedAt: new Date(),
-    })
+    await collectionSet(
+      'courses',
+      courseId,
+      {
+        title: formData.title.trim(),
+        level: formData.level.trim(),
+        blurb: formData.blurb.trim(),
+        href: formData.href.trim() || `/courses/${formData.title.toLowerCase().replace(/\s+/g, '-')}`,
+        image: formData.image.trim(),
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true },
+    )
 
-    // Revalidate pages to show updated course immediately
     revalidatePath('/')
     revalidatePath('/dashboard/courses')
     revalidateTag(DASHBOARD_COURSES_LIST_TAG, 'max')
     revalidateTag(PUBLIC_COURSES_TAG, 'max')
 
-    // Create notification for course update
     await createNotification(
       'course_updated',
       `${session.name} updated the course: "${formData.title.trim()}"`,
       session,
-      ['course updated']
+      ['course updated'],
     )
 
-    return {
-      success: true,
-    }
-  } catch (error) {
-    return {
-      success: false,
-      error: 'Failed to update course. Please try again.',
-    }
+    return { success: true }
+  } catch {
+    return { success: false, error: 'Failed to update course. Please try again.' }
   }
 }
 
-/**
- * Archive or unarchive a course
- */
 export async function archiveCourse(courseId: string): Promise<{ success: boolean; error?: string }> {
   const session = await requireAuth()
 
-  if (!adminDb) {
-    return {
-      success: false,
-      error: 'Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.',
-    }
-  }
-
   try {
-    // Check if course exists
-    const courseDoc = await adminDb.collection('courses').doc(courseId).get()
-    if (!courseDoc.exists) {
-      return {
-        success: false,
-        error: 'Course not found',
-      }
-    }
+    const courseDoc = await collectionGet('courses', courseId)
+    if (!courseDoc) return { success: false, error: 'Course not found' }
 
-    const courseData = courseDoc.data()!
-
+    const courseData = courseDoc as Record<string, unknown>
     if (!canEditResource(session, 'courses', courseData.createdBy as string | undefined)) {
-      return {
-        success: false,
-        error: 'You do not have permission to archive this course.',
-      }
+      return { success: false, error: 'You do not have permission to archive this course.' }
     }
 
-    const currentArchiveStatus = courseData.isArchived || false
+    const currentArchiveStatus = Boolean(courseData.isArchived)
+    await collectionSet(
+      'courses',
+      courseId,
+      { isArchived: !currentArchiveStatus, updatedAt: new Date().toISOString() },
+      { merge: true },
+    )
 
-    // Toggle archive status
-    await adminDb.collection('courses').doc(courseId).update({
-      isArchived: !currentArchiveStatus,
-      updatedAt: new Date(),
-    })
-
-    // Revalidate pages
     revalidatePath('/')
     revalidatePath('/dashboard/courses')
     revalidateTag(DASHBOARD_COURSES_LIST_TAG, 'max')
     revalidateTag(PUBLIC_COURSES_TAG, 'max')
 
-    // Create notification for course archive/unarchive
     const action = !currentArchiveStatus ? 'archived' : 'unarchived'
     await createNotification(
       'course_archived',
       `${session.name} ${action} the course: "${courseData.title}"`,
       session,
-      [`course ${action}`]
+      [`course ${action}`],
     )
 
-    return {
-      success: true,
-    }
-  } catch (error) {
-    return {
-      success: false,
-      error: 'Failed to archive course. Please try again.',
-    }
+    return { success: true }
+  } catch {
+    return { success: false, error: 'Failed to archive course. Please try again.' }
   }
 }
 
-/**
- * Delete a course permanently
- */
 export async function deleteCourse(courseId: string): Promise<{ success: boolean; error?: string }> {
   const session = await requireAuth()
 
-  if (!adminDb) {
-    return {
-      success: false,
-      error: 'Firebase Admin SDK is not configured. Please set up FIREBASE_ADMIN_* environment variables.',
-    }
-  }
-
   try {
-    // Check if course exists
-    const courseDoc = await adminDb.collection('courses').doc(courseId).get()
-    if (!courseDoc.exists) {
-      return {
-        success: false,
-        error: 'Course not found',
-      }
-    }
+    const courseDoc = await collectionGet('courses', courseId)
+    if (!courseDoc) return { success: false, error: 'Course not found' }
 
-    const courseData = courseDoc.data()!
-
+    const courseData = courseDoc as Record<string, unknown>
     if (!canDeleteResource(session, 'courses', courseData.createdBy as string | undefined)) {
-      return {
-        success: false,
-        error: 'You do not have permission to delete this course.',
-      }
+      return { success: false, error: 'You do not have permission to delete this course.' }
     }
 
-    // Delete the course
-    await adminDb.collection('courses').doc(courseId).delete()
+    await collectionDelete('courses', courseId)
 
-    // Revalidate pages to remove deleted course immediately
     revalidatePath('/')
     revalidatePath('/dashboard/courses')
     revalidateTag(DASHBOARD_COURSES_LIST_TAG, 'max')
     revalidateTag(PUBLIC_COURSES_TAG, 'max')
 
-    // Create notification for course deletion
     await createNotification(
       'course_deleted',
       `${session.name} deleted the course: "${courseData.title}"`,
       session,
-      ['course deleted']
+      ['course deleted'],
     )
 
-    return {
-      success: true,
-    }
-  } catch (error) {
-    return {
-      success: false,
-      error: 'Failed to delete course. Please try again.',
-    }
+    return { success: true }
+  } catch {
+    return { success: false, error: 'Failed to delete course. Please try again.' }
   }
 }

@@ -7,7 +7,13 @@ import {
   canEditArea,
   canDeleteArea,
 } from '@/lib/auth'
-import { adminDb } from '@/lib/firebase-admin'
+import {
+  collectionAdd,
+  collectionDelete,
+  collectionGet,
+  collectionGetAll,
+  collectionSet,
+} from '@/lib/db/collections'
 import { PUBLIC_HOMEPAGE_ORGS_TAG } from '@/lib/public-cache-tags'
 import {
   HOMEPAGE_ORGS_COLLECTION,
@@ -26,18 +32,15 @@ function revalidateHomepageOrgs() {
   revalidateTag(DASHBOARD_HOMEPAGE_ORGS_TAG, 'max')
 }
 
-async function fetchHomepageOrgsFromDb(
-  includeInactive: boolean,
-): Promise<HomepageOrg[]> {
-  const db = adminDb!
-  const snapshot = await db.collection(HOMEPAGE_ORGS_COLLECTION).get()
+async function fetchHomepageOrgsFromDb(includeInactive: boolean): Promise<HomepageOrg[]> {
+  const docs = await collectionGetAll(HOMEPAGE_ORGS_COLLECTION)
   const orgs: HomepageOrg[] = []
-  snapshot.docs.forEach((doc) => {
-    const mapped = mapHomepageOrgDoc(doc.id, doc.data() as Record<string, unknown>)
-    if (!mapped) return
-    if (!includeInactive && !mapped.isActive) return
+  for (const doc of docs) {
+    const mapped = mapHomepageOrgDoc(String(doc.id), doc as Record<string, unknown>)
+    if (!mapped) continue
+    if (!includeInactive && !mapped.isActive) continue
     orgs.push(mapped)
-  })
+  }
   return sortHomepageOrgs(orgs)
 }
 
@@ -52,12 +55,6 @@ export async function getHomepageOrgs(): Promise<{
   error?: string
 }> {
   await requireAuth()
-  if (!adminDb) {
-    return {
-      orgs: [],
-      error: 'Firebase Admin SDK is not configured.',
-    }
-  }
   try {
     const orgs = await getCachedHomepageOrgs()
     return { orgs }
@@ -74,9 +71,6 @@ export async function createHomepageOrg(
   if (!canCreateArea(session, 'partners')) {
     return { success: false, error: 'You do not have permission to create partners or schools.' }
   }
-  if (!adminDb) {
-    return { success: false, error: 'Firebase Admin SDK is not configured.' }
-  }
 
   const name = input.name.trim()
   if (!name) return { success: false, error: 'Name is required.' }
@@ -92,8 +86,8 @@ export async function createHomepageOrg(
         ? input.sortOrder
         : sameKind.reduce((max, org) => Math.max(max, org.sortOrder), -1) + 1
 
-    const now = new Date()
-    const ref = await adminDb.collection(HOMEPAGE_ORGS_COLLECTION).add({
+    const now = new Date().toISOString()
+    const id = await collectionAdd(HOMEPAGE_ORGS_COLLECTION, {
       kind: input.kind,
       name,
       logoUrl: input.logoUrl?.trim() || null,
@@ -105,7 +99,7 @@ export async function createHomepageOrg(
     })
 
     revalidateHomepageOrgs()
-    return { success: true, id: ref.id }
+    return { success: true, id }
   } catch (error) {
     console.error('Error creating homepage org:', error)
     return { success: false, error: 'Failed to create entry. Please try again.' }
@@ -120,17 +114,13 @@ export async function updateHomepageOrg(
   if (!canEditArea(session, 'partners')) {
     return { success: false, error: 'You do not have permission to edit partners or schools.' }
   }
-  if (!adminDb) {
-    return { success: false, error: 'Firebase Admin SDK is not configured.' }
-  }
   if (!id.trim()) return { success: false, error: 'Missing id.' }
 
   try {
-    const ref = adminDb.collection(HOMEPAGE_ORGS_COLLECTION).doc(id)
-    const snap = await ref.get()
-    if (!snap.exists) return { success: false, error: 'Entry not found.' }
+    const existing = await collectionGet(HOMEPAGE_ORGS_COLLECTION, id)
+    if (!existing) return { success: false, error: 'Entry not found.' }
 
-    const patch: Record<string, unknown> = { updatedAt: new Date() }
+    const patch: Record<string, unknown> = { updatedAt: new Date().toISOString() }
     if (typeof input.name === 'string') {
       const name = input.name.trim()
       if (!name) return { success: false, error: 'Name is required.' }
@@ -149,7 +139,7 @@ export async function updateHomepageOrg(
       patch.sortOrder = input.sortOrder
     }
 
-    await ref.update(patch)
+    await collectionSet(HOMEPAGE_ORGS_COLLECTION, id, patch, { merge: true })
     revalidateHomepageOrgs()
     return { success: true }
   } catch (error) {
@@ -158,20 +148,15 @@ export async function updateHomepageOrg(
   }
 }
 
-export async function deleteHomepageOrg(
-  id: string,
-): Promise<{ success: boolean; error?: string }> {
+export async function deleteHomepageOrg(id: string): Promise<{ success: boolean; error?: string }> {
   const session = await requireAuth()
   if (!canDeleteArea(session, 'partners')) {
     return { success: false, error: 'You do not have permission to delete partners or schools.' }
   }
-  if (!adminDb) {
-    return { success: false, error: 'Firebase Admin SDK is not configured.' }
-  }
   if (!id.trim()) return { success: false, error: 'Missing id.' }
 
   try {
-    await adminDb.collection(HOMEPAGE_ORGS_COLLECTION).doc(id).delete()
+    await collectionDelete(HOMEPAGE_ORGS_COLLECTION, id)
     revalidateHomepageOrgs()
     return { success: true }
   } catch (error) {
@@ -188,9 +173,6 @@ export async function reorderHomepageOrg(
   if (!canEditArea(session, 'partners')) {
     return { success: false, error: 'You do not have permission to reorder partners or schools.' }
   }
-  if (!adminDb) {
-    return { success: false, error: 'Firebase Admin SDK is not configured.' }
-  }
 
   try {
     const all = await fetchHomepageOrgsFromDb(true)
@@ -205,17 +187,21 @@ export async function reorderHomepageOrg(
     }
 
     const other = siblings[swapWith]
-    const batch = adminDb.batch()
-    const now = new Date()
-    batch.update(adminDb.collection(HOMEPAGE_ORGS_COLLECTION).doc(current.id), {
-      sortOrder: other.sortOrder,
-      updatedAt: now,
-    })
-    batch.update(adminDb.collection(HOMEPAGE_ORGS_COLLECTION).doc(other.id), {
-      sortOrder: current.sortOrder,
-      updatedAt: now,
-    })
-    await batch.commit()
+    const now = new Date().toISOString()
+    await Promise.all([
+      collectionSet(
+        HOMEPAGE_ORGS_COLLECTION,
+        current.id,
+        { sortOrder: other.sortOrder, updatedAt: now },
+        { merge: true },
+      ),
+      collectionSet(
+        HOMEPAGE_ORGS_COLLECTION,
+        other.id,
+        { sortOrder: current.sortOrder, updatedAt: now },
+        { merge: true },
+      ),
+    ])
     revalidateHomepageOrgs()
     return { success: true }
   } catch (error) {
