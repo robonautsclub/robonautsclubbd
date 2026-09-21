@@ -54,3 +54,4 @@ next-env.d.ts
 # Firebase → D1 dump (local only; never commit)
 /tmp/firebase-dump/
 tmp/firebase-dump/
+.cf-bkash-secrets.env

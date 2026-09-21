@@ -53,7 +53,7 @@
     "NEXT_PUBLIC_BASE_URL": "https://robonautsclubbd.atm3collab.workers.dev",
     "NEXT_PUBLIC_SITE_URL": "https://robonautsclubbd.atm3collab.workers.dev",
     "BREVO_FROM_EMAIL": "no-reply@robonautsltd.com",
-    "BKASH_CHECKOUT_URL_BASE": "https://tokenized.sandbox.bka.sh/v1.2.0-beta"
+    "BKASH_CHECKOUT_URL_BASE": "https://tokenized.pay.bka.sh/v1.2.0-beta"
   },
   "secrets": {
     "required": [
