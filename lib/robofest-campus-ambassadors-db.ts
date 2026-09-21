@@ -76,38 +76,44 @@ export async function getActiveRobofestCampusAmbassadorById(
   return mapped
 }
 
-export async function getPublicRobofestCampusAmbassadors(): Promise<
+async function fetchPublicRobofestCampusAmbassadorsFromDb(): Promise<
   RobofestCampusAmbassador[]
 > {
   try {
-    return await unstable_cache(
-      async (): Promise<RobofestCampusAmbassador[]> => {
-        const docs = await collectionGetAll(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION)
+    const docs = await collectionGetAll(ROBOFEST_CAMPUS_AMBASSADORS_COLLECTION)
 
-        if (docs.length === 0) {
-          return sortRobofestCampusAmbassadors(
-            ROBOFEST_CAMPUS_AMBASSADOR_SEED.filter((a) => a.isActive),
-          )
-        }
+    if (docs.length === 0) {
+      return sortRobofestCampusAmbassadors(
+        ROBOFEST_CAMPUS_AMBASSADOR_SEED.filter((a) => a.isActive),
+      )
+    }
 
-        const list: RobofestCampusAmbassador[] = []
-        for (const doc of docs) {
-          const mapped = mapRobofestCampusAmbassadorDoc(
-            String(doc.id),
-            doc as Record<string, unknown>,
-          )
-          if (!mapped || !mapped.isActive) continue
-          list.push(mapped)
-        }
-        return sortRobofestCampusAmbassadors(list)
-      },
-      [PUBLIC_ROBOFEST_AMBASSADORS_TAG],
-      { tags: [PUBLIC_ROBOFEST_AMBASSADORS_TAG], revalidate: 3600 },
-    )()
+    const list: RobofestCampusAmbassador[] = []
+    for (const doc of docs) {
+      const mapped = mapRobofestCampusAmbassadorDoc(
+        String(doc.id),
+        doc as Record<string, unknown>,
+      )
+      if (!mapped || !mapped.isActive) continue
+      list.push(mapped)
+    }
+    return sortRobofestCampusAmbassadors(list)
   } catch (error) {
     console.error('Error fetching campus ambassadors:', error)
     return sortRobofestCampusAmbassadors(
       ROBOFEST_CAMPUS_AMBASSADOR_SEED.filter((a) => a.isActive),
     )
   }
+}
+
+const getCachedPublicRobofestCampusAmbassadors = unstable_cache(
+  fetchPublicRobofestCampusAmbassadorsFromDb,
+  [PUBLIC_ROBOFEST_AMBASSADORS_TAG],
+  { tags: [PUBLIC_ROBOFEST_AMBASSADORS_TAG], revalidate: 3600 },
+)
+
+export async function getPublicRobofestCampusAmbassadors(): Promise<
+  RobofestCampusAmbassador[]
+> {
+  return getCachedPublicRobofestCampusAmbassadors()
 }

@@ -202,24 +202,28 @@ export const getPublicEvent = cache(async (slugOrId: string): Promise<Event | nu
   return fetchPublicEventFromDb(slugOrId)
 })
 
-export const getPublicEnglishMediumSchools = cache(async (): Promise<string[]> => {
+async function fetchPublicEnglishMediumSchoolsFromDb(): Promise<string[]> {
   try {
-    return unstable_cache(
-      async (): Promise<string[]> => {
-        const approved = await collectionWhere(SCHOOL_DIRECTORY_COLLECTION, 'status', '==', 'approved')
-        return approved
-          .filter((doc) => (typeof doc.isActive === 'boolean' ? doc.isActive : true))
-          .map((doc) => (typeof doc.name === 'string' ? doc.name.trim() : ''))
-          .filter((name): name is string => Boolean(name))
-          .sort((a, b) => a.localeCompare(b))
-      },
-      [PUBLIC_SCHOOLS_TAG],
-      { tags: [PUBLIC_SCHOOLS_TAG], revalidate: 3600 },
-    )()
+    const approved = await collectionWhere(SCHOOL_DIRECTORY_COLLECTION, 'status', '==', 'approved')
+    return approved
+      .filter((doc) => (typeof doc.isActive === 'boolean' ? doc.isActive : true))
+      .map((doc) => (typeof doc.name === 'string' ? doc.name.trim() : ''))
+      .filter((name): name is string => Boolean(name))
+      .sort((a, b) => a.localeCompare(b))
   } catch (error) {
     console.error('Error fetching schools:', error)
     return []
   }
+}
+
+const getCachedPublicEnglishMediumSchools = unstable_cache(
+  fetchPublicEnglishMediumSchoolsFromDb,
+  [PUBLIC_SCHOOLS_TAG],
+  { tags: [PUBLIC_SCHOOLS_TAG], revalidate: 3600 },
+)
+
+export const getPublicEnglishMediumSchools = cache(async (): Promise<string[]> => {
+  return getCachedPublicEnglishMediumSchools()
 })
 
 async function fetchPublicCoursesFromDb(): Promise<Course[]> {
