@@ -1,12 +1,10 @@
 import { Metadata } from 'next'
-import { Calendar, Images, MapPin } from 'lucide-react'
+import { Images } from 'lucide-react'
 import { PAGE_SEO, buildPageMetadata } from '@/lib/seo-metadata'
 import { effectiveGalleryDisplayRaw } from '@/lib/publicContentDates'
-import { GALLERY_ALBUM_PREVIEW_MAX } from '@/lib/media-gallery'
-import ImageLightboxGallery from '@/components/ImageLightboxGallery'
-import ListingHeroSection from '@/components/ListingHeroSection'
+import RoboHudHero from '@/components/RoboHudHero'
+import GalleryAlbumCard from '@/components/gallery/GalleryAlbumCard'
 import { getGalleryGroups } from './actions'
-import { Card, CardContent } from '@/components/ui/card'
 
 export const metadata: Metadata = buildPageMetadata({
   title: PAGE_SEO.gallery.title,
@@ -39,66 +37,66 @@ function formatDisplayDate(iso: string | Date | null) {
 
 export default async function GalleryPage() {
   const groups = await getGalleryGroups()
+  const albumCount = groups.length
+  const photoCount = groups.reduce((sum, g) => sum + g.images.length, 0)
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <ListingHeroSection overlay="dark">
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-sm mb-4">
-            <Images className="w-4 h-4" />
-            <span className="text-xs sm:text-sm font-medium">Moments</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
-            Gallery
-          </h1>
-          <p className="text-base sm:text-lg text-blue-100 max-w-2xl mx-auto">
-            Snapshots from workshops, competitions, and community events.
-          </p>
+    <div className="flex min-h-screen flex-col bg-linear-to-b from-slate-50 via-white to-slate-50/80">
+      <RoboHudHero>
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-white/5 px-3 py-1.5 shadow-[0_0_24px_rgba(34,211,238,0.15)] backdrop-blur-sm sm:mb-5 sm:px-4">
+          <Images className="size-3.5 text-cyan-200 sm:size-4" aria-hidden />
+          <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-100 sm:text-xs">
+            Robogallery
+          </span>
         </div>
-      </ListingHeroSection>
+        <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl">Gallery</h1>
+        <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-sky-100/90 sm:mt-4 sm:text-base md:text-lg">
+          Snapshots from workshops, competitions, and community events.
+        </p>
+        {albumCount > 0 ? (
+          <p className="mt-5 inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs font-medium text-cyan-100/80 sm:mt-6 sm:text-sm">
+            <span>
+              {albumCount} album{albumCount === 1 ? '' : 's'}
+            </span>
+            <span className="hidden text-cyan-300/40 sm:inline" aria-hidden>
+              ·
+            </span>
+            <span>
+              {photoCount} photo{photoCount === 1 ? '' : 's'}
+            </span>
+          </p>
+        ) : null}
+      </RoboHudHero>
 
-      <main className="flex-1 py-12 sm:py-16 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto space-y-16 sm:space-y-20">
+      <main className="relative flex-1 px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-linear-to-b from-indigo-50/50 to-transparent"
+          aria-hidden
+        />
+        <div className="relative z-10 mx-auto max-w-7xl">
           {groups.length === 0 ? (
-            <Card>
-              <CardContent className="p-12 text-center text-gray-600">
-                <Images className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                <p>No gallery albums yet.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            groups.map((group) => {
-              const dateLine = formatDisplayDate(effectiveGalleryDisplayRaw(group))
-              return (
-              <section key={group.id} className="scroll-mt-24">
-                <div className="mb-6 sm:mb-8">
-                  <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">{group.title}</h2>
-                  {dateLine ? (
-                    <p className="mt-2 flex items-center gap-2 text-gray-600 text-sm sm:text-base">
-                      <Calendar className="w-5 h-5 shrink-0 text-indigo-600" />
-                      {dateLine}
-                    </p>
-                  ) : null}
-                  {group.location ? (
-                    <p className="mt-2 flex items-start gap-2 text-gray-600 text-sm sm:text-base">
-                      <MapPin className="w-5 h-5 shrink-0 text-indigo-600 mt-0.5" />
-                      <span className="whitespace-pre-wrap">{group.location}</span>
-                    </p>
-                  ) : null}
+            <div className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-12 text-center shadow-sm sm:p-16">
+              <div className="bg-tech-grid-ink pointer-events-none absolute inset-0 opacity-60" aria-hidden />
+              <div className="relative z-10">
+                <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-indigo-50 ring-1 ring-indigo-100">
+                  <Images className="size-7 text-indigo-400" aria-hidden />
                 </div>
-                {group.images.length === 0 ? (
-                  <p className="text-gray-500 text-sm">No images in this album yet.</p>
-                ) : (
-                  <ImageLightboxGallery
-                    images={group.images.map((img) => img.url)}
-                    maxGridImages={GALLERY_ALBUM_PREVIEW_MAX}
-                    viewAllHref={`/gallery/album/${group.id}`}
-                    viewAllLabel={`See all ${group.images.length} images`}
-                    aspect="square"
-                  />
-                )}
-              </section>
-            )})
+                <p className="text-base font-medium text-gray-700 sm:text-lg">No gallery albums yet.</p>
+                <p className="mt-2 text-sm text-gray-500">Check back soon for moments from the lab and stage.</p>
+              </div>
+            </div>
+          ) : (
+            <ul className="m-0 grid list-none grid-cols-1 gap-6 p-0 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3 lg:gap-8">
+              {groups.map((group, index) => {
+                const dateLine = formatDisplayDate(effectiveGalleryDisplayRaw(group))
+                const featured = index === 0
+                return (
+                  <li key={group.id} className={featured ? 'sm:col-span-2 lg:col-span-2' : 'min-w-0'}>
+                    <GalleryAlbumCard group={group} dateLine={dateLine} featured={featured} />
+                  </li>
+                )
+              })}
+            </ul>
           )}
         </div>
       </main>
