@@ -137,20 +137,15 @@ async function fetchPublicEventsFromDb(lean: boolean, limit: number): Promise<Ev
   }
 }
 
-const getCachedPublicEvents = unstable_cache(
-  () => fetchPublicEventsFromDb(true, PUBLIC_EVENTS_MAX),
-  [PUBLIC_EVENTS_TAG, 'list'],
-  { tags: [PUBLIC_EVENTS_TAG], revalidate: 120 },
-)
-
 const getCachedPublicEventsHome = unstable_cache(
   () => fetchPublicEventsFromDb(true, PUBLIC_EVENTS_HOME_MAX),
-  [PUBLIC_EVENTS_TAG, 'home'],
+  [PUBLIC_EVENTS_TAG, 'home', 'v2'],
   { tags: [PUBLIC_EVENTS_TAG], revalidate: 120 },
 )
 
 export const getPublicEvents = cache(async (): Promise<Event[]> => {
-  return getCachedPublicEvents()
+  // Skip unstable_cache on the public list so new D1 events appear immediately.
+  return fetchPublicEventsFromDb(true, PUBLIC_EVENTS_MAX)
 })
 
 /** Tighter list for homepage rails — same lean shape, fewer rows. */
@@ -183,7 +178,7 @@ async function fetchPublicEventFromDb(param: string): Promise<Event | null> {
   }
 
   try {
-    const events = await getCachedPublicEvents()
+    const events = await fetchPublicEventsFromDb(true, PUBLIC_EVENTS_MAX)
     const match = events.find((event) => eventMatchesPublicParam(event, normalized))
     if (match) {
       // List was lean — re-fetch full doc for detail

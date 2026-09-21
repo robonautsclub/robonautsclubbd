@@ -39,8 +39,9 @@ export const metadata: Metadata = buildPageMetadata({
   ],
 })
 
-// ISR: admin actions also call revalidatePath / revalidateTag
-export const revalidate = 120
+// Always read latest events from D1 (admin creates must show up immediately)
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 // --- Main Page ---
 export default async function EventsPage() {
