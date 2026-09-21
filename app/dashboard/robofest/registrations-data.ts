@@ -1,9 +1,16 @@
-import { collectionGet, collectionWhere } from '@/lib/db/collections'
+import { collectionGet } from '@/lib/db/collections'
+import {
+  countRobofestRegistrations,
+  queryRobofestCampusAmbassadorReferralCounts,
+  queryRobofestRegistrationsMatching,
+  queryRobofestRegistrationsPage,
+  queryRobofestRegistrationStats,
+  queryRobofestRegistrationStatusCounts,
+} from '@/lib/db/robofest-registrations'
 import {
   ROBOFEST_REGISTRATIONS_COLLECTION,
   mapRobofestRegistrationDoc,
   type RobofestRegistration,
-  type RobofestRegistrationStatus,
 } from '@/lib/robofest-content'
 import { registrationMatchesNameFilter } from './registration-search'
 import type {
@@ -46,6 +53,16 @@ function normalizeFilters(
     roundCity: filters.roundCity?.trim() || undefined,
     ageCategory: filters.ageCategory?.trim() || undefined,
     search: filters.search?.trim() || undefined,
+  }
+}
+
+function toSqlFilters(filters: RobofestRegistrationListFilters) {
+  const f = normalizeFilters(filters)
+  return {
+    status: f.status,
+    category: f.category,
+    roundCity: f.roundCity,
+    ageCategory: f.ageCategory,
   }
 }
 
@@ -100,7 +117,17 @@ function pageFromItems(
   }
 }
 
-async function loadRobofestRegistrationsPageFallback(options: {
+function mapDocs(docs: Record<string, unknown>[]): RobofestRegistration[] {
+  return docs.map((doc) =>
+    mapRobofestRegistrationDoc(String(doc.id), doc as Record<string, unknown>),
+  )
+}
+
+/**
+ * Search / complex filters: SQL narrows by indexed columns, then JS applies
+ * name search + in-memory keyset paging.
+ */
+async function loadRobofestRegistrationsPageWithSearch(options: {
   filters: RobofestRegistrationListFilters
   cursor?: RobofestRegistrationCursor | null
   pageSize: number
@@ -108,18 +135,12 @@ async function loadRobofestRegistrationsPageFallback(options: {
 }): Promise<RobofestRegistrationPage> {
   const f = normalizeFilters(options.filters)
   const scanLimit = options.scanLimit ?? FALLBACK_SCAN_LIMIT
-  const docs = await collectionWhere(
-    ROBOFEST_REGISTRATIONS_COLLECTION,
-    'status',
-    '==',
-    f.status,
-  )
+  const docs = await queryRobofestRegistrationsMatching({
+    filters: toSqlFilters(f),
+    limit: scanLimit,
+  })
 
-  const items = docs
-    .slice(0, scanLimit)
-    .map((doc) =>
-      mapRobofestRegistrationDoc(String(doc.id), doc as Record<string, unknown>),
-    )
+  const items = mapDocs(docs)
     .filter((item) => matchesExtraFilters(item, f))
     .sort(compareNewestFirst)
 
@@ -131,15 +152,40 @@ export async function loadRobofestRegistrationsPage(options: {
   cursor?: RobofestRegistrationCursor | null
   pageSize?: number
 }): Promise<RobofestRegistrationPage> {
-  const pageSize = Math.min(Math.max(options.pageSize ?? ROBOFEST_REGISTRATIONS_PAGE_SIZE, 1), 100)
+  const pageSize = Math.min(
+    Math.max(options.pageSize ?? ROBOFEST_REGISTRATIONS_PAGE_SIZE, 1),
+    100,
+  )
   const f = normalizeFilters(options.filters)
-  const scanLimit = f.search ? SEARCH_SCAN_LIMIT : FALLBACK_SCAN_LIMIT
-  return loadRobofestRegistrationsPageFallback({
-    filters: f,
-    cursor: options.cursor,
-    pageSize,
-    scanLimit,
-  })
+
+  if (f.search) {
+    return loadRobofestRegistrationsPageWithSearch({
+      filters: f,
+      cursor: options.cursor,
+      pageSize,
+      scanLimit: SEARCH_SCAN_LIMIT,
+    })
+  }
+
+  const sqlFilters = toSqlFilters(f)
+  const [{ rows, hasMore }, matchedTotal] = await Promise.all([
+    queryRobofestRegistrationsPage({
+      filters: sqlFilters,
+      cursor: options.cursor,
+      limit: pageSize,
+    }),
+    countRobofestRegistrations(sqlFilters),
+  ])
+
+  const items = mapDocs(rows)
+  const last = items[items.length - 1]
+  return {
+    items,
+    nextCursor:
+      hasMore && last?.createdAt ? { createdAt: last.createdAt, id: last.id } : null,
+    hasMore,
+    matchedTotal,
+  }
 }
 
 export async function loadRobofestRegistrationsForExport(
@@ -147,12 +193,22 @@ export async function loadRobofestRegistrationsForExport(
   maxDocs = 5000,
 ): Promise<RobofestRegistration[]> {
   const f = normalizeFilters(filters)
-  const page = await loadRobofestRegistrationsPageFallback({
-    filters: f,
-    pageSize: maxDocs,
-    scanLimit: Math.min(maxDocs, SEARCH_SCAN_LIMIT),
+  const scanLimit = Math.min(maxDocs, SEARCH_SCAN_LIMIT)
+
+  if (f.search) {
+    const page = await loadRobofestRegistrationsPageWithSearch({
+      filters: f,
+      pageSize: maxDocs,
+      scanLimit,
+    })
+    return page.items
+  }
+
+  const docs = await queryRobofestRegistrationsMatching({
+    filters: toSqlFilters(f),
+    limit: scanLimit,
   })
-  return page.items
+  return mapDocs(docs)
 }
 
 function participantCount(r: RobofestRegistration): number {
@@ -196,61 +252,71 @@ function aggregateRegistrationStats(items: RobofestRegistration[]): RobofestRegi
 export async function loadRobofestRegistrationStats(
   filters: RobofestRegistrationListFilters,
 ): Promise<RobofestRegistrationStats> {
-  const items = await loadRobofestRegistrationsForExport(filters)
-  return aggregateRegistrationStats(items)
+  const f = normalizeFilters(filters)
+
+  if (f.search) {
+    const items = await loadRobofestRegistrationsForExport(f)
+    return aggregateRegistrationStats(items)
+  }
+
+  try {
+    const stats = await queryRobofestRegistrationStats(toSqlFilters(f))
+    return {
+      total: stats.total,
+      registrations: stats.registrations,
+      byCategory: stats.byCategory,
+      byAge: stats.byAge,
+      paidTotal: stats.paidTotal,
+      paidCount: stats.paidCount,
+    }
+  } catch (error) {
+    console.error('[robofest] SQL stats failed, falling back to export path:', error)
+    const items = await loadRobofestRegistrationsForExport(f)
+    return aggregateRegistrationStats(items)
+  }
 }
 
 export async function loadRobofestRegistrationStatusCounts(): Promise<RobofestRegistrationStatusCounts> {
-  const empty = { pending: 0, confirmed: 0, cancelled: 0 }
-  const statuses: RobofestRegistrationStatus[] = ['pending', 'confirmed', 'cancelled']
-
-  const results = await Promise.all(
-    statuses.map(async (status) => {
-      const docs = await collectionWhere(ROBOFEST_REGISTRATIONS_COLLECTION, 'status', '==', status)
-      return [status, docs.length] as const
-    }),
-  )
-
-  const counts = { ...empty }
-  for (const [status, count] of results) {
-    counts[status] = count
+  const empty: RobofestRegistrationStatusCounts = {
+    pending: 0,
+    confirmed: 0,
+    cancelled: 0,
   }
-  return counts
+
+  try {
+    const counts = await queryRobofestRegistrationStatusCounts()
+    return {
+      pending: counts.pending ?? 0,
+      confirmed: counts.confirmed ?? 0,
+      cancelled: counts.cancelled ?? 0,
+    }
+  } catch (error) {
+    console.error('[robofest] SQL status counts failed:', error)
+    return empty
+  }
 }
 
+/**
+ * One GROUP BY for all ambassadors. Optional `ambassadorIds` seeds zero entries
+ * for ambassadors with no referrals yet.
+ */
 export async function loadRobofestCampusAmbassadorReferralCounts(
-  ambassadorIds: string[],
+  ambassadorIds: string[] = [],
 ): Promise<Record<string, RobofestCampusAmbassadorReferralStats>> {
   const counts: Record<string, RobofestCampusAmbassadorReferralStats> = {}
   for (const id of ambassadorIds) {
     counts[id] = { ...EMPTY_ROBOFEST_CAMPUS_AMBASSADOR_REFERRAL_STATS }
   }
-  if (ambassadorIds.length === 0) return counts
 
-  const results = await Promise.all(
-    ambassadorIds.map(async (id) => {
-      const docs = await collectionWhere(
-        ROBOFEST_REGISTRATIONS_COLLECTION,
-        'campusAmbassadorId',
-        '==',
-        id,
-      )
-      const confirmed = docs.filter((d) => d.status === 'confirmed')
-      let members = 0
-      for (const doc of confirmed) {
-        const registration = mapRobofestRegistrationDoc(
-          String(doc.id),
-          doc as Record<string, unknown>,
-        )
-        members += participantCount(registration)
-      }
-      return [id, { teams: confirmed.length, members }] as const
-    }),
-  )
-
-  for (const [id, stats] of results) {
-    counts[id] = stats
+  try {
+    const grouped = await queryRobofestCampusAmbassadorReferralCounts()
+    for (const [id, stats] of Object.entries(grouped)) {
+      counts[id] = stats
+    }
+  } catch (error) {
+    console.error('[robofest] SQL referral counts failed:', error)
   }
+
   return counts
 }
 
@@ -260,7 +326,10 @@ export async function loadRobofestRegistrationsByIds(
 ): Promise<RobofestRegistration[]> {
   if (ids.length === 0) return []
 
-  const unique = Array.from(new Set(ids.map((id) => id.trim()).filter(Boolean))).slice(0, maxDocs)
+  const unique = Array.from(new Set(ids.map((id) => id.trim()).filter(Boolean))).slice(
+    0,
+    maxDocs,
+  )
 
   const results = await Promise.all(
     unique.map(async (id) => {

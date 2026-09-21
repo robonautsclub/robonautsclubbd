@@ -224,6 +224,23 @@ function rowFromDoc(collection: string, id: string, data: JsonRecord) {
         teamNumber: typeof data.teamNumber === 'string' ? data.teamNumber : null,
         status: typeof data.status === 'string' ? data.status : null,
         email: typeof data.email === 'string' ? data.email : null,
+        category: typeof data.category === 'string' ? data.category : null,
+        roundCity: typeof data.roundCity === 'string' ? data.roundCity : null,
+        ageCategory: typeof data.ageCategory === 'string' ? data.ageCategory : null,
+        campusAmbassadorId:
+          typeof data.campusAmbassadorId === 'string'
+            ? data.campusAmbassadorId
+            : null,
+        paymentStatus:
+          typeof data.paymentStatus === 'string' ? data.paymentStatus : null,
+        amountPaid:
+          typeof data.amountPaid === 'number' && Number.isFinite(data.amountPaid)
+            ? data.amountPaid
+            : null,
+        teamSize:
+          typeof data.teamSize === 'number' && Number.isFinite(data.teamSize)
+            ? Math.trunc(data.teamSize)
+            : null,
         payload,
         createdAt,
         updatedAt,

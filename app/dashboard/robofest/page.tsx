@@ -22,6 +22,7 @@ export default async function RobofestDashboardPage() {
     initialStats,
     schools,
     campusAmbassadors,
+    referralCounts,
   ] = await Promise.all([
     getRobofestDashboardContent(),
     getRobofestRegistrationsPage({
@@ -32,11 +33,9 @@ export default async function RobofestDashboardPage() {
     getRobofestRegistrationStats(defaultFilters),
     getPublicEnglishMediumSchools(),
     getRobofestCampusAmbassadors(),
+    // Single GROUP BY — no N+1 and no wait on ambassador list
+    getRobofestCampusAmbassadorReferralCounts(),
   ])
-
-  const referralCounts = await getRobofestCampusAmbassadorReferralCounts(
-    campusAmbassadors.map((a) => a.id),
-  )
 
   return (
     <div className="w-full min-w-0 max-w-none">

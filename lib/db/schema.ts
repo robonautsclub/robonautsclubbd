@@ -2,7 +2,7 @@
  * D1 schema for the Cloudflare copy of Firebase data.
  * Indexed columns for common queries; nested Firestore fields live in `payload` JSON.
  */
-import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { index, integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
 export const users = sqliteTable(
   'users',
@@ -110,6 +110,13 @@ export const robofestRegistrations = sqliteTable(
     teamNumber: text('team_number'),
     status: text('status'),
     email: text('email'),
+    category: text('category'),
+    roundCity: text('round_city'),
+    ageCategory: text('age_category'),
+    campusAmbassadorId: text('campus_ambassador_id'),
+    paymentStatus: text('payment_status'),
+    amountPaid: real('amount_paid'),
+    teamSize: integer('team_size'),
     payload: text('payload').notNull().default('{}'),
     createdAt: text('created_at'),
     updatedAt: text('updated_at'),
@@ -117,6 +124,9 @@ export const robofestRegistrations = sqliteTable(
   (t) => [
     index('robofest_registrations_team_number_idx').on(t.teamNumber),
     index('robofest_registrations_status_idx').on(t.status),
+    index('robofest_registrations_status_created_at_idx').on(t.status, t.createdAt),
+    index('robofest_registrations_campus_ambassador_id_idx').on(t.campusAmbassadorId),
+    index('robofest_registrations_created_at_idx').on(t.createdAt),
   ],
 )
 

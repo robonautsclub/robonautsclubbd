@@ -24,6 +24,7 @@ import {
   ROBOFEST_REGISTRATIONS_COLLECTION,
   getDefaultRobofestContent,
   getRobofestCategoryByName,
+  getRobofestContent,
   getRobofestContentFresh,
   mapRobofestContentDoc,
   mapRobofestRegistrationDoc,
@@ -94,7 +95,7 @@ function revalidateRobofestAmbassadors() {
 
 export async function getRobofestDashboardContent(): Promise<RobofestContent> {
   await requireAuth()
-  return getRobofestContentFresh()
+  return getRobofestContent()
 }
 
 export async function updateRobofestContent(
@@ -264,7 +265,7 @@ export async function getRobofestRegistrationStats(
 }
 
 export async function getRobofestCampusAmbassadorReferralCounts(
-  ambassadorIds: string[],
+  ambassadorIds: string[] = [],
 ) {
   await requireTabAccess('robofest')
   try {
