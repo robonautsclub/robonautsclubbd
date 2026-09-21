@@ -10,7 +10,7 @@ import {
   Users,
   ArrowRight,
 } from 'lucide-react'
-import { getPublicEvents } from './actions'
+import { getPublicEvents } from './public-data'
 import RealtimeEventsList from '@/components/RealtimeEventsList'
 import ListingHeroSection from '@/components/ListingHeroSection'
 import { isEventUpcoming } from '@/lib/dateUtils'

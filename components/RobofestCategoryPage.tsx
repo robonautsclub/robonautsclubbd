@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import type {
   RobofestCategoryContent,
   RobofestContent,
@@ -11,11 +12,14 @@ import {
 } from "@/lib/robofest-content";
 import type { RobofestCampusAmbassador } from "@/lib/robofest-campus-ambassadors";
 import { getRobofestCategoryRules } from "@/lib/robofest-category-rules";
-import RobofestCategoryRegistrationForm from "@/components/RobofestCategoryRegistrationForm";
 import RobofestRegistrationCountdown from "@/components/RobofestRegistrationCountdown";
 import { resolveRobofestDivisionClosingDate } from "@/lib/robofest-deadlines";
 import { Button } from "@/components/ui/button";
 import RobofestIcon from "@/components/RobofestIcon";
+
+const RobofestCategoryRegistrationForm = dynamic(
+  () => import("@/components/RobofestCategoryRegistrationForm"),
+);
 
 function RulesViewButton({
   href,

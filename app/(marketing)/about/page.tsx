@@ -164,14 +164,17 @@ function SectionHeader({
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <section
-        className="relative text-white py-16 sm:py-20 md:py-24 px-4 sm:px-6 overflow-hidden"
-        style={{
-          backgroundImage: "url('/roboclass.jpg')",
-          backgroundSize: "cover",
-          backgroundPosition: "top",
-        }}
-      >
+      <section className="relative text-white py-16 sm:py-20 md:py-24 px-4 sm:px-6 overflow-hidden">
+        <Image
+          src="/roboclass.jpg"
+          alt=""
+          fill
+          priority
+          className="object-cover object-top"
+          sizes="100vw"
+          quality={75}
+        />
+        <div className="absolute inset-0 bg-slate-900/45" aria-hidden />
         <div className="absolute inset-0 opacity-20">
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-300 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
           <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-300 rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2" />

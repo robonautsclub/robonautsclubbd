@@ -38,7 +38,7 @@ function formatDisplayDate(iso: string | Date | null) {
 export default async function GalleryPage() {
   const groups = await getGalleryGroups()
   const albumCount = groups.length
-  const photoCount = groups.reduce((sum, g) => sum + g.images.length, 0)
+  const photoCount = groups.reduce((sum, g) => sum + (g.imageCount ?? g.images.length), 0)
 
   return (
     <div className="flex min-h-screen flex-col bg-linear-to-b from-slate-50 via-white to-slate-50/80">

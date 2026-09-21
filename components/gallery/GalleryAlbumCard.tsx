@@ -13,7 +13,7 @@ type Props = {
 export default function GalleryAlbumCard({ group, dateLine = '', featured = false }: Props) {
   const cover = group.images[0]?.url
   const stack = group.images.slice(1, 4).map((img) => img.url)
-  const photoCount = group.images.length
+  const photoCount = group.imageCount ?? group.images.length
 
   return (
     <Link

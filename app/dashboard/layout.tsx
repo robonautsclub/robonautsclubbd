@@ -6,6 +6,8 @@ import TokenExpirationChecker from './TokenExpirationChecker'
 import SessionTimer from './SessionTimer'
 import Notifications from './Notifications'
 import DashboardShell from './DashboardShell'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { Toaster } from '@/components/ui/sonner'
 
 // Force dynamic rendering since this layout uses cookies for authentication
 export const dynamic = 'force-dynamic'
@@ -23,7 +25,7 @@ export default async function DashboardLayout({
   const session = await requireAuth()
 
   return (
-    <>
+    <TooltipProvider delayDuration={200}>
       <TokenExpirationChecker />
       <SessionTimer />
       <DashboardShell
@@ -40,6 +42,7 @@ export default async function DashboardLayout({
       >
         {children}
       </DashboardShell>
-    </>
+      <Toaster richColors closeButton position="top-right" />
+    </TooltipProvider>
   )
 }

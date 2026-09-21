@@ -1,12 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowRight, Volume2, VolumeX } from 'lucide-react'
-import UpcomingEventsRail from '@/components/UpcomingEventsRail'
 import type { Event } from '@/types/event'
 import { Button } from '@/components/ui/button'
+
+const UpcomingEventsRail = dynamic(() => import('@/components/UpcomingEventsRail'), {
+  ssr: true,
+  loading: () => <div className="h-28 w-full" aria-hidden />,
+})
 
 const HERO_VIDEO =
   'https://res.cloudinary.com/digkc0xsk/video/upload/v1771270419/ROBOFESTnew_lj6ak1.mp4'
@@ -43,7 +48,7 @@ export default function Hero({ upcomingEvents = [] }: { upcomingEvents?: Event[]
           className="absolute inset-0 z-0 h-full w-full object-cover object-[70%_center] sm:object-center"
           src={HERO_VIDEO}
           poster={HERO_VIDEO_POSTER}
-          preload="metadata"
+          preload="none"
           autoPlay
           muted={muted}
           loop
@@ -64,7 +69,6 @@ export default function Hero({ upcomingEvents = [] }: { upcomingEvents?: Event[]
         </div>
       )}
 
-      {/* Left-weighted scrim — right side stays open for video */}
       <div
         className="absolute inset-0 z-1 bg-linear-to-r from-slate-950/90 via-slate-950/55 to-transparent lg:via-slate-950/40"
         aria-hidden="true"
@@ -78,7 +82,6 @@ export default function Hero({ upcomingEvents = [] }: { upcomingEvents?: Event[]
         aria-hidden="true"
       />
 
-      {/* Full-bleed left content — not centered in max-w box */}
       <div className="relative z-10 flex w-full flex-1 flex-col pt-28 sm:pt-32 lg:pt-28">
         <div className="flex flex-1 items-center px-4 py-8 sm:px-6 sm:py-10 lg:px-10 xl:px-14">
           <div className="w-full max-w-[28rem] space-y-6 text-left sm:max-w-md md:max-w-lg lg:max-w-xl lg:space-y-7">
@@ -152,7 +155,6 @@ export default function Hero({ upcomingEvents = [] }: { upcomingEvents?: Event[]
           </div>
         </div>
 
-        {/* Upcoming events stay in the hero — always above the wave */}
         {hasEvents ? (
           <div className="relative z-20 mt-auto w-full px-4 pb-20 sm:px-6 sm:pb-24 lg:px-10 lg:pb-20 xl:px-14">
             <UpcomingEventsRail events={upcomingEvents} />

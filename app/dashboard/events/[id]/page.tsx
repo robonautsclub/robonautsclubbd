@@ -5,7 +5,7 @@ import {
   getEventBookingStats,
 } from '../../actions'
 import { BOOKING_DEFAULT_PAGE_SIZE } from '../bookings-types'
-import { getPublicEnglishMediumSchools } from '@/app/(marketing)/events/actions'
+import { getPublicEnglishMediumSchools } from '@/app/(marketing)/events/public-data'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import EventHeaderActions from './EventHeaderActions'

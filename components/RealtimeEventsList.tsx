@@ -1,6 +1,3 @@
-'use client'
-
-import { useMemo, memo, useState } from 'react'
 import {
   parseEventDates,
   formatEventDates,
@@ -12,7 +9,6 @@ import {
   bdWallTimeToUtcDate,
 } from '@/lib/dateUtils'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Calendar, Clock, MapPin, ArrowRight } from 'lucide-react'
 import { Event } from '@/types/event'
 import { eventPublicHref } from '@/lib/event-ui'
@@ -25,6 +21,7 @@ import {
   getRobofestEventsListCard,
   ROBOFEST_EVENTS_LIST_CARD_ID,
 } from '@/lib/robofest-events-card'
+import EventCardImage from '@/components/EventCardImage'
 
 /**
  * Check if an event is currently going on
@@ -36,20 +33,16 @@ function isEventGoingOn(event: Event): boolean {
 
   if (eventDates.length === 0) return false
 
-  // Check if today is within the event date range
   const sortedDates = [...eventDates].sort()
   const firstEventDate = getEventDateInBangladesh(sortedDates[0])
   const lastEventDate = getEventDateInBangladesh(sortedDates[sortedDates.length - 1])
 
   const daysFromStart = differenceInDays(bstNow, firstEventDate)
   const daysFromEnd = differenceInDays(bstNow, lastEventDate)
-
-  // Check if today is within the event date range (inclusive)
   const isWithinRange = daysFromStart >= 0 && daysFromEnd <= 0
 
   if (!isWithinRange) return false
 
-  // Find which event date matches today
   let matchedEventDate: string | null = null
   for (const eventDateStr of sortedDates) {
     const eventDateBST = getEventDateInBangladesh(eventDateStr)
@@ -60,18 +53,13 @@ function isEventGoingOn(event: Event): boolean {
     }
   }
 
-  // If no exact match but we're within range, use the first date
   if (!matchedEventDate) {
     matchedEventDate = sortedDates[0]
   }
 
-  // If event has a time, check if current time is past the event start time
   if (event.time && matchedEventDate) {
     try {
-      // Parse time string (e.g., "10:00 AM", "2:30 PM", "14:00")
       const timeStr = event.time.trim()
-
-      // Handle formats like "10:00 AM" or "2:30 PM"
       const is12Hour = /AM|PM/i.test(timeStr)
       let eventHours = 0
       let eventMinutes = 0
@@ -89,17 +77,14 @@ function isEventGoingOn(event: Event): boolean {
           eventHours = hours
           eventMinutes = minutes
         } else {
-          // If parsing fails, assume event is going on if it's today
           return true
         }
       } else {
-        // Handle 24-hour format (e.g., "14:00", "09:30")
         const match = timeStr.match(/(\d+):(\d+)/)
         if (match) {
           eventHours = parseInt(match[1])
           eventMinutes = parseInt(match[2])
         } else {
-          // If parsing fails, assume event is going on if it's today
           return true
         }
       }
@@ -114,83 +99,58 @@ function isEventGoingOn(event: Event): boolean {
         0,
         0,
       )
-      // Assume event runs for 8 hours
       const eventEndUtc = new Date(eventStartUtc.getTime() + 8 * 60 * 60 * 1000)
       const nowMs = Date.now()
 
       return nowMs >= eventStartUtc.getTime() && nowMs <= eventEndUtc.getTime()
     } catch {
-      // If time parsing fails, assume event is going on if it's today
       return true
     }
   }
 
-  // If no time specified, assume event is going on all day if it's today
   return true
 }
 
-interface RealtimeEventsListProps {
-  initialEvents?: Event[]
+function getTimeDisplay(event: Event, isUpcoming: boolean): string | null {
+  const firstDate = getFirstEventDate(event.date)
+  if (!firstDate || !isUpcoming) return null
+
+  if (isEventGoingOn(event)) {
+    return 'Event going on'
+  }
+
+  const bstNow = getBangladeshNow()
+  const eventDateStr = Array.isArray(event.date)
+    ? event.date[0]
+    : typeof event.date === 'string' && event.date.includes(',')
+      ? event.date.split(',')[0].trim()
+      : event.date || ''
+
+  if (!eventDateStr) return null
+
+  const eventDateBST = getEventDateInBangladesh(eventDateStr)
+  const hoursUntil = differenceInHours(eventDateBST, bstNow)
+  const daysUntil = differenceInDays(eventDateBST, bstNow)
+
+  if (daysUntil === 0) {
+    if (hoursUntil >= 0) return 'Starting soon'
+    return 'Event going on'
+  }
+  if (hoursUntil < 24 && hoursUntil >= 0) return 'Starting soon'
+  if (hoursUntil >= 24 && hoursUntil < 48) return 'Tomorrow'
+  if (daysUntil > 0) return `${daysUntil} days away`
+  return null
 }
 
-const FALLBACK_IMAGE = '/robot.gif'
-
-// Event Card Component (same as in events/page.tsx but for client component)
-// Memoized to prevent unnecessary re-renders
-const EventCard = memo(({ event, priority = false }: { event: Event; priority?: boolean }) => {
-  const [imageError, setImageError] = useState(false)
+function EventCard({ event, priority = false }: { event: Event; priority?: boolean }) {
   const eventDates = parseEventDates(event.date)
-  const firstDate = getFirstEventDate(event.date)
   const isUpcoming = isEventUpcoming(event.date)
   const status = isUpcoming ? 'Upcoming' : 'Completed'
-  const imageSrc = event.image && !imageError ? event.image : FALLBACK_IMAGE
-
-  // Calculate time until event in Bangladesh Standard Time
-  let timeDisplay: string | null = null
-  if (firstDate && isUpcoming) {
-    // First check if event is currently going on
-    if (isEventGoingOn(event)) {
-      timeDisplay = 'Event going on'
-    } else {
-      const bstNow = getBangladeshNow()
-      // Parse the event date string and convert to BST
-      const eventDateStr = Array.isArray(event.date)
-        ? event.date[0]
-        : typeof event.date === 'string' && event.date.includes(',')
-        ? event.date.split(',')[0].trim()
-        : event.date || ''
-
-      if (eventDateStr) {
-        const eventDateBST = getEventDateInBangladesh(eventDateStr)
-        const hoursUntil = differenceInHours(eventDateBST, bstNow)
-        const daysUntil = differenceInDays(eventDateBST, bstNow)
-
-        if (daysUntil === 0) {
-          // Same day but event hasn't started yet
-          if (hoursUntil >= 0) {
-            timeDisplay = 'Starting soon'
-          } else {
-            // Past today, might be multi-day event still going
-            timeDisplay = 'Event going on'
-          }
-        } else if (hoursUntil < 24 && hoursUntil >= 0) {
-          // Less than 24 hours - show "Starting soon"
-          timeDisplay = 'Starting soon'
-        } else if (hoursUntil >= 24 && hoursUntil < 48) {
-          // Between 24-48 hours - show "Tomorrow"
-          timeDisplay = 'Tomorrow'
-        } else if (daysUntil > 0) {
-          // More than 48 hours - show days count
-          timeDisplay = `${daysUntil} days away`
-        }
-      }
-    }
-  }
+  const timeDisplay = getTimeDisplay(event, isUpcoming)
 
   return (
     <Link href={eventPublicHref(event)} prefetch={false} className="h-full">
       <Card className="group relative border-2 hover:border-indigo-300 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 h-full flex flex-col p-0">
-        {/* Status Badge */}
         <div className="absolute top-4 right-4 z-10">
           <Badge
             className={`shadow-sm border-0 text-xs font-bold ${
@@ -203,18 +163,8 @@ const EventCard = memo(({ event, priority = false }: { event: Event; priority?: 
           </Badge>
         </div>
 
-        {/* Image/Visual Section */}
         <div className="relative h-40 sm:h-48 bg-linear-to-br from-indigo-400 via-blue-400 to-purple-400 overflow-hidden">
-          <Image
-            src={imageSrc}
-            alt={event.title}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            priority={priority}
-            loading={priority ? undefined : 'lazy'}
-            onError={() => setImageError(true)}
-          />
+          <EventCardImage src={event.image} alt={event.title} priority={priority} />
           <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors" />
           {isUpcoming && timeDisplay && (
             <Badge className="absolute bottom-4 left-4 bg-white/90 hover:bg-white/90 backdrop-blur-sm text-indigo-700 z-10 border-0 text-sm font-bold">
@@ -223,19 +173,15 @@ const EventCard = memo(({ event, priority = false }: { event: Event; priority?: 
           )}
         </div>
 
-        {/* Content Section */}
         <CardContent className="p-4 sm:p-6 flex flex-col flex-1">
           <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3 group-hover:text-indigo-500 transition-colors line-clamp-2">
             {event.title}
           </h3>
 
-          {/* Event Details */}
           <div className="space-y-1.5 sm:space-y-2 mb-3 sm:mb-4">
             <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
               <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-indigo-500 shrink-0" />
-              <span className="font-medium">
-                {formatEventDates(eventDates)}
-              </span>
+              <span className="font-medium">{formatEventDates(eventDates)}</span>
             </div>
             {event.time && (
               <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
@@ -251,14 +197,6 @@ const EventCard = memo(({ event, priority = false }: { event: Event; priority?: 
             )}
           </div>
 
-          {/*
-          <p className="text-gray-700 text-xs sm:text-sm mb-3 sm:mb-4 flex-1 line-clamp-3">
-            {event.description}
-          </p>
-          */}
-
-
-          {/* Tags */}
           {event.tags && event.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-3 sm:mb-4">
               {event.tags.slice(0, 3).map((tag, index) => (
@@ -278,7 +216,6 @@ const EventCard = memo(({ event, priority = false }: { event: Event; priority?: 
             </div>
           )}
 
-          {/* CTA Button */}
           <div className="mt-auto pt-3 sm:pt-4 border-t border-gray-100">
             <div className="flex items-center gap-2 text-indigo-500 font-semibold group-hover:text-indigo-700 transition-colors text-sm sm:text-base">
               <span>View Details</span>
@@ -289,11 +226,9 @@ const EventCard = memo(({ event, priority = false }: { event: Event; priority?: 
       </Card>
     </Link>
   )
-})
+}
 
-EventCard.displayName = 'EventCard'
-
-const SectionHeader = ({
+function SectionHeader({
   title,
   subtitle,
   count,
@@ -301,71 +236,61 @@ const SectionHeader = ({
   title: string
   subtitle?: string
   count?: number
-}) => (
-  <div className="mb-6 sm:mb-8">
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
-      <div className="flex-1">
-        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-          {title}
-        </h2>
-        {subtitle && (
-          <p className="text-sm sm:text-base md:text-lg text-gray-600">{subtitle}</p>
+}) {
+  return (
+    <div className="mb-6 sm:mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
+        <div className="flex-1">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2">{title}</h2>
+          {subtitle && <p className="text-sm sm:text-base md:text-lg text-gray-600">{subtitle}</p>}
+        </div>
+        {count !== undefined && (
+          <Badge
+            variant="secondary"
+            className="flex sm:hidden md:flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-indigo-100 hover:bg-indigo-100 self-start sm:self-auto"
+          >
+            <span className="text-base sm:text-lg font-bold text-indigo-700">{count}</span>
+            <span className="text-xs sm:text-sm text-indigo-700">Events</span>
+          </Badge>
         )}
       </div>
-      {count !== undefined && (
-        <Badge variant="secondary" className="flex sm:hidden md:flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-indigo-100 hover:bg-indigo-100 self-start sm:self-auto">
-          <span className="text-base sm:text-lg font-bold text-indigo-700">{count}</span>
-          <span className="text-xs sm:text-sm text-indigo-700">Events</span>
-        </Badge>
-      )}
     </div>
-  </div>
-)
+  )
+}
 
-export default function RealtimeEventsList({ initialEvents = [] }: RealtimeEventsListProps) {
-  const displayEvents = useMemo(() => {
-    const robofestCard = getRobofestEventsListCard()
-    const withoutDuplicate = initialEvents.filter(
-      (event) => event.id !== ROBOFEST_EVENTS_LIST_CARD_ID,
-    )
-    return [...withoutDuplicate, robofestCard]
-  }, [initialEvents])
+interface PublicEventsListProps {
+  initialEvents?: Event[]
+}
 
-  // Sort events: upcoming first, then past events
-  // Memoize to prevent unnecessary re-sorting
-  const sortedEvents = useMemo(() => {
-    return [...displayEvents].sort((a, b) => {
-      const dateA = getFirstEventDate(a.date)
-      const dateB = getFirstEventDate(b.date)
+/** Server-rendered public events list (legacy name RealtimeEventsList). */
+export default function RealtimeEventsList({ initialEvents = [] }: PublicEventsListProps) {
+  const robofestCard = getRobofestEventsListCard()
+  const withoutDuplicate = initialEvents.filter((event) => event.id !== ROBOFEST_EVENTS_LIST_CARD_ID)
+  const displayEvents = [...withoutDuplicate, robofestCard]
 
-      if (!dateA && !dateB) return 0
-      if (!dateA) return 1
-      if (!dateB) return -1
+  const sortedEvents = [...displayEvents].sort((a, b) => {
+    const dateA = getFirstEventDate(a.date)
+    const dateB = getFirstEventDate(b.date)
 
-      const aIsPast = hasEventPassed(a.date)
-      const bIsPast = hasEventPassed(b.date)
+    if (!dateA && !dateB) return 0
+    if (!dateA) return 1
+    if (!dateB) return -1
 
-      // Upcoming events first
-      if (aIsPast && !bIsPast) return 1
-      if (!aIsPast && bIsPast) return -1
+    const aIsPast = hasEventPassed(a.date)
+    const bIsPast = hasEventPassed(b.date)
 
-      // Within same group, sort by date (newest first for past, earliest first for upcoming)
-      if (aIsPast) return dateB.getTime() - dateA.getTime()
-      return dateA.getTime() - dateB.getTime()
-    })
-  }, [displayEvents])
+    if (aIsPast && !bIsPast) return 1
+    if (!aIsPast && bIsPast) return -1
 
-  const upcomingEvents = useMemo(() => {
-    return sortedEvents.filter((event) => isEventUpcoming(event.date))
-  }, [sortedEvents])
+    if (aIsPast) return dateB.getTime() - dateA.getTime()
+    return dateA.getTime() - dateB.getTime()
+  })
 
-  const pastEvents = useMemo(() => {
-    return sortedEvents.filter((event) => hasEventPassed(event.date))
-  }, [sortedEvents])
+  const upcomingEvents = sortedEvents.filter((event) => isEventUpcoming(event.date))
+  const pastEvents = sortedEvents.filter((event) => hasEventPassed(event.date))
 
   return (
     <>
-      {/* Upcoming Events Section */}
       {upcomingEvents.length > 0 ? (
         <section className="mb-12 sm:mb-16 md:mb-20">
           <SectionHeader
@@ -384,23 +309,18 @@ export default function RealtimeEventsList({ initialEvents = [] }: RealtimeEvent
           <Card className="border-2 border-dashed border-gray-300">
             <CardContent className="p-8 sm:p-12 text-center">
               <Calendar className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
-                No Upcoming Events
-              </h3>
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">No Upcoming Events</h3>
               <p className="text-sm sm:text-base text-gray-600 mb-6">
                 Check back soon for new events and workshops!
               </p>
               <Button asChild className="bg-indigo-500 hover:bg-indigo-600 text-white text-sm sm:text-base">
-                <a href={`mailto:${SITE_CONFIG.email}`}>
-                  Contact Us
-                </a>
+                <a href={`mailto:${SITE_CONFIG.email}`}>Contact Us</a>
               </Button>
             </CardContent>
           </Card>
         </section>
       )}
 
-      {/* Past Events Section */}
       {pastEvents.length > 0 && (
         <section>
           <SectionHeader

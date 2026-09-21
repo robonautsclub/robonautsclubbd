@@ -32,14 +32,17 @@ function mapImages(raw: unknown): GalleryImage[] {
     .filter((x): x is GalleryImage => x !== null)
 }
 
-function mapGalleryDoc(id: string, data: Record<string, unknown>): GalleryGroup {
+function mapGalleryDoc(id: string, data: Record<string, unknown>, lean: boolean): GalleryGroup {
   const sortOrder = typeof data.sortOrder === 'number' && !Number.isNaN(data.sortOrder) ? data.sortOrder : 0
   const displayIso = toIso(data.displayDate)
+  const allImages = mapImages(data.images)
+  const images = lean ? allImages.slice(0, 4) : allImages
   return {
     id,
     title: typeof data.title === 'string' ? data.title : '',
     location: typeof data.location === 'string' ? data.location : '',
-    images: mapImages(data.images),
+    images,
+    imageCount: allImages.length,
     sortOrder,
     displayDate: displayIso || null,
     createdAt: toIso(data.createdAt),
@@ -50,7 +53,7 @@ function mapGalleryDoc(id: string, data: Record<string, unknown>): GalleryGroup 
 
 async function fetchGalleryGroupsFromDb(): Promise<GalleryGroup[]> {
   const docs = await collectionGetAll('galleryGroups')
-  const items = docs.map((doc) => mapGalleryDoc(String(doc.id), doc as Record<string, unknown>))
+  const items = docs.map((doc) => mapGalleryDoc(String(doc.id), doc as Record<string, unknown>, true))
   items.sort((a, b) => {
     if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -58,7 +61,7 @@ async function fetchGalleryGroupsFromDb(): Promise<GalleryGroup[]> {
   return items
 }
 
-const getCachedGalleryGroups = unstable_cache(fetchGalleryGroupsFromDb, [PUBLIC_GALLERY_TAG], {
+const getCachedGalleryGroups = unstable_cache(fetchGalleryGroupsFromDb, [PUBLIC_GALLERY_TAG, 'list'], {
   tags: [PUBLIC_GALLERY_TAG],
   revalidate: 3600,
 })
@@ -71,7 +74,7 @@ export const getPublicGalleryGroupById = cache(async (id: string): Promise<Galle
       async () => {
         const doc = await collectionGet('galleryGroups', trimmed)
         if (!doc) return null
-        return mapGalleryDoc(String(doc.id), doc as Record<string, unknown>)
+        return mapGalleryDoc(String(doc.id), doc as Record<string, unknown>, false)
       },
       [PUBLIC_GALLERY_TAG, 'by-id', trimmed],
       { tags: [PUBLIC_GALLERY_TAG], revalidate: 3600 },

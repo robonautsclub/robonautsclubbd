@@ -1,5 +1,3 @@
-'use client'
-
 import Image from 'next/image'
 import { BookOpen, Trophy, Users, Wrench } from 'lucide-react'
 import { SITE_CONFIG } from '@/lib/site-config'

@@ -19,15 +19,19 @@ function toIso(v: unknown): string | null {
   return null
 }
 
-function mapNewsDoc(id: string, data: Record<string, unknown>): NewsArticle {
+function mapNewsDoc(id: string, data: Record<string, unknown>, lean: boolean): NewsArticle {
   return {
     id,
     title: typeof data.title === 'string' ? data.title : '',
     slug: typeof data.slug === 'string' ? data.slug : '',
-    body: typeof data.body === 'string' ? data.body : '',
+    body: lean ? '' : typeof data.body === 'string' ? data.body : '',
     coverImageUrl:
       typeof data.coverImageUrl === 'string' && data.coverImageUrl ? data.coverImageUrl : undefined,
-    images: Array.isArray(data.images) ? data.images.filter((u: unknown) => typeof u === 'string') : undefined,
+    images: lean
+      ? undefined
+      : Array.isArray(data.images)
+        ? data.images.filter((u: unknown) => typeof u === 'string')
+        : undefined,
     published: Boolean(data.published),
     displayDate: toIso(data.displayDate),
     publishedAt: toIso(data.publishedAt),
@@ -46,7 +50,7 @@ function newsSortTime(a: NewsArticle): number {
 
 async function fetchPublishedNewsFromDb(): Promise<NewsArticle[]> {
   const docs = await collectionWhere('news', 'published', '==', true)
-  const items = docs.map((doc) => mapNewsDoc(String(doc.id), doc as Record<string, unknown>))
+  const items = docs.map((doc) => mapNewsDoc(String(doc.id), doc as Record<string, unknown>, true))
 
   items.sort((a, b) => {
     const da = newsSortTime(a)
@@ -86,7 +90,7 @@ export const getNewsArticleBySlug = cache(async (slug: string | null | undefined
         if (matches.length === 0) return null
         const doc = matches[0]
         if (!doc.published) return null
-        return mapNewsDoc(String(doc.id), doc as Record<string, unknown>)
+        return mapNewsDoc(String(doc.id), doc as Record<string, unknown>, false)
       },
       [PUBLIC_NEWS_TAG, 'by-slug', normalizedSlug],
       { tags: [PUBLIC_NEWS_TAG], revalidate: 3600 },

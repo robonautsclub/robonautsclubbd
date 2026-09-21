@@ -25,7 +25,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Autoplay from 'embla-carousel-autoplay'
 
-const FALLBACK_IMAGE = '/robot.gif'
+const FALLBACK_IMAGE = '/robologo.png'
 
 /** Accent gradients for carousel chrome (cycles by slide index). */
 const ACCENT_GRADIENTS = [

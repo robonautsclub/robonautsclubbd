@@ -2,8 +2,6 @@ import { revalidatePath, revalidateTag } from 'next/cache'
 import { collectionSet, collectionWhere, newId } from '@/lib/db/collections'
 import type { Event } from '@/types/event'
 import type { Booking } from '@/types/booking'
-import { sendBookingConfirmationEmail } from '@/lib/email'
-import { generateBookingConfirmationPDF } from '@/lib/pdfGenerator'
 import { generateRegistrationId } from '@/lib/registrationId'
 import { normalizeCustomFormAnswers } from '@/lib/eventCustomForm'
 import { getEventRegistrationFields } from '@/lib/registrationFields'
@@ -129,6 +127,7 @@ export async function createBookingRecordAndSendEmail(
   if (!sendEmail) {
     try {
       const verificationUrl = `${resolveBaseUrl()}/verify-booking?registrationId=${encodeURIComponent(registrationId)}`
+      const { generateBookingConfirmationPDF } = await import('@/lib/pdfGenerator')
       const pdfBuffer = await generateBookingConfirmationPDF({
         registrationId,
         bookingId,
@@ -177,6 +176,7 @@ export async function createBookingRecordAndSendEmail(
     return { success: true, bookingId, registrationId }
   }
 
+  const { sendBookingConfirmationEmail } = await import('@/lib/email')
   const emailResult = await sendBookingConfirmationEmail({
     to: normalizedEmail,
     name: trimmedName,
@@ -267,6 +267,7 @@ export async function resendBookingConfirmationEmail(
   const mergeBooking = (patch: Record<string, unknown>) =>
     collectionSet('bookings', booking.id!, patch, { merge: true })
 
+  const { sendBookingConfirmationEmail } = await import('@/lib/email')
   const emailResult = await sendBookingConfirmationEmail({
     to: booking.email,
     name: booking.name,

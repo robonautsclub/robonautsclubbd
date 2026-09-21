@@ -27,7 +27,7 @@ export default function EventImage({ src, alt, priority = false }: EventImagePro
     return (
       <div className="relative h-64 md:h-80 lg:h-96">
         <Image
-          src="/robot.gif"
+          src="/robologo.png"
           alt={alt}
           fill
           className="object-cover"

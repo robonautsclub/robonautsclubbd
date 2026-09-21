@@ -1,5 +1,5 @@
 import { MetadataRoute } from 'next'
-import { getPublicEvents } from './(marketing)/events/actions'
+import { getPublicEvents } from './(marketing)/events/public-data'
 import { getPublishedNews } from './(marketing)/news/actions'
 import { getGalleryGroups } from './(marketing)/gallery/actions'
 import { eventPublicHref } from '@/lib/event-ui'

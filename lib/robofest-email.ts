@@ -5,7 +5,6 @@
 import * as brevo from '@getbrevo/brevo'
 import type { Event } from '@/types/event'
 import type { RobofestTeamMember } from '@/lib/robofest-content'
-import { generateBookingConfirmationPDF } from '@/lib/pdfGenerator'
 import { SITE_CONFIG } from '@/lib/site-config'
 import { formatEventDateLabel } from '@/lib/dateUtils'
 import { formatAgeCategoryLabel } from '@/lib/robofest-registration-options'
@@ -371,6 +370,7 @@ export async function sendRobofestConfirmationEmail(
   let pdfBuffer: Buffer | null = null
   let pdfError: string | undefined
   try {
+    const { generateBookingConfirmationPDF } = await import('@/lib/pdfGenerator')
     pdfBuffer = await generateBookingConfirmationPDF({
       registrationId,
       bookingId,

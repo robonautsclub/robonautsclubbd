@@ -1,12 +1,12 @@
 import Link from 'next/link'
 import { Metadata } from 'next'
 import Script from 'next/script'
+import dynamic from 'next/dynamic'
 import { Calendar, Clock, MapPin, ArrowLeft, Users, Monitor, Building2, Banknote } from 'lucide-react'
-import { getPublicEnglishMediumSchools, getPublicEvent } from '../actions'
+import { getPublicEnglishMediumSchools, getPublicEvent } from '../public-data'
 import { Event } from '@/types/event'
 import { notFound, permanentRedirect } from 'next/navigation'
 import { eventPublicHref } from '@/lib/event-ui'
-import BookingForm from './BookingForm'
 import EventImage from './EventImage'
 import { getEventSchema, getBreadcrumbSchema, absoluteSiteUrl } from '@/lib/seo'
 import { parseEventDates, formatEventDates, hasEventPassed, isRegistrationOpen } from '@/lib/dateUtils'
@@ -14,11 +14,13 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
+const BookingForm = dynamic(() => import('./BookingForm'))
+
 
 // Helper function to validate and get image URL
 const getEventImageUrl = (imageUrl?: string): string => {
   if (!imageUrl || imageUrl.trim() === '') {
-    return '/robotics-event.jpg'
+    return '/roboclass.jpg'
   }
 
   const trimmed = imageUrl.trim()
@@ -34,7 +36,7 @@ const getEventImageUrl = (imageUrl?: string): string => {
   }
   
   // Invalid URL, use default
-  return '/robot.gif'
+  return '/robologo.png'
 }
 
 // Helper function to get tags from event
@@ -188,8 +190,10 @@ export default async function EventDetailPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const event = await getPublicEvent(slug)
-  const schools = await getPublicEnglishMediumSchools()
+  const [event, schools] = await Promise.all([
+    getPublicEvent(slug),
+    getPublicEnglishMediumSchools(),
+  ])
 
   if (!event) {
     notFound()

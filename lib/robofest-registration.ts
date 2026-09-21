@@ -9,11 +9,6 @@ import {
   collectionSet,
   collectionWhere,
 } from "@/lib/db/collections";
-import {
-  sendRobofestConfirmationEmail,
-  uniqueMemberEmails,
-} from "@/lib/robofest-email";
-import { generateBookingConfirmationPDF } from "@/lib/pdfGenerator";
 import { generateRegistrationId } from "@/lib/registrationId";
 import { allocateRobofestTeamNumber } from "@/lib/robofest-team-number";
 import {
@@ -29,6 +24,27 @@ import {
   formatAgeCategoryLabel,
   type RobofestAgeCategory,
 } from "@/lib/robofest-registration-options";
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function uniqueMemberEmails(
+  teamMembers: RobofestTeamMember[] | undefined,
+  fallbackEmail?: string,
+): string[] {
+  const seen = new Set<string>();
+  const emails: string[] = [];
+  for (const member of teamMembers || []) {
+    const email = (member.email || "").trim().toLowerCase();
+    if (!email || !emailRegex.test(email) || seen.has(email)) continue;
+    seen.add(email);
+    emails.push(email);
+  }
+  if (emails.length === 0 && fallbackEmail) {
+    const fallback = fallbackEmail.trim().toLowerCase();
+    if (fallback && emailRegex.test(fallback)) emails.push(fallback);
+  }
+  return emails;
+}
 
 export type RobofestRegistrationFormData = {
   category: string;
@@ -203,6 +219,7 @@ export async function generateRobofestConfirmationPdfFromData(
   const origin = (baseUrl || getBaseUrl()).replace(/\/$/, "");
   const verificationUrl = `${origin}/verify-booking?registrationId=${encodeURIComponent(registration.registrationId)}`;
 
+  const { generateBookingConfirmationPDF } = await import("@/lib/pdfGenerator");
   const buffer = await generateBookingConfirmationPDF({
     registrationId: registration.registrationId,
     bookingId: registration.id,
@@ -399,6 +416,7 @@ export async function createRobofestRegistrationAndSendEmail(
   });
 
   const recipients = uniqueMemberEmails(teamMembers, email);
+  const { sendRobofestConfirmationEmail } = await import("@/lib/robofest-email");
   const emailResult = await sendRobofestConfirmationEmail({
     recipients,
     teamName: name,
@@ -567,6 +585,7 @@ export async function resendRobofestConfirmationEmail(
 
   const teamMembers = registration.teamMembers || [];
   const recipients = uniqueMemberEmails(teamMembers, registration.email);
+  const { sendRobofestConfirmationEmail } = await import("@/lib/robofest-email");
   const emailResult = await sendRobofestConfirmationEmail({
     recipients,
     teamName: registration.name,

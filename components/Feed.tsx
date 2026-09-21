@@ -1,6 +1,3 @@
-'use client'
-
-import { useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { SITE_CONFIG } from '@/lib/site-config'
 import { resolveCourseHref } from '@/lib/course-ui'
@@ -35,24 +32,22 @@ interface FeedProps {
   initialWorkshopSchools?: HomepageOrg[]
 }
 
-const Feed = ({
+export default function Feed({
   initialCourses = [],
   initialUpcomingEvents = [],
   initialPartners = [],
   initialWorkshopSchools = [],
-}: FeedProps) => {
-  const courses = useMemo(() => {
-    return initialCourses
-      .filter((course) => !course.isArchived)
-      .map((course) => ({
-        id: course.id,
-        title: course.title,
-        level: course.level,
-        blurb: course.blurb,
-        href: resolveCourseHref(course.href),
-        img: course.image,
-      }))
-  }, [initialCourses])
+}: FeedProps) {
+  const courses = initialCourses
+    .filter((course) => !course.isArchived)
+    .map((course) => ({
+      id: course.id,
+      title: course.title,
+      level: course.level,
+      blurb: course.blurb,
+      href: resolveCourseHref(course.href),
+      img: course.image,
+    }))
 
   const faqItems = [
     {
@@ -102,5 +97,3 @@ const Feed = ({
     </div>
   )
 }
-
-export default Feed

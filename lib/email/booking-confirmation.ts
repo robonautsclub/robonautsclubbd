@@ -1,5 +1,4 @@
 import { formatEventDates, getFirstEventDate, parseEventDates } from '@/lib/dateUtils'
-import { generateBookingConfirmationPDF } from '@/lib/pdfGenerator'
 import type { BookingConfirmationEmailProps, EmailResult } from './types'
 import {
   validateAndNormalizeEmail,
@@ -53,6 +52,7 @@ export async function sendBookingConfirmationEmail({
     let pdfError: string | undefined
 
     try {
+      const { generateBookingConfirmationPDF } = await import('@/lib/pdfGenerator')
       pdfBuffer = await generateBookingConfirmationPDF({
         registrationId,
         bookingId,

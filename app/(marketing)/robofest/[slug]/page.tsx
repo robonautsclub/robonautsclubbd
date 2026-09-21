@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { notFound } from "next/navigation";
-import { getPublicEnglishMediumSchools } from "@/app/(marketing)/events/actions";
+import { getPublicEnglishMediumSchools } from "@/app/(marketing)/events/public-data";
 import { getPublicRobofestCampusAmbassadors } from "@/lib/robofest-campus-ambassadors-db";
 import {
   getActiveRobofestCategories,
@@ -109,8 +109,10 @@ export default async function RobofestCategoryRoute({ params }: PageProps) {
     notFound();
   }
 
-  const schools = await getPublicEnglishMediumSchools();
-  const campusAmbassadors = await getPublicRobofestCampusAmbassadors();
+  const [schools, campusAmbassadors] = await Promise.all([
+    getPublicEnglishMediumSchools(),
+    getPublicRobofestCampusAmbassadors(),
+  ]);
   const image = getRobofestCategoryImage(category);
   const categoryUrl = getRobofestCategoryHref(category.slug);
 

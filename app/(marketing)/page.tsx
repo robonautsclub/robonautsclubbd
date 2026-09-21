@@ -3,9 +3,9 @@ import Feed from "@/components/Feed";
 import { PAGE_SEO, buildPageMetadata } from "@/lib/seo-metadata";
 import {
   getPublicCourses,
-  getPublicEvents,
+  getPublicEventsForHome,
   getPublicHomepageOrgs,
-} from "./events/actions";
+} from "./events/public-data";
 import { isEventUpcoming } from "@/lib/dateUtils";
 import { SITE_CONFIG } from "@/lib/site-config";
 
@@ -28,7 +28,7 @@ export const revalidate = 1800;
 export default async function Home() {
   const [courses, events, homepageOrgs] = await Promise.all([
     getPublicCourses(),
-    getPublicEvents(),
+    getPublicEventsForHome(),
     getPublicHomepageOrgs(),
   ])
   const initialUpcomingEvents = events.filter((e) => isEventUpcoming(e.date))
