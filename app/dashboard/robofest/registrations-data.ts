@@ -1,4 +1,4 @@
-import { collectionGet } from '@/lib/db/collections'
+import { collectionGet, collectionWhere } from '@/lib/db/collections'
 import {
   countRobofestRegistrations,
   queryRobofestCampusAmbassadorReferralCounts,
@@ -11,6 +11,7 @@ import {
   ROBOFEST_REGISTRATIONS_COLLECTION,
   mapRobofestRegistrationDoc,
   type RobofestRegistration,
+  type RobofestRegistrationStatus,
 } from '@/lib/robofest-content'
 import { registrationMatchesNameFilter } from './registration-search'
 import type {
@@ -123,6 +124,42 @@ function mapDocs(docs: Record<string, unknown>[]): RobofestRegistration[] {
   )
 }
 
+function isMissingIndexedColumnError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+  return /no such column|category|round_city|age_category|campus_ambassador/i.test(
+    message,
+  )
+}
+
+/**
+ * Legacy path used when migration 0001 has not been applied yet (payload-only).
+ */
+async function loadRobofestRegistrationsPageLegacy(options: {
+  filters: RobofestRegistrationListFilters
+  cursor?: RobofestRegistrationCursor | null
+  pageSize: number
+  scanLimit?: number
+}): Promise<RobofestRegistrationPage> {
+  const f = normalizeFilters(options.filters)
+  const scanLimit = options.scanLimit ?? FALLBACK_SCAN_LIMIT
+  const docs = await collectionWhere(
+    ROBOFEST_REGISTRATIONS_COLLECTION,
+    'status',
+    '==',
+    f.status,
+  )
+
+  const items = docs
+    .slice(0, scanLimit)
+    .map((doc) =>
+      mapRobofestRegistrationDoc(String(doc.id), doc as Record<string, unknown>),
+    )
+    .filter((item) => matchesExtraFilters(item, f))
+    .sort(compareNewestFirst)
+
+  return pageFromItems(items, options.cursor, options.pageSize)
+}
+
 /**
  * Search / complex filters: SQL narrows by indexed columns, then JS applies
  * name search + in-memory keyset paging.
@@ -135,16 +172,28 @@ async function loadRobofestRegistrationsPageWithSearch(options: {
 }): Promise<RobofestRegistrationPage> {
   const f = normalizeFilters(options.filters)
   const scanLimit = options.scanLimit ?? FALLBACK_SCAN_LIMIT
-  const docs = await queryRobofestRegistrationsMatching({
-    filters: toSqlFilters(f),
-    limit: scanLimit,
-  })
+  try {
+    const docs = await queryRobofestRegistrationsMatching({
+      filters: toSqlFilters(f),
+      limit: scanLimit,
+    })
 
-  const items = mapDocs(docs)
-    .filter((item) => matchesExtraFilters(item, f))
-    .sort(compareNewestFirst)
+    const items = mapDocs(docs)
+      .filter((item) => matchesExtraFilters(item, f))
+      .sort(compareNewestFirst)
 
-  return pageFromItems(items, options.cursor, options.pageSize)
+    return pageFromItems(items, options.cursor, options.pageSize)
+  } catch (error) {
+    if (!isMissingIndexedColumnError(error)) throw error
+    console.warn(
+      '[robofest] Indexed registration query failed; using legacy scan. Apply migration 0001.',
+      error,
+    )
+    return loadRobofestRegistrationsPageLegacy({
+      ...options,
+      scanLimit,
+    })
+  }
 }
 
 export async function loadRobofestRegistrationsPage(options: {
@@ -167,24 +216,40 @@ export async function loadRobofestRegistrationsPage(options: {
     })
   }
 
-  const sqlFilters = toSqlFilters(f)
-  const [{ rows, hasMore }, matchedTotal] = await Promise.all([
-    queryRobofestRegistrationsPage({
-      filters: sqlFilters,
-      cursor: options.cursor,
-      limit: pageSize,
-    }),
-    countRobofestRegistrations(sqlFilters),
-  ])
+  try {
+    const sqlFilters = toSqlFilters(f)
+    const [{ rows, hasMore }, matchedTotal] = await Promise.all([
+      queryRobofestRegistrationsPage({
+        filters: sqlFilters,
+        cursor: options.cursor,
+        limit: pageSize,
+      }),
+      countRobofestRegistrations(sqlFilters),
+    ])
 
-  const items = mapDocs(rows)
-  const last = items[items.length - 1]
-  return {
-    items,
-    nextCursor:
-      hasMore && last?.createdAt ? { createdAt: last.createdAt, id: last.id } : null,
-    hasMore,
-    matchedTotal,
+    const items = mapDocs(rows)
+    const last = items[items.length - 1]
+    return {
+      items,
+      nextCursor:
+        hasMore && last?.createdAt
+          ? { createdAt: last.createdAt, id: last.id }
+          : null,
+      hasMore,
+      matchedTotal,
+    }
+  } catch (error) {
+    if (!isMissingIndexedColumnError(error)) throw error
+    console.warn(
+      '[robofest] Indexed registration page failed; using legacy scan. Apply migration 0001.',
+      error,
+    )
+    return loadRobofestRegistrationsPageLegacy({
+      filters: f,
+      cursor: options.cursor,
+      pageSize,
+      scanLimit: FALLBACK_SCAN_LIMIT,
+    })
   }
 }
 
@@ -204,11 +269,25 @@ export async function loadRobofestRegistrationsForExport(
     return page.items
   }
 
-  const docs = await queryRobofestRegistrationsMatching({
-    filters: toSqlFilters(f),
-    limit: scanLimit,
-  })
-  return mapDocs(docs)
+  try {
+    const docs = await queryRobofestRegistrationsMatching({
+      filters: toSqlFilters(f),
+      limit: scanLimit,
+    })
+    return mapDocs(docs)
+  } catch (error) {
+    if (!isMissingIndexedColumnError(error)) throw error
+    console.warn(
+      '[robofest] Indexed export query failed; using legacy scan. Apply migration 0001.',
+      error,
+    )
+    const page = await loadRobofestRegistrationsPageLegacy({
+      filters: f,
+      pageSize: maxDocs,
+      scanLimit,
+    })
+    return page.items
+  }
 }
 
 function participantCount(r: RobofestRegistration): number {
@@ -292,7 +371,32 @@ export async function loadRobofestRegistrationStatusCounts(): Promise<RobofestRe
     }
   } catch (error) {
     console.error('[robofest] SQL status counts failed:', error)
-    return empty
+    try {
+      const statuses: RobofestRegistrationStatus[] = [
+        'pending',
+        'confirmed',
+        'cancelled',
+      ]
+      const results = await Promise.all(
+        statuses.map(async (status) => {
+          const docs = await collectionWhere(
+            ROBOFEST_REGISTRATIONS_COLLECTION,
+            'status',
+            '==',
+            status,
+          )
+          return [status, docs.length] as const
+        }),
+      )
+      const counts = { ...empty }
+      for (const [status, count] of results) {
+        counts[status] = count
+      }
+      return counts
+    } catch (legacyError) {
+      console.error('[robofest] Legacy status counts failed:', legacyError)
+      return empty
+    }
   }
 }
 
@@ -315,6 +419,34 @@ export async function loadRobofestCampusAmbassadorReferralCounts(
     }
   } catch (error) {
     console.error('[robofest] SQL referral counts failed:', error)
+    if (ambassadorIds.length === 0) return counts
+    try {
+      const results = await Promise.all(
+        ambassadorIds.map(async (id) => {
+          const docs = await collectionWhere(
+            ROBOFEST_REGISTRATIONS_COLLECTION,
+            'campusAmbassadorId',
+            '==',
+            id,
+          )
+          const confirmed = docs.filter((d) => d.status === 'confirmed')
+          let members = 0
+          for (const doc of confirmed) {
+            const registration = mapRobofestRegistrationDoc(
+              String(doc.id),
+              doc as Record<string, unknown>,
+            )
+            members += participantCount(registration)
+          }
+          return [id, { teams: confirmed.length, members }] as const
+        }),
+      )
+      for (const [id, stats] of results) {
+        counts[id] = stats
+      }
+    } catch (legacyError) {
+      console.error('[robofest] Legacy referral counts failed:', legacyError)
+    }
   }
 
   return counts

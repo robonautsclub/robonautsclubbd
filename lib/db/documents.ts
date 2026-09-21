@@ -82,7 +82,13 @@ export function parsePayload(raw: string | null | undefined): JsonRecord {
 
 function mergeDoc(id: string, row: { payload?: string | null } & JsonRecord): JsonRecord {
   const payload = parsePayload(row.payload as string | undefined)
-  return { ...payload, id, ...omit(row, ['payload']) }
+  const columns = omit(row, ['payload'])
+  const indexed: JsonRecord = {}
+  for (const [key, value] of Object.entries(columns)) {
+    // Never let NULL indexed columns wipe payload fields (pre-backfill / partial rows).
+    if (value != null) indexed[key] = value
+  }
+  return { ...payload, ...indexed, id }
 }
 
 function omit<T extends JsonRecord>(obj: T, keys: string[]): JsonRecord {

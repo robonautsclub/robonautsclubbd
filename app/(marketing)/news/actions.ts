@@ -72,10 +72,17 @@ const getCachedPublishedNews = unstable_cache(fetchPublishedNewsFromDb, [PUBLIC_
 
 export const getPublishedNews = cache(async (): Promise<NewsArticle[]> => {
   try {
-    return await getCachedPublishedNews()
+    // Skip unstable_cache on the public list so D1 news appear immediately
+    // (OpenNext cache callbacks can lack Cloudflare request context).
+    return await fetchPublishedNewsFromDb()
   } catch (e) {
     console.error('Error fetching published news:', e)
-    return []
+    try {
+      return await getCachedPublishedNews()
+    } catch (cacheError) {
+      console.error('Error fetching cached published news:', cacheError)
+      return []
+    }
   }
 })
 
@@ -84,17 +91,11 @@ export const getNewsArticleBySlug = cache(async (slug: string | null | undefined
   if (!normalizedSlug) return null
 
   try {
-    return await unstable_cache(
-      async () => {
-        const matches = await collectionWhere('news', 'slug', '==', normalizedSlug, { limit: 1 })
-        if (matches.length === 0) return null
-        const doc = matches[0]
-        if (!doc.published) return null
-        return mapNewsDoc(String(doc.id), doc as Record<string, unknown>, false)
-      },
-      [PUBLIC_NEWS_TAG, 'by-slug', normalizedSlug],
-      { tags: [PUBLIC_NEWS_TAG], revalidate: 3600 },
-    )()
+    const matches = await collectionWhere('news', 'slug', '==', normalizedSlug, { limit: 1 })
+    if (matches.length === 0) return null
+    const doc = matches[0]
+    if (!doc.published) return null
+    return mapNewsDoc(String(doc.id), doc as Record<string, unknown>, false)
   } catch (e) {
     console.error('Error fetching news by slug:', e)
     return null

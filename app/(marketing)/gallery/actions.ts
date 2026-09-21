@@ -70,15 +70,9 @@ export const getPublicGalleryGroupById = cache(async (id: string): Promise<Galle
   const trimmed = id?.trim()
   if (!trimmed) return null
   try {
-    return await unstable_cache(
-      async () => {
-        const doc = await collectionGet('galleryGroups', trimmed)
-        if (!doc) return null
-        return mapGalleryDoc(String(doc.id), doc as Record<string, unknown>, false)
-      },
-      [PUBLIC_GALLERY_TAG, 'by-id', trimmed],
-      { tags: [PUBLIC_GALLERY_TAG], revalidate: 3600 },
-    )()
+    const doc = await collectionGet('galleryGroups', trimmed)
+    if (!doc) return null
+    return mapGalleryDoc(String(doc.id), doc as Record<string, unknown>, false)
   } catch (e) {
     console.error('Error fetching gallery group:', e)
     return null
@@ -87,9 +81,15 @@ export const getPublicGalleryGroupById = cache(async (id: string): Promise<Galle
 
 export const getGalleryGroups = cache(async (): Promise<GalleryGroup[]> => {
   try {
-    return await getCachedGalleryGroups()
+    // Skip unstable_cache on the public list so D1 albums appear immediately.
+    return await fetchGalleryGroupsFromDb()
   } catch (e) {
     console.error('Error fetching gallery groups:', e)
-    return []
+    try {
+      return await getCachedGalleryGroups()
+    } catch (cacheError) {
+      console.error('Error fetching cached gallery groups:', cacheError)
+      return []
+    }
   }
 })

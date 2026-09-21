@@ -117,8 +117,15 @@ export async function collectionWhere(
     const v = doc[field]
     switch (op) {
       case '==':
+        // D1/SQLite booleans often arrive as 0/1; also tolerate "true"/"false" strings.
+        if (typeof value === 'boolean') {
+          return Boolean(v) === value
+        }
         return v === value
       case '!=':
+        if (typeof value === 'boolean') {
+          return Boolean(v) !== value
+        }
         return v !== value
       case '>':
         return (v as number | string) > (value as number | string)
