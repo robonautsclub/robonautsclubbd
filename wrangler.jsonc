@@ -8,15 +8,39 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
-  // Self-reference for revalidation (queue: "direct")
+  // Self-reference required for ISR revalidation queue
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
       "service": "robonautsclubbd"
     }
   ],
-  // R2 / DO queue cache disabled until R2 is enabled on this Cloudflare account.
+  "kv_namespaces": [
+    {
+      "binding": "NEXT_INC_CACHE_KV",
+      "id": "0cac87dac4aa4c0eb5216dddaa585a21"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "NEXT_CACHE_DO_QUEUE",
+        "class_name": "DOQueueHandler"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["DOQueueHandler"]
+    }
+  ],
   "d1_databases": [
+    {
+      "binding": "NEXT_TAG_CACHE_D1",
+      "database_name": "robonautsclub-next-tag-cache",
+      "database_id": "98f68009-40ac-451f-9b3f-34d4f2f5d042"
+    },
     {
       "binding": "DB",
       "database_name": "robonautsclub-app",
@@ -26,7 +50,6 @@
   ],
   "vars": {
     "NODE_ENV": "production",
-    // Cloudflare Worker preview URL — do not attach production DNS yet
     "NEXT_PUBLIC_BASE_URL": "https://robonautsclubbd.atm3collab.workers.dev",
     "NEXT_PUBLIC_SITE_URL": "https://robonautsclubbd.atm3collab.workers.dev",
     "BREVO_FROM_EMAIL": "no-reply@robonautsltd.com",
