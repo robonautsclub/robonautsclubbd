@@ -5,7 +5,12 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 
 type LightboxPortalProps = {
@@ -42,13 +47,25 @@ export function LightboxPortal({ images, openIndex, onClose, setOpenIndex }: Lig
 
   if (!isOpen || !images[openIndex]) return null
 
+  const label = `Image ${openIndex + 1} of ${total}`
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
       <DialogContent
         showCloseButton={false}
-        className="max-w-[min(100vw,1400px)]! w-screen h-screen sm:h-[95vh] p-0 border-0 bg-black/95 sm:rounded-none gap-0 grid-rows-[auto_1fr_auto] focus:outline-none"
-        aria-label={`Image ${openIndex + 1} of ${total}`}
+        overlayClassName="z-[80] bg-black/90"
+        className={cn(
+          'fixed inset-0 top-0 left-0 z-[80] flex h-dvh max-h-dvh w-screen max-w-none sm:max-w-none',
+          'translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none border-0',
+          'bg-transparent p-0 shadow-none focus:outline-none',
+          'data-[state=closed]:zoom-out-100 data-[state=open]:zoom-in-100',
+        )}
       >
+        <DialogTitle className="sr-only">{label}</DialogTitle>
+        <DialogDescription className="sr-only">
+          Full-size gallery image. Use arrow keys to navigate between photos.
+        </DialogDescription>
+
         <Button
           type="button"
           variant="ghost"
@@ -70,7 +87,7 @@ export function LightboxPortal({ images, openIndex, onClose, setOpenIndex }: Lig
                 e.stopPropagation()
                 go(-1)
               }}
-              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-50 size-12 rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-white"
+              className="absolute left-2 sm:left-4 top-1/2 z-50 size-12 -translate-y-1/2 rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-white"
               aria-label="Previous image"
             >
               <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8" />
@@ -83,7 +100,7 @@ export function LightboxPortal({ images, openIndex, onClose, setOpenIndex }: Lig
                 e.stopPropagation()
                 go(1)
               }}
-              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-50 size-12 rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-white"
+              className="absolute right-2 sm:right-4 top-1/2 z-50 size-12 -translate-y-1/2 rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-white"
               aria-label="Next image"
             >
               <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8" />
@@ -91,17 +108,18 @@ export function LightboxPortal({ images, openIndex, onClose, setOpenIndex }: Lig
           </>
         ) : null}
 
-        <div className="flex items-center justify-center w-full h-full p-4 sm:p-8">
+        {/* min-h-0 so tall/portrait images can shrink inside the viewport */}
+        <div className="flex min-h-0 w-full flex-1 items-center justify-center px-3 pb-12 pt-14 sm:px-10 sm:pb-14 sm:pt-12">
           {/* eslint-disable-next-line @next/next/no-img-element -- large modal uses native img for simplicity */}
           <img
             src={images[openIndex]}
             alt=""
-            className="max-h-full max-w-full w-auto h-auto object-contain"
+            className="h-auto max-h-full w-auto max-w-full object-contain"
           />
         </div>
 
         {total > 1 ? (
-          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-sm text-white/80">
+          <p className="pointer-events-none absolute bottom-4 left-1/2 z-50 -translate-x-1/2 text-sm text-white/80">
             {openIndex + 1} / {total}
           </p>
         ) : null}

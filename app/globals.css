@@ -214,6 +214,27 @@
   animation: float-slow 8s ease-in-out infinite;
 }
 
+@keyframes hud-scan {
+  0% {
+    transform: translateY(-20%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(420%);
+    opacity: 0;
+  }
+}
+
+.animate-hud-scan {
+  animation: hud-scan 6s ease-in-out infinite;
+}
+
 .bg-tech-grid {
   background-image:
     linear-gradient(to right, rgb(255 255 255 / 0.06) 1px, transparent 1px),
@@ -238,7 +259,8 @@
   .animate-scroll-left,
   .animate-scroll-right,
   .animate-gradient,
-  .animate-float-slow {
+  .animate-float-slow,
+  .animate-hud-scan {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
