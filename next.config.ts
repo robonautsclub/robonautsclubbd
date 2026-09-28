@@ -98,5 +98,9 @@ const nextConfig: NextConfig = {
 
 export default withBundleAnalyzer(nextConfig);
 
-// Bindings from wrangler.jsonc (D1 DB, R2 cache, etc.) available in `next dev`
-import('@opennextjs/cloudflare').then((m) => m.initOpenNextCloudflareForDev())
+// Bindings from wrangler.jsonc (D1 DB, R2 cache, etc.) available in `next dev`.
+// Do not start the local Workers runtime during `next build`; a stale local
+// SQLite file otherwise aborts the production build.
+if (process.env.NODE_ENV === 'development') {
+  import('@opennextjs/cloudflare').then((m) => m.initOpenNextCloudflareForDev())
+}
