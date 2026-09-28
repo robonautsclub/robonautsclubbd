@@ -1,7 +1,7 @@
 import { CheckCircle, XCircle, Calendar, MapPin, Clock, User, Mail, Phone, School } from 'lucide-react'
 import { formatEventDates, parseEventDates } from '@/lib/dateUtils'
 import { generateQRCodeDataURL } from '@/lib/qrCode'
-import { adminDb } from '@/lib/firebase-admin'
+import { collectionGet, getBookingByRegistrationId as lookupBookingByRegistrationId } from '@/lib/db/collections'
 import type { Booking } from '@/types/booking'
 import type { Event } from '@/types/event'
 import { format } from 'date-fns'
@@ -15,49 +15,41 @@ interface VerificationPageProps {
   params: Promise<{ registrationId: string }>
 }
 
+function parseTimestamp(value: unknown): unknown {
+  if (value && typeof value === 'object' && 'toDate' in value) {
+    return (value as { toDate: () => Date }).toDate()
+  }
+  return value
+}
+
 async function getBookingByRegistrationId(registrationId: string): Promise<{
   booking: Booking | null
   event: Event | null
 }> {
   try {
-    if (!adminDb) {
-      console.error('Firebase Admin SDK not available')
+    const bookingDoc = await lookupBookingByRegistrationId(registrationId)
+    if (!bookingDoc) {
       return { booking: null, event: null }
     }
 
-    // Query bookings collection by registrationId
-    const bookingsSnapshot = await adminDb
-      .collection('bookings')
-      .where('registrationId', '==', registrationId)
-      .limit(1)
-      .get()
-
-    if (bookingsSnapshot.empty) {
-      return { booking: null, event: null }
-    }
-
-    const bookingDoc = bookingsSnapshot.docs[0]
-    const bookingData = bookingDoc.data()
-
+    const bookingData = bookingDoc as Record<string, unknown>
     const booking: Booking = {
-      id: bookingDoc.id,
+      id: String(bookingDoc.id),
       ...bookingData,
-      createdAt: bookingData.createdAt?.toDate?.() || bookingData.createdAt,
+      createdAt: parseTimestamp(bookingData.createdAt),
     } as Booking
 
-    // Fetch event details
-    const eventDoc = await adminDb.collection('events').doc(booking.eventId).get()
-
-    if (!eventDoc.exists) {
+    const eventDoc = await collectionGet('events', String(booking.eventId))
+    if (!eventDoc) {
       return { booking, event: null }
     }
 
-    const eventData = eventDoc.data()!
+    const eventData = eventDoc as Record<string, unknown>
     const event: Event = {
-      id: eventDoc.id,
+      id: String(eventDoc.id),
       ...eventData,
-      createdAt: eventData.createdAt?.toDate?.() || eventData.createdAt,
-      updatedAt: eventData.updatedAt?.toDate?.() || eventData.updatedAt,
+      createdAt: parseTimestamp(eventData.createdAt),
+      updatedAt: parseTimestamp(eventData.updatedAt),
     } as Event
 
     return { booking, event }
